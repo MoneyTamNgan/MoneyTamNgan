@@ -2,28 +2,46 @@ openapi: 3.0.3
 info:
   title: MoneyTamNgan API
   description: >
-    JSON REST API contract between the Next.js frontend and the Node.js backend.
-    Sprint 1 scope only: TOR ingestion (FR-1.1) and software/non-software
-    classification (FR-1.2). See the "Out of scope" note at the bottom of this
-    file for what is deliberately excluded from this pass.
-  version: "0.1.0-sprint1"
+    JSON REST API contract between the Next.js frontend and the Node.js backend,
+    covering all 4 epics from the SRS so FE/BE only need to design this once.
+
+    Endpoints are tagged by the sprint that actually builds them (see each tag's
+    description). "Sprint 1 (build now)" endpoints are the committed target for
+    the current sprint (FR-1.1 ingestion + FR-1.2 classification); everything
+    else is a forward-looking draft for Sprint 3-5 and MAY change once that
+    sprint's requirements are worked out in detail — treat it as a starting
+    point for those sprints' contract review, not a frozen spec.
+  version: "0.2.0-draft"
 servers:
   - url: http://localhost:4000/api/v1
     description: Local development (backend port TBD by BE dev)
 
-# No auth in Sprint 1 scope (see "Out of scope" note at the bottom of this file).
-# Declared explicitly so it reads as a deliberate decision, not an oversight.
 security: []
 
 tags:
   - name: TORs
-    description: Public/shared endpoints for reading ingested TOR records
+    description: "[Sprint 1 - build now] Public/shared endpoints for reading ingested TOR records (FR-1.1, FR-1.2)."
   - name: Admin - Ingestion
-    description: Monitoring and manual triggering of scraping jobs
+    description: "[Sprint 1 - build now] Monitoring and manual triggering of scraping jobs (FR-1.1)."
   - name: Admin - Classification
-    description: Reviewing and correcting software/non-software classification
+    description: "[Sprint 1 - build now] Reviewing and correcting software/non-software classification (FR-1.2)."
+  - name: Auth
+    description: "[Sprint 3 draft] Login/session, required by Contractor Profile and Matching below (not FR-numbered; supports FR-2.2/2.3)."
+  - name: Contractor Profile
+    description: "[Sprint 3 draft] Self-reported contractor profile CRUD (FR-2.2)."
+  - name: Matching
+    description: "[Sprint 3 draft] Match scoring between TORs and contractor profiles (FR-2.3)."
+  - name: PDF Summary
+    description: "[Sprint 2 draft] OCR/LLM-extracted structured summary fields on a TOR (FR-2.1)."
+  - name: Anomaly Detection
+    description: "[Sprint 4 draft] Budget and qualification anomaly flags on a TOR (FR-3.1, FR-3.2)."
+  - name: Public Analytics
+    description: "[Sprint 5 draft] Unauthenticated historical search and aggregate metrics (FR-4.1, FR-4.2)."
 
 paths:
+  # ---------------------------------------------------------------------------
+  # Sprint 1 - build now
+  # ---------------------------------------------------------------------------
   /health:
     get:
       summary: Liveness check
@@ -293,7 +311,416 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  # ---------------------------------------------------------------------------
+  # Sprint 2 draft - PDF parsing / summarization (FR-2.1)
+  # ---------------------------------------------------------------------------
+  /tors/{id}/summary:
+    get:
+      summary: Get the LLM-extracted structured summary for a TOR
+      description: >
+        Draft for Sprint 2. Populated once the OCR + Vertex AI extraction
+        pipeline has processed the source PDF; 404 until then (or return the
+        Tor's summary fields as null - to be settled with BE when this sprint starts).
+      tags: [PDF Summary]
+      operationId: getTorSummary
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      responses:
+        "200":
+          description: Structured summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TorSummary"
+        "404":
+          description: TOR not found, or summary not yet generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ---------------------------------------------------------------------------
+  # Sprint 3 draft - Auth (supports FR-2.2, FR-2.3)
+  # ---------------------------------------------------------------------------
+  /auth/google:
+    post:
+      summary: Log in with a Google ID token
+      description: Draft for Sprint 3, matches the mockup's "เข้าสู่ระบบด้วย Google" button.
+      tags: [Auth]
+      operationId: loginWithGoogle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idToken]
+              properties:
+                idToken:
+                  type: string
+                  description: Google Sign-In ID token from the frontend.
+      responses:
+        "200":
+          description: Session established (sets sessionAuth cookie)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Invalid Google token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/login:
+    post:
+      summary: Log in with email + password
+      tags: [Auth]
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Session established (sets sessionAuth cookie)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      summary: End the current session
+      tags: [Auth]
+      operationId: logout
+      security: [{ sessionAuth: [] }]
+      responses:
+        "204":
+          description: Logged out
+
+  /auth/me:
+    get:
+      summary: Get the currently logged-in user
+      tags: [Auth]
+      operationId: getCurrentUser
+      security: [{ sessionAuth: [] }]
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ---------------------------------------------------------------------------
+  # Sprint 3 draft - Contractor Profile (FR-2.2)
+  # ---------------------------------------------------------------------------
+  /profile:
+    get:
+      summary: Get the current user's contractor profile
+      tags: [Contractor Profile]
+      operationId: getProfile
+      security: [{ sessionAuth: [] }]
+      responses:
+        "200":
+          description: Contractor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractorProfile"
+        "404":
+          description: Profile not created yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create the current user's contractor profile
+      tags: [Contractor Profile]
+      operationId: createProfile
+      security: [{ sessionAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractorProfileInput"
+      responses:
+        "201":
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractorProfile"
+    put:
+      summary: Update the current user's contractor profile
+      description: FR-2.2.3 - users may update their profile at any time.
+      tags: [Contractor Profile]
+      operationId: updateProfile
+      security: [{ sessionAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractorProfileInput"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractorProfile"
+
+  # ---------------------------------------------------------------------------
+  # Sprint 3 draft - Matching (FR-2.3)
+  # ---------------------------------------------------------------------------
+  /matches:
+    get:
+      summary: List TORs matching the current user's profile above their threshold
+      tags: [Matching]
+      operationId: listMatches
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+      responses:
+        "200":
+          description: Paginated list of matched TORs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/MatchResult"
+
+  /tors/{id}/match:
+    get:
+      summary: Get the match score between one TOR and the current user's profile
+      tags: [Matching]
+      operationId: getTorMatch
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      responses:
+        "200":
+          description: Match result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchResult"
+        "404":
+          description: TOR not found, or no profile exists to match against
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ---------------------------------------------------------------------------
+  # Sprint 4 draft - Anomaly Detection (FR-3.1, FR-3.2)
+  # ---------------------------------------------------------------------------
+  /tors/{id}/anomalies:
+    get:
+      summary: Get budget and qualification anomaly flags for a TOR
+      description: Backs the clause-level highlight UI and budget warning badge.
+      tags: [Anomaly Detection]
+      operationId: getTorAnomalies
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      responses:
+        "200":
+          description: Anomaly detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnomalyReport"
+        "404":
+          description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tors/{id}/report:
+    post:
+      summary: User-submitted flag report on a TOR
+      description: Backs the "user flag reporting button" component.
+      tags: [Anomaly Detection]
+      operationId: reportTor
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        "201":
+          description: Report submitted
+        "404":
+          description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ---------------------------------------------------------------------------
+  # Sprint 5 draft - Public Analytics (FR-4.1, FR-4.2)
+  # ---------------------------------------------------------------------------
+  /analytics/search:
+    get:
+      summary: Search historical TOR records with aggregate metrics
+      tags: [Public Analytics]
+      operationId: searchAnalytics
+      description: >
+        Unauthenticated, rate-limited per NFR-4/FR-4.2.2 (see 429 response).
+      parameters:
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: agency
+          in: query
+          schema:
+            type: string
+        - name: budgetMin
+          in: query
+          schema:
+            type: number
+        - name: budgetMax
+          in: query
+          schema:
+            type: number
+        - name: category
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+      responses:
+        "200":
+          description: Search results with aggregate metrics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Tor"
+                      aggregates:
+                        $ref: "#/components/schemas/AnalyticsAggregates"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /analytics/export:
+    get:
+      summary: Export historical search results as CSV or JSON
+      tags: [Public Analytics]
+      operationId: exportAnalytics
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [csv, json]
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: agency
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File contents
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tor"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: mtn_session
+      description: >
+        Sprint 3 draft. Session cookie set after successful login via
+        /auth/google or /auth/login. Admin-only endpoints (all /admin/* paths)
+        will also require this once auth lands; they're unauthenticated in
+        the Sprint 1 build since no login flow exists yet.
+
   parameters:
     TorIdParam:
       name: id
@@ -376,10 +803,50 @@ components:
           minimum: 0
           maximum: 1
           description: Classifier confidence score, null if not yet classified or manually overridden.
+        supersededByTorId:
+          type: string
+          nullable: true
+          description: "[Sprint 5 draft, FR-1.3] Id of the newer revision, if this record's status is Superseded."
+        matchScore:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 100
+          description: "[Sprint 3 draft] Populated only when returned via an authenticated endpoint for a contractor with a profile."
+        budgetAnomaly:
+          type: object
+          nullable: true
+          description: "[Sprint 4 draft]"
+          allOf:
+            - $ref: "#/components/schemas/BudgetAnomaly"
         createdAt:
           type: string
           format: date-time
         updatedAt:
+          type: string
+          format: date-time
+
+    TorSummary:
+      type: object
+      description: "[Sprint 2 draft, FR-2.1]"
+      properties:
+        torId:
+          type: string
+        executiveSummary:
+          type: string
+        vendorEligibility:
+          type: string
+        requiredTeamExperience:
+          type: string
+        requiredTechStack:
+          type: array
+          items:
+            type: string
+        requiredCertifications:
+          type: array
+          items:
+            type: string
+        generatedAt:
           type: string
           format: date-time
 
@@ -426,6 +893,152 @@ components:
           type: string
           format: date-time
 
+    User:
+      type: object
+      description: "[Sprint 3 draft]"
+      required: [id, email, role]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [contractor, admin]
+
+    ContractorProfileInput:
+      type: object
+      description: "[Sprint 3 draft] FR-2.2.2 - self-reported, no verification required."
+      properties:
+        companyName:
+          type: string
+        techStack:
+          type: array
+          items:
+            type: string
+        projectCapacity:
+          type: string
+          description: Free-text self-reported capacity (e.g. team size, concurrent-project count).
+        pastProjectValues:
+          type: array
+          items:
+            type: number
+          description: THB values of past completed projects, self-reported.
+        certifications:
+          type: array
+          items:
+            type: string
+        capital:
+          type: number
+          nullable: true
+        matchThreshold:
+          type: number
+          minimum: 0
+          maximum: 100
+          default: 70
+          description: FR-2.3.3 - notification fires when a TOR's matchScore meets/exceeds this.
+
+    ContractorProfile:
+      allOf:
+        - $ref: "#/components/schemas/ContractorProfileInput"
+        - type: object
+          required: [id, userId, createdAt, updatedAt]
+          properties:
+            id:
+              type: string
+            userId:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    MatchResult:
+      type: object
+      description: "[Sprint 3 draft, FR-2.3.2]"
+      required: [torId, matchScore, computedAt]
+      properties:
+        torId:
+          type: string
+        matchScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        skillOverlapScore:
+          type: number
+          nullable: true
+        contractSizeScore:
+          type: number
+          nullable: true
+        teamCapacityScore:
+          type: number
+          nullable: true
+        computedAt:
+          type: string
+          format: date-time
+
+    BudgetAnomalyTag:
+      type: string
+      enum: [NONE, HIGH_BUDGET_ANOMALY]
+
+    BudgetAnomaly:
+      type: object
+      description: "[Sprint 4 draft, FR-3.1]"
+      properties:
+        baselinePrice:
+          type: number
+          description: Category Average(Scope Category), or the TOR's own budget if no historical category data exists yet.
+        deviationMultiplier:
+          type: number
+          description: TOR Budget / Baseline Price.
+        tag:
+          $ref: "#/components/schemas/BudgetAnomalyTag"
+
+    FlaggedClause:
+      type: object
+      description: "[Sprint 4 draft, FR-3.2]"
+      required: [clauseText, type, reasoning]
+      properties:
+        clauseText:
+          type: string
+        type:
+          type: string
+          enum: [IRRELEVANT_HARDWARE, UNREALISTIC_TENURE, VENDOR_LOCK_IN, OTHER]
+        reasoning:
+          type: string
+          description: Stored LLM/rule-based reasoning behind the flag (FR-3.2.3).
+
+    AnomalyReport:
+      type: object
+      description: "[Sprint 4 draft]"
+      properties:
+        torId:
+          type: string
+        budgetAnomaly:
+          $ref: "#/components/schemas/BudgetAnomaly"
+        flaggedClauses:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlaggedClause"
+
+    AnalyticsAggregates:
+      type: object
+      description: "[Sprint 5 draft, FR-4.1.3]"
+      properties:
+        meanBudget:
+          type: number
+        medianDuration:
+          type: number
+          description: In days.
+        totalSpend:
+          type: number
+
     PaginatedList:
       type: object
       required: [total, page, pageSize]
@@ -452,10 +1065,9 @@ components:
               type: string
               example: "No TOR exists with the given id."
 
-# Out of scope for this Sprint 1 pass (deliberately excluded, not forgotten):
-# - Auth (Google OAuth / email login) — no user-facing login flow lands until Sprint 3.
-# - Contractor profiles, skill matching, notifications (FR-2.2, FR-2.3).
-# - Anomaly/risk detection endpoints (FR-3.1, FR-3.2).
-# - Public analytics dashboard endpoints (FR-4.1, FR-4.2).
-# - TOR version-chain / supersede-linking endpoints (FR-1.3) — revisit once the
-#   "TOR version and status management" work starts later in the roadmap.
+# Status of this file:
+# - Sprint 1 paths (TORs, Admin - Ingestion, Admin - Classification, /health) are
+#   the committed, build-now contract for the current sprint's DoD.
+# - All other tags/paths are a full-system draft covering Epics 2-4 so FE/BE only
+#   design once. They are NOT locked - revisit and adjust each one at the start
+#   of the sprint that implements it, once real requirements/data shapes are known.
