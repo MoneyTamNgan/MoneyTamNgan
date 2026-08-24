@@ -12,6 +12,8 @@ info:
     out in detail — treat it as a starting point for later contract review,
     not a frozen spec.
   version: "0.2.0-draft"
+  license:
+    name: UNLICENSED
 servers:
   - url: http://localhost:4000/api/v1
     description: Local development (backend port TBD by BE dev)
@@ -176,6 +178,12 @@ paths:
                         type: array
                         items:
                           $ref: "#/components/schemas/IngestionRun"
+        "400":
+          description: Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     post:
       summary: Manually trigger an ingestion job
       description: >
@@ -230,6 +238,12 @@ paths:
                         type: array
                         items:
                           $ref: "#/components/schemas/Tor"
+        "400":
+          description: Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /admin/tors/{id}/classification:
     patch:
@@ -415,6 +429,12 @@ paths:
       responses:
         "204":
           description: Logged out
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /auth/me:
     get:
@@ -476,6 +496,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContractorProfile"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     put:
       summary: Update the current user's contractor profile
       description: Per FR-2.2.3 - users may update their profile at any time.
@@ -495,6 +521,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContractorProfile"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   # ---------------------------------------------------------------------------
   # Planned - Matching (FR-2.3)
@@ -522,6 +554,12 @@ paths:
                         type: array
                         items:
                           $ref: "#/components/schemas/MatchResult"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /tors/{id}/match:
     get:

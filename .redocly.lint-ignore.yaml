@@ -1,0 +1,10 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+docs/api/openapi.yaml:
+  info-license-strict:
+    - '#/info/license/url'
+  no-server-example.com:
+    - '#/servers/0/url'
+  operation-4xx-response:
+    - '#/paths/~1health/get/responses'
+    - '#/paths/~1admin~1keywords/get/responses'
