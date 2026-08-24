@@ -18,8 +18,16 @@ Validate after editing:
 npx @redocly/cli lint docs/api/openapi.yaml
 ```
 
-Preview rendered docs:
+Preview rendered docs (Redoc, not Swagger UI — no "Try it out" button, just
+readable docs):
 
 ```
-npx @redocly/cli preview-docs docs/api/openapi.yaml
+npx @redocly/cli build-docs docs/api/openapi.yaml -o docs/api/preview.html
+open docs/api/preview.html
+```
+
+Or serve with live-reload on edits:
+
+```
+npx @redocly/cli preview -d docs/api
 ```
