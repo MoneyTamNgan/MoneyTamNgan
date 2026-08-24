@@ -1,0 +1,461 @@
+openapi: 3.0.3
+info:
+  title: MoneyTamNgan API
+  description: >
+    JSON REST API contract between the Next.js frontend and the Node.js backend.
+    Sprint 1 scope only: TOR ingestion (FR-1.1) and software/non-software
+    classification (FR-1.2). See the "Out of scope" note at the bottom of this
+    file for what is deliberately excluded from this pass.
+  version: "0.1.0-sprint1"
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development (backend port TBD by BE dev)
+
+# No auth in Sprint 1 scope (see "Out of scope" note at the bottom of this file).
+# Declared explicitly so it reads as a deliberate decision, not an oversight.
+security: []
+
+tags:
+  - name: TORs
+    description: Public/shared endpoints for reading ingested TOR records
+  - name: Admin - Ingestion
+    description: Monitoring and manual triggering of scraping jobs
+  - name: Admin - Classification
+    description: Reviewing and correcting software/non-software classification
+
+paths:
+  /health:
+    get:
+      summary: Liveness check
+      description: Basic health check for FE integration smoke-testing.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /tors:
+    get:
+      summary: List/filter ingested TORs
+      tags: [TORs]
+      operationId: listTors
+      parameters:
+        - name: isSoftware
+          in: query
+          description: Filter by classification result. Omit to include all (including pending/null).
+          schema:
+            type: boolean
+        - name: agency
+          in: query
+          description: Filter by exact issuing agency name.
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/TorStatus"
+        - name: dateFrom
+          in: query
+          description: Inclusive lower bound on releaseDate (ISO 8601 date).
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          description: Inclusive upper bound on releaseDate (ISO 8601 date).
+          schema:
+            type: string
+            format: date
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+      responses:
+        "200":
+          description: Paginated list of TORs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Tor"
+              example:
+                items:
+                  - id: "TOR-2569-014"
+                    title: "ระบบบริหารจัดการจราจรอัจฉริยะ"
+                    agency: "สำนักการจราจรและขนส่ง"
+                    budget: 15000000
+                    releaseDate: "2026-08-09"
+                    sourceUrl: "https://procurement.bangkok.go.th/tor/2569-014"
+                    pdfUrl: "https://procurement.bangkok.go.th/tor/2569-014.pdf"
+                    status: "Active"
+                    isSoftware: true
+                    classificationConfidence: 0.92
+                    createdAt: "2026-08-09T08:15:00Z"
+                    updatedAt: "2026-08-09T08:15:00Z"
+                total: 186
+                page: 1
+                pageSize: 20
+        "400":
+          description: Invalid filter parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tors/{id}:
+    get:
+      summary: Get a single TOR by id
+      tags: [TORs]
+      operationId: getTor
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      responses:
+        "200":
+          description: TOR detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tor"
+        "404":
+          description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/ingestion/runs:
+    get:
+      summary: List recent ingestion job runs
+      description: Backs the admin "ingestion overview" panel (source, status, item counts).
+      tags: [Admin - Ingestion]
+      operationId: listIngestionRuns
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+      responses:
+        "200":
+          description: Paginated list of ingestion runs, most recent first
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/IngestionRun"
+    post:
+      summary: Manually trigger an ingestion job
+      description: >
+        Backs the "สั่งการดึงข้อมูลด้วยตนเอง" (trigger ingestion manually) button
+        in the admin mockup.
+      tags: [Admin - Ingestion]
+      operationId: triggerIngestionRun
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                  description: Optional single source to run (e.g. "BMA Procurement Portal", "e-GP"). Omit to run all configured sources.
+      responses:
+        "202":
+          description: Ingestion job accepted and started asynchronously
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestionRun"
+        "409":
+          description: An ingestion run is already in progress for the requested source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/classification/queue:
+    get:
+      summary: List TORs pending or uncertain classification review
+      description: Backs the "ตรวจสอบประเภท TOR" (review TOR category) panel.
+      tags: [Admin - Classification]
+      operationId: listClassificationQueue
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+      responses:
+        "200":
+          description: Paginated list of TORs needing manual classification review
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Tor"
+
+  /admin/tors/{id}/classification:
+    patch:
+      summary: Manually confirm or override a TOR's classification
+      tags: [Admin - Classification]
+      operationId: updateTorClassification
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isSoftware]
+              properties:
+                isSoftware:
+                  type: boolean
+      responses:
+        "200":
+          description: Updated TOR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tor"
+        "404":
+          description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/keywords:
+    get:
+      summary: List classification keyword rules
+      tags: [Admin - Classification]
+      operationId: listClassificationKeywords
+      responses:
+        "200":
+          description: All keyword rules used by the classifier
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassificationKeyword"
+    put:
+      summary: Replace the classification keyword list
+      description: Backs the admin toggle for updating software-classification keywords.
+      tags: [Admin - Classification]
+      operationId: replaceClassificationKeywords
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [keyword, category]
+                properties:
+                  keyword:
+                    type: string
+                  category:
+                    $ref: "#/components/schemas/KeywordCategory"
+      responses:
+        "200":
+          description: Updated keyword list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClassificationKeyword"
+        "400":
+          description: Invalid keyword list (e.g. empty keyword string)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  parameters:
+    TorIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: "TOR-2569-014"
+    PageParam:
+      name: page
+      in: query
+      description: 1-indexed page number. Defaults to 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSizeParam:
+      name: pageSize
+      in: query
+      description: Items per page. Defaults to 20, max 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    TorStatus:
+      type: string
+      enum: [Active, Superseded, Invalid, Cancelled]
+
+    KeywordCategory:
+      type: string
+      enum: [software, non-software]
+
+    Tor:
+      type: object
+      required:
+        - id
+        - title
+        - agency
+        - budget
+        - releaseDate
+        - sourceUrl
+        - status
+        - isSoftware
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique project id or URL-hash-derived identifier (FR-1.1.3 dedup key).
+        title:
+          type: string
+        agency:
+          type: string
+          description: Issuing BMA agency name.
+        budget:
+          type: number
+          description: Announced budget in THB.
+        releaseDate:
+          type: string
+          format: date
+        sourceUrl:
+          type: string
+          format: uri
+        pdfUrl:
+          type: string
+          format: uri
+          nullable: true
+        status:
+          $ref: "#/components/schemas/TorStatus"
+        isSoftware:
+          type: boolean
+          nullable: true
+          description: null = not yet classified.
+        classificationConfidence:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+          description: Classifier confidence score, null if not yet classified or manually overridden.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IngestionRun:
+      type: object
+      required: [id, source, startedAt, status, itemsFound, itemsNew, itemsFailed]
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+          description: e.g. "BMA Procurement Portal", "e-GP".
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [running, success, failed]
+        itemsFound:
+          type: integer
+        itemsNew:
+          type: integer
+        itemsFailed:
+          type: integer
+
+    ClassificationKeyword:
+      type: object
+      required: [id, keyword, category, updatedAt]
+      properties:
+        id:
+          type: string
+        keyword:
+          type: string
+        category:
+          $ref: "#/components/schemas/KeywordCategory"
+        updatedBy:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+
+    PaginatedList:
+      type: object
+      required: [total, page, pageSize]
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: "TOR_NOT_FOUND"
+            message:
+              type: string
+              example: "No TOR exists with the given id."
+
+# Out of scope for this Sprint 1 pass (deliberately excluded, not forgotten):
+# - Auth (Google OAuth / email login) — no user-facing login flow lands until Sprint 3.
+# - Contractor profiles, skill matching, notifications (FR-2.2, FR-2.3).
+# - Anomaly/risk detection endpoints (FR-3.1, FR-3.2).
+# - Public analytics dashboard endpoints (FR-4.1, FR-4.2).
+# - TOR version-chain / supersede-linking endpoints (FR-1.3) — revisit once the
+#   "TOR version and status management" work starts later in the roadmap.
