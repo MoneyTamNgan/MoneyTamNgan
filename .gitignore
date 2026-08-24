@@ -22,6 +22,9 @@ dist/
 build/
 coverage/
 
+# Generated API docs preview
+docs/api/preview.html
+
 # Python
 __pycache__/
 *.pyc
