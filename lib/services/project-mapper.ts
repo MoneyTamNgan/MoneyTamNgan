@@ -13,11 +13,12 @@ export function projectToTor(project: ProjectRecord): Tor {
   const budgetAnomaly = project.anomalies.high_budget_flag && multiplier > 0
     ? { baselinePrice: project.budget / multiplier, deviationMultiplier: multiplier, tag: "HIGH_BUDGET_ANOMALY" as const }
     : null;
-  return { id: project.project_id, title: project.project_name, agency: project.dept_name, budget: project.budget, releaseDate: project.timeline.announce_date ?? "ยังไม่มีข้อมูล", sourceUrl: project.pdf_url ?? "ยังไม่มีข้อมูล", pdfUrl: project.pdf_url ?? null, status: toTorStatus(project), isSoftware: project.is_software, classificationConfidence: null, supersededByTorId: project.version_info.superseded_by, matchScore: null, budgetAnomaly, createdAt: project.created_at, updatedAt: project.updated_at };
+  const fallbackDate = project.timeline.announce_date ?? "ยังไม่มีข้อมูล";
+  return { id: project.project_id, title: project.project_name, agency: project.dept_name, budget: project.budget, releaseDate: fallbackDate, sourceUrl: project.pdf_url ?? "ยังไม่มีข้อมูล", pdfUrl: project.pdf_url ?? null, status: toTorStatus(project), isSoftware: project.is_software, classificationConfidence: null, supersededByTorId: project.version_info.superseded_by, matchScore: null, budgetAnomaly, createdAt: project.created_at ?? fallbackDate, updatedAt: project.updated_at ?? fallbackDate };
 }
 
 export function projectToTorSummary(project: ProjectRecord): TorSummary {
-  return { torId: project.project_id, executiveSummary: project.extracted_data.summary ?? "ยังไม่มีข้อมูล", vendorEligibility: project.extracted_data.qualifications.length ? project.extracted_data.qualifications.join("\n") : "ยังไม่มีข้อมูล", requiredTeamExperience: "ยังไม่มีข้อมูล", requiredTechStack: project.extracted_data.tech_stack, requiredCertifications: [], generatedAt: project.updated_at };
+  return { torId: project.project_id, executiveSummary: project.extracted_data.summary ?? "ยังไม่มีข้อมูล", vendorEligibility: project.extracted_data.qualifications.length ? project.extracted_data.qualifications.join("\n") : "ยังไม่มีข้อมูล", requiredTeamExperience: "ยังไม่มีข้อมูล", requiredTechStack: project.extracted_data.tech_stack, requiredCertifications: [], generatedAt: project.updated_at ?? project.timeline.announce_date ?? null };
 }
 
 export function projectToAnomalyReport(project: ProjectRecord): AnomalyReport {

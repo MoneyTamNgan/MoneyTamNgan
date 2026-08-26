@@ -9,8 +9,8 @@ export interface ProjectRecord {
   is_software: boolean;
   timeline: {
     announce_date?: string;
-    contract_start?: string;
-    contract_end?: string;
+    contract_start?: string | null;
+    contract_end?: string | null;
     duration_days?: number;
   };
   pdf_url?: string;
@@ -30,6 +30,6 @@ export interface ProjectRecord {
     is_latest: boolean;
     superseded_by: string | null;
   };
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }

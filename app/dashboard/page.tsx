@@ -79,9 +79,17 @@ export default function DashboardPage() {
   return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:475px!important;transition:transform .26s cubic-bezier(.2,.8,.2,1),border-color .2s ease,background .2s ease,box-shadow .26s cubic-bezier(.2,.8,.2,1)!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}.feed-card:hover{z-index:5!important;transform:translateY(-20px) scale(1.035)!important;border-color:#a5f0c3!important;background:#16414a!important;box-shadow:0 34px 60px rgba(0,0,0,.4)!important}`}</style>
     <header className="feed-nav">
       <Link className="feed-brand" href="/dashboard" aria-label="หน้าหลัก BMA TOR TRACKER"><span className="feed-seal">BMA</span><span>BMA TOR<br /><strong>TRACKER</strong></span></Link>
+      <nav className="feed-primary-nav" aria-label="เมนูหลัก">
+        <Link className="is-active" href="/dashboard">หน้าหลัก</Link>
+        <Link href="/profile">โปรไฟล์</Link>
+        <Link href="/analytics">วิเคราะห์</Link>
+        <Link className="admin-nav-link" href="/admin">ผู้ดูแลระบบ <span>ต้องมีสิทธิ์</span></Link>
+      </nav>
       <div className="feed-actions"><button className="notification-button" type="button" aria-label="การแจ้งเตือน"><span aria-hidden="true">♧</span><i /></button><Link className="feed-avatar" href="/profile" aria-label="ไปยังโปรไฟล์บริษัท">พ</Link></div>
     </header>
-    <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}`}</style>
+    <style jsx global>{`.feed-primary-nav{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0}.feed-primary-nav>a{padding:10px 12px;border-radius:999px;color:#b7cdc3;font-size:.88rem;font-weight:700;text-decoration:none;white-space:nowrap;transition:background .2s ease,color .2s ease}.feed-primary-nav>a:hover{background:#173941;color:#effaf4}.feed-primary-nav>a.is-active{background:#1c4a43;color:#a5f0c3}.feed-primary-nav .admin-nav-link{display:inline-flex;align-items:center;gap:7px}.feed-primary-nav .admin-nav-link span{padding:3px 6px;border:1px solid #5d765c;border-radius:999px;color:#d9c982;font-size:.62rem;font-weight:800}@media (max-width:980px){.feed-nav{grid-template-columns:auto minmax(0,1fr) auto}.feed-primary-nav{justify-content:flex-start;overflow-x:auto;scrollbar-width:none}.feed-primary-nav::-webkit-scrollbar{display:none}}@media (max-width:650px){.feed-nav{grid-template-columns:1fr auto}.feed-primary-nav{grid-column:1/-1;grid-row:2;justify-content:flex-start;width:100%;padding-top:2px}.feed-primary-nav>a{padding:8px 10px;font-size:.76rem}.feed-primary-nav .admin-nav-link span{display:none}}.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card{height:475px;max-height:475px;overflow-y:hidden;scrollbar-gutter:stable}.feed-card:hover{overflow-y:auto}.feed-card:hover .technology-tags{max-height:none;overflow:visible}.feed-card::-webkit-scrollbar{width:7px}.feed-card::-webkit-scrollbar-thumb{border-radius:999px;background:#5e9280}.feed-card::-webkit-scrollbar-track{background:transparent}`}</style>
+
+    <style jsx global>{`@media (min-width:981px){.feed-nav{grid-template-columns:auto minmax(0,1fr) auto}.feed-primary-nav{justify-content:space-evenly;gap:12px;width:100%}.feed-primary-nav>a{padding:13px 18px;font-size:1.05rem}.feed-primary-nav .admin-nav-link span{padding:4px 7px;font-size:.7rem}}`}</style>
 
     <section className="information-carousel" aria-label="ข้อมูลแนะนำ">
       <div className="information-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
@@ -108,14 +116,14 @@ export default function DashboardPage() {
       <section className="feed-grid" aria-label="รายการ TOR">
         {loading && <p className="feed-empty">กำลังโหลดรายการ TOR…</p>}
         {error && <p className="feed-empty">{error}</p>}
-        {!loading && !error && visibleItems.map(({ tor, summary, matchScore }) => <Link className="feed-card" href={`/tors/${tor.id}`} key={tor.id}>
+        {!loading && !error && visibleItems.map(({ tor, summary, matchScore }) => <Link className="feed-card" href={`/tors/${tor.id}`} key={tor.id} onMouseLeave={(event) => event.currentTarget.scrollTo({ top: 0 })}>
           <div className="feed-card-top"><div className="feed-card-meta"><span>{formatDate(tor.releaseDate)}</span><span>รหัสโครงการ {tor.id}</span></div>{matchScore === null ? <span className="match-badge match-uncertain">ไม่แน่ใจ</span> : <span className="match-badge">{matchScore}% ตรงกับคุณ</span>}</div>
           <h2>{tor.title}</h2><p className="feed-agency"><span aria-hidden="true">⌂</span>{tor.agency}</p>
           <div className="feed-card-bottom">
             <div className="anomaly-slot">{tor.budgetAnomaly?.tag === "HIGH_BUDGET_ANOMALY" && <p className="budget-warning"><span aria-hidden="true">!</span> งบประมาณสูงผิดปกติเมื่อเทียบกับข้อมูลที่มี</p>}</div>
             <div className="feed-budget"><span>งบประมาณ</span><strong>{tor.budget.toLocaleString("th-TH")} บาท</strong></div>
-            <div className="technology-tags">{summary?.requiredTechStack.length ? summary.requiredTechStack.map((name) => <span key={name}>{name}</span>) : <span className="unknown-tag">ยังไม่มีข้อมูลเทคโนโลยี</span>}</div>
             <footer><span className={`feed-status status-${tor.status.toLowerCase()}`}><i />{statusLabel(tor.status)}</span></footer>
+            <div className="technology-tags">{summary?.requiredTechStack.length ? summary.requiredTechStack.map((name) => <span key={name}>{name}</span>) : <span className="unknown-tag">ยังไม่มีข้อมูลเทคโนโลยี</span>}</div>
           </div>
         </Link>)}
         {!loading && !error && visibleItems.length === 0 && <p className="feed-empty">ไม่พบโครงการที่ตรงกับตัวกรองที่เลือก</p>}
