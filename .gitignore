@@ -21,6 +21,8 @@ node_modules/
 dist/
 build/
 coverage/
+.next/
+out/
 
 # Generated API docs preview
 docs/api/preview.html
