@@ -1,5 +1,6 @@
 import { mockProjectRecords } from "@/lib/mock-project-records";
 import { projectToAnomalyReport, projectToTor, projectToTorSummary } from "@/lib/services/project-mapper";
+import type { ProjectRecord } from "@/types/project";
 import type { AnalyticsResult, AnalyticsSearchParams, AnomalyReport, PaginatedList, Tor, TorListParams, TorSummary } from "@/types/tor";
 
 // Development mode is intentionally active until the REST API is implemented.
@@ -31,6 +32,16 @@ export async function getTor(id: string): Promise<Tor | null> {
   return apiFetch<Tor>(`/tors/${encodeURIComponent(id)}`);
   */
   throw new Error("ยังไม่ได้เชื่อมต่อ API รายละเอียด TOR");
+}
+
+// Use this adapter on pages that need fields from the Project model which are
+// intentionally not flattened into the TOR feed view model.
+export async function getProjectRecord(id: string): Promise<ProjectRecord | null> {
+  if (USE_MOCK_TOR_SERVICE) { await pause(); return mockProjectRecords.find((item) => item.project_id === id) ?? null; }
+  /* PRODUCTION — enable when GET /tors/{id} returns the Project schema.
+  return apiFetch<ProjectRecord>(`/tors/${encodeURIComponent(id)}`);
+  */
+  throw new Error("ยังไม่ได้เชื่อมต่อ API รายละเอียดโครงการ");
 }
 
 export async function getTorSummary(id: string): Promise<TorSummary | null> {
