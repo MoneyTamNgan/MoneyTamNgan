@@ -1,4 +1,5 @@
 import "./globals.css";
+import SidebarLayout from "@/components/ui/SidebarLayout";
 
 export const metadata = {
   title: "MoneyTamNgan",
@@ -6,5 +7,5 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  return <html lang="th"><body>{children}</body></html>;
+  return <html lang="th"><body><SidebarLayout>{children}</SidebarLayout></body></html>;
 }
