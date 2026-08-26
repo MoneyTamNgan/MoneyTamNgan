@@ -16,6 +16,8 @@ export default function SidebarLayout({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const isHome = pathname === "/dashboard" || pathname.startsWith("/tors/");
 
+  if (pathname === "/") return <>{children}</>;
+
   return <div className={`sidebar-layout ${isOpen ? "is-open" : ""}`}>
     <aside className="app-sidebar" aria-label="เมนูหลัก">
       <div className="sidebar-top"><Link className="sidebar-brand" href="/dashboard" aria-label="หน้าหลัก BMA TOR TRACKER"><span className="sidebar-seal">BMA</span><span className="sidebar-brand-copy">BMA TOR<br /><strong>TRACKER</strong></span></Link><button className="sidebar-toggle" type="button" onClick={() => setIsOpen((open) => !open)} aria-label={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"} aria-expanded={isOpen}><span aria-hidden="true">{isOpen ? "‹" : "›"}</span></button></div>

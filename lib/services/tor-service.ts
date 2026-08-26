@@ -44,6 +44,14 @@ export async function getProjectRecord(id: string): Promise<ProjectRecord | null
   throw new Error("ยังไม่ได้เชื่อมต่อ API รายละเอียดโครงการ");
 }
 
+export async function listProjectRecords(): Promise<ProjectRecord[]> {
+  if (USE_MOCK_TOR_SERVICE) { await pause(); return mockProjectRecords; }
+  /* PRODUCTION — enable when the list endpoint returns Project records.
+  return apiFetch<ProjectRecord[]>("/tors");
+  */
+  throw new Error("ยังไม่ได้เชื่อมต่อ API รายการโครงการ");
+}
+
 export async function getTorSummary(id: string): Promise<TorSummary | null> {
   if (USE_MOCK_TOR_SERVICE) { await pause(); const project = mockProjectRecords.find((item) => item.project_id === id); return project ? projectToTorSummary(project) : null; }
   /* PRODUCTION — planned endpoint; confirm its final 404/null behavior with BE.
