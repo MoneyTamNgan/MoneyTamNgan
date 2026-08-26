@@ -1,4 +1,5 @@
-import { mockAnomalyReports, mockTors, mockTorSummaries } from "@/lib/mock-tors";
+import { mockProjectRecords } from "@/lib/mock-project-records";
+import { projectToAnomalyReport, projectToTor, projectToTorSummary } from "@/lib/services/project-mapper";
 import type { AnalyticsResult, AnalyticsSearchParams, AnomalyReport, PaginatedList, Tor, TorListParams, TorSummary } from "@/types/tor";
 
 // Development mode is intentionally active until the REST API is implemented.
@@ -9,7 +10,7 @@ const pause = () => Promise.resolve();
 export async function listTors(params: TorListParams = {}): Promise<PaginatedList<Tor>> {
   if (USE_MOCK_TOR_SERVICE) {
     await pause();
-    const items = mockTors.filter((tor) => (!params.isSoftware && params.isSoftware !== false ? true : tor.isSoftware === params.isSoftware) && (!params.status || tor.status === params.status) && (!params.agency || tor.agency === params.agency));
+    const items = mockProjectRecords.map(projectToTor).filter((tor) => (params.isSoftware === undefined || tor.isSoftware === params.isSoftware) && (!params.status || tor.status === params.status) && (!params.agency || tor.agency === params.agency));
     return { items, total: items.length, page: params.page ?? 1, pageSize: params.pageSize ?? items.length };
   }
   /* PRODUCTION — enable after GET /tors is implemented.
@@ -25,7 +26,7 @@ export async function listTors(params: TorListParams = {}): Promise<PaginatedLis
 }
 
 export async function getTor(id: string): Promise<Tor | null> {
-  if (USE_MOCK_TOR_SERVICE) { await pause(); return mockTors.find((tor) => tor.id === id) ?? null; }
+  if (USE_MOCK_TOR_SERVICE) { await pause(); const project = mockProjectRecords.find((item) => item.project_id === id); return project ? projectToTor(project) : null; }
   /* PRODUCTION — enable after GET /tors/{id} is implemented.
   return apiFetch<Tor>(`/tors/${encodeURIComponent(id)}`);
   */
@@ -33,7 +34,7 @@ export async function getTor(id: string): Promise<Tor | null> {
 }
 
 export async function getTorSummary(id: string): Promise<TorSummary | null> {
-  if (USE_MOCK_TOR_SERVICE) { await pause(); return mockTorSummaries[id] ?? null; }
+  if (USE_MOCK_TOR_SERVICE) { await pause(); const project = mockProjectRecords.find((item) => item.project_id === id); return project ? projectToTorSummary(project) : null; }
   /* PRODUCTION — planned endpoint; confirm its final 404/null behavior with BE.
   return apiFetch<TorSummary>(`/tors/${encodeURIComponent(id)}/summary`);
   */
@@ -41,7 +42,7 @@ export async function getTorSummary(id: string): Promise<TorSummary | null> {
 }
 
 export async function getTorAnomalies(id: string): Promise<AnomalyReport | null> {
-  if (USE_MOCK_TOR_SERVICE) { await pause(); return mockAnomalyReports[id] ?? null; }
+  if (USE_MOCK_TOR_SERVICE) { await pause(); const project = mockProjectRecords.find((item) => item.project_id === id); return project ? projectToAnomalyReport(project) : null; }
   /* PRODUCTION — planned endpoint; enable after anomaly processing is available.
   return apiFetch<AnomalyReport>(`/tors/${encodeURIComponent(id)}/anomalies`);
   */
@@ -51,7 +52,7 @@ export async function getTorAnomalies(id: string): Promise<AnomalyReport | null>
 export async function searchAnalytics(params: AnalyticsSearchParams = {}): Promise<AnalyticsResult> {
   if (USE_MOCK_TOR_SERVICE) {
     await pause();
-    const items = mockTors.filter((tor) => (!params.agency || tor.agency === params.agency) && (!params.budgetMin || tor.budget >= params.budgetMin) && (!params.budgetMax || tor.budget <= params.budgetMax));
+    const items = mockProjectRecords.map(projectToTor).filter((tor) => (!params.agency || tor.agency === params.agency) && (!params.budgetMin || tor.budget >= params.budgetMin) && (!params.budgetMax || tor.budget <= params.budgetMax));
     const totalSpend = items.reduce((total, tor) => total + tor.budget, 0);
     return { items, total: items.length, page: params.page ?? 1, pageSize: params.pageSize ?? items.length, aggregates: { meanBudget: items.length ? totalSpend / items.length : 0, medianDuration: null, totalSpend } };
   }
