@@ -32,3 +32,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# AI Agent files
+AGENTS.md
+CLAUDE.md
+
