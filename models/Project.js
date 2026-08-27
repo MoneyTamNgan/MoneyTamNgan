@@ -7,7 +7,8 @@ const ProjectSchema = new mongoose.Schema({
     dept_sub_name: { type: String },
     budget: { type: Number, required: true },
     project_status: { type: String, default: 'Active' },
-    is_software: { type: Boolean, default: true, index: true },
+    is_software: { type: Boolean, default: null, index: true },
+    classification_confidence: { type: Number, min: 0, max: 1, default: null },
 
     timeline: {
         announce_date: { type: Date },
