@@ -1,5 +1,5 @@
 import connectDB from '@/lib/db';
-import { fetchAllFromEGP, mapToProjectSchema } from '@/lib/egp-api';
+import { buildProjectUpsert, fetchAllFromEGP } from '@/lib/egp-api';
 import Project from '@/models/Project';
 import { NextResponse } from 'next/server';
 
@@ -41,17 +41,16 @@ export async function POST(request) {
         // Upsert each record into MongoDB
         for (const raw of rawRecords) {
             try {
-                const projectData = mapToProjectSchema(raw);
+                const { filter, update } = buildProjectUpsert(raw);
+                const existed = await Project.exists(filter);
+                await Project.findOneAndUpdate(filter, update, {
+                    upsert: true,
+                    returnDocument: 'after',
+                    runValidators: true,
+                    setDefaultsOnInsert: true,
+                });
 
-                const result = await Project.findOneAndUpdate(
-                    { project_id: projectData.project_id },
-                    { $set: projectData },
-                    { upsert: true, new: true, runValidators: true }
-                );
-
-                // If the document was just created (no previous updatedAt), count as new
-                if (result.created_at && result.updated_at &&
-                    result.created_at.getTime() === result.updated_at.getTime()) {
+                if (!existed) {
                     itemsNew++;
                 } else {
                     itemsUpdated++;
