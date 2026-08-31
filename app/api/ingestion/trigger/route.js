@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import { buildProjectUpsert, fetchAllFromEGP } from '@/lib/egp-api';
+import { enqueueProject } from '@/lib/job-queue';
 import Project from '@/models/Project';
 import { NextResponse } from 'next/server';
 
@@ -10,7 +11,8 @@ import { NextResponse } from 'next/server';
  * Fetches project data and upserts it into MongoDB.
  *
  * Body (optional):
- *   { year?: string, keyword?: string, limit?: number, deptCode?: string }
+ *   { year?: string, keyword?: string, limit?: number, deptCode?: string,
+ *     enqueueProcessing?: boolean }
  */
 export async function POST(request) {
     try {
@@ -24,7 +26,13 @@ export async function POST(request) {
             // No body provided — use defaults
         }
 
-        const { year = '2568', keyword, limit, deptCode } = body;
+        const { year = '2568', keyword, limit, deptCode, enqueueProcessing = false } = body;
+        if (typeof enqueueProcessing !== 'boolean') {
+            return NextResponse.json({
+                status: 'failed',
+                error: { code: 'INVALID_INGESTION_REQUEST', message: 'enqueueProcessing must be a boolean' },
+            }, { status: 400 });
+        }
 
         console.log(`📡 Starting EGP ingestion: year=${year}, keyword=${keyword || '(all)'}`);
 
@@ -36,6 +44,7 @@ export async function POST(request) {
         let itemsNew = 0;
         let itemsUpdated = 0;
         let itemsFailed = 0;
+        let jobsQueued = 0;
         const errors = [];
 
         // Upsert each record into MongoDB
@@ -55,6 +64,10 @@ export async function POST(request) {
                 } else {
                     itemsUpdated++;
                 }
+                if (enqueueProcessing) {
+                    const { reused } = await enqueueProject(raw.project_id);
+                    if (!reused) jobsQueued++;
+                }
             } catch (err) {
                 itemsFailed++;
                 errors.push({
@@ -72,6 +85,7 @@ export async function POST(request) {
             itemsNew,
             itemsUpdated,
             itemsFailed,
+            jobsQueued,
             errors: errors.slice(0, 10), // Only show first 10 errors
             completedAt: new Date().toISOString(),
         };
