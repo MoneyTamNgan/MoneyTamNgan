@@ -1,7 +1,4 @@
 {
-  "name": "money-tam-ngan",
-  "private": true,
-  "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,6 +6,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.6.0",
     "mongoose": "^9.9.4",
     "next": "^16.3.3",
