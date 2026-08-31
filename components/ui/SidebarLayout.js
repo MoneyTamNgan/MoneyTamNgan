@@ -14,13 +14,14 @@ const navigationItems = [
 export default function SidebarLayout({ children }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [isOrangeTheme, setIsOrangeTheme] = useState(true);
   const isHome = pathname === "/dashboard" || pathname.startsWith("/tors/");
 
   if (pathname === "/") return <>{children}</>;
 
-  return <div className={`sidebar-layout ${isOpen ? "is-open" : ""}`}>
+  return <div className={`sidebar-layout ${isOpen ? "is-open" : ""} ${isOrangeTheme ? "theme-orange" : "theme-mint"}`}>
     <aside className="app-sidebar" aria-label="เมนูหลัก">
-      <div className="sidebar-top"><Link className="sidebar-brand" href="/dashboard" aria-label="หน้าหลัก BMA TOR TRACKER"><span className="sidebar-seal">BMA</span><span className="sidebar-brand-copy">BMA TOR<br /><strong>TRACKER</strong></span></Link><button className="sidebar-toggle" type="button" onClick={() => setIsOpen((open) => !open)} aria-label={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"} aria-expanded={isOpen}><span aria-hidden="true">{isOpen ? "‹" : "›"}</span></button></div>
+      <div className="sidebar-top"><Link className="sidebar-brand" href="/dashboard" aria-label="หน้าหลัก BMA TOR TRACKER"><span className="sidebar-seal">BMA</span><span className="sidebar-brand-copy">BMA TOR<br /><strong>TRACKER</strong></span></Link><button className="sidebar-toggle" type="button" onClick={() => setIsOpen((open) => !open)} aria-label={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"} aria-expanded={isOpen}><span aria-hidden="true">{isOpen ? "‹" : "›"}</span></button><button className="sidebar-theme-toggle" type="button" onClick={() => setIsOrangeTheme((orange) => !orange)} aria-label={isOrangeTheme ? "เปลี่ยนเป็นธีมมิ้นต์" : "เปลี่ยนเป็นธีมส้มครีม"} title={isOrangeTheme ? "เปลี่ยนเป็นธีมมิ้นต์" : "เปลี่ยนเป็นธีมส้มครีม"}><span aria-hidden="true">{isOrangeTheme ? "◐" : "◑"}</span><strong>{isOrangeTheme ? "Light mode" : "Dark mode"}</strong></button></div>
       <section className="sidebar-profile-section" aria-label="ข้อมูลโปรไฟล์"><p className="sidebar-section-label">โปรไฟล์</p><div className="sidebar-profile-preview"><span className="sidebar-profile-photo" aria-hidden="true">พ</span><span className="sidebar-profile-copy"><strong>บริษัทตัวอย่าง</strong><small>ผู้ใช้งานระบบ</small></span></div><Link className="sidebar-profile-editor" href="/profile" title="แก้ไขโปรไฟล์"><span aria-hidden="true">✎</span><strong>แก้ไขโปรไฟล์</strong><i aria-hidden="true">›</i></Link></section>
       <nav className="sidebar-nav">{navigationItems.map((item) => {
         const active = item.href === "/dashboard" ? isHome : pathname === item.href;
