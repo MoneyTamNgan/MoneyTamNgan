@@ -7,5 +7,11 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  return <html lang="th"><body><SidebarLayout>{children}</SidebarLayout></body></html>;
+  return (
+    <html lang="th" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <SidebarLayout>{children}</SidebarLayout>
+      </body>
+    </html>
+  );
 }
