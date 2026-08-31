@@ -1,15 +1,23 @@
 {
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "scrape": "node scripts/scrape.js",
+    "worker": "node scripts/worker.js --watch",
+    "worker:once": "node scripts/worker.js",
     "test": "node --test"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.0.1",
+    "dotenv": "^16.6.1",
+    "google-auth-library": "^10.3.0",
     "mongodb": "^7.6.0",
     "mongoose": "^9.9.4",
     "next": "^16.3.3",
+    "puppeteer": "^25.9.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   }

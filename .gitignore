@@ -23,6 +23,7 @@ build/
 coverage/
 .next/
 out/
+storage/
 
 # Generated API docs preview
 docs/api/preview.html
@@ -36,4 +37,3 @@ venv/
 # AI Agent files
 AGENTS.md
 CLAUDE.md
-
