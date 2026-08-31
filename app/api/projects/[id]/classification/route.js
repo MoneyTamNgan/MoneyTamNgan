@@ -16,6 +16,7 @@ export async function PATCH(request, { params }) {
         const project = await Project.findOneAndUpdate({ project_id: id }, {
             $set: {
                 is_software: body.isSoftware,
+                classification_confidence: 1,
                 'classification.status': 'manual_override',
                 'classification.confidence': 1,
                 'classification.method': 'manual',
