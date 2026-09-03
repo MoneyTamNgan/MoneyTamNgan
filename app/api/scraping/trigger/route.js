@@ -9,6 +9,7 @@ import {
 } from '@/lib/scraper';
 import Project from '@/models/Project';
 import { NextResponse } from 'next/server';
+import path from 'node:path';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -28,7 +29,9 @@ function pdfUpdateFromResult(result) {
     if (result.pdf_url) {
         update.pdf_url = result.pdf_url;
         update['document.source_url'] = result.pdf_url;
-        update['document.source_type'] = 'egp_browser';
+        update['document.source_type'] = result.resolver_source || 'egp_browser';
+        update['document.aggregator_url'] = result.aggregator_url;
+        update['document.official_detail_url'] = result.official_detail_url;
         update['document.status'] = result.pdf_path ? 'downloaded' : 'url_found';
     }
     if (result.pdf_path) {
@@ -39,6 +42,13 @@ function pdfUpdateFromResult(result) {
         update['document.local_path'] = result.pdf_path;
         update['document.size_bytes'] = result.pdf_size;
         update['document.mime_type'] = result.pdf_content_type;
+        update['document.archive_path'] = result.archive_path;
+        update['document.archive_filename'] = result.archive_path
+            ? path.basename(result.archive_path)
+            : undefined;
+        update['document.archive_mime_type'] = result.archive_content_type;
+        update['document.archive_size_bytes'] = result.archive_size;
+        update['document.extracted_files'] = result.extracted_pdfs || [];
         update['document.downloaded_at'] = new Date();
         update['processing.status'] = 'document_downloaded';
     }
@@ -190,6 +200,14 @@ export async function POST(request) {
                 pdf_url: r.pdf_url,
                 pdf_path: r.pdf_path,
                 pdf_size: r.pdf_size,
+                pdf_content_type: r.pdf_content_type,
+                archive_path: r.archive_path,
+                archive_size: r.archive_size,
+                archive_content_type: r.archive_content_type,
+                extracted_pdfs: r.extracted_pdfs,
+                aggregator_url: r.aggregator_url,
+                official_detail_url: r.official_detail_url,
+                resolver_source: r.resolver_source,
                 attachmentCount: r.attachments.length,
                 error: r.error,
             })),

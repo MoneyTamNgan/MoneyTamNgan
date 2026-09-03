@@ -56,11 +56,23 @@ const ProjectSchema = new mongoose.Schema({
     document: {
         source_url: { type: String },
         source_type: { type: String },
+        aggregator_url: { type: String },
+        official_detail_url: { type: String },
         local_path: { type: String },
         gcs_uri: { type: String },
         filename: { type: String },
         mime_type: { type: String },
         size_bytes: { type: Number, min: 0 },
+        archive_path: { type: String },
+        archive_filename: { type: String },
+        archive_mime_type: { type: String },
+        archive_size_bytes: { type: Number, min: 0 },
+        extracted_files: [{
+            entryName: { type: String },
+            filename: { type: String },
+            path: { type: String },
+            size: { type: Number, min: 0 },
+        }],
         sha256: { type: String, index: true },
         status: {
             type: String,
