@@ -7,10 +7,13 @@ MoneyTamNgan uses an API-first pipeline:
 1. Ingest structured project metadata from the e-GP Open Data API.
 2. Classify obvious software/non-software projects from metadata.
 3. Download a known `pdf_url` directly without opening a browser.
-4. Use the rate-limited Puppeteer adapter only when no usable URL exists.
-5. Validate and hash the document, then keep it locally or upload it to GCS.
-6. Optionally send the PDF to Vertex AI for schema-controlled extraction.
-7. Store the summary, qualifications, scope, tech stack, evidence pages, and
+4. When no URL is known, resolve the project permalink through
+   `egp-gprocurement.com`, then open its encrypted official e-GP detail URL.
+5. Download the official draft e-Bidding ZIP from `gprocurement.go.th`, safely
+   extract its PDFs, and select the most likely TOR document.
+6. Validate and hash the document, then keep it locally or upload it to GCS.
+7. Optionally send the selected PDF to Vertex AI for schema-controlled extraction.
+8. Store the summary, qualifications, scope, tech stack, evidence pages, and
    anomaly signals without overwriting authoritative e-GP metadata.
 
 Long-running processing is represented by MongoDB-backed jobs. API requests
@@ -70,11 +73,20 @@ The classification patch body is `{ "isSoftware": true, "reason": "..." }`.
 
 ## Document storage
 
-The TOR resolver finds e-GP document links, downloads the best
-PDF (or ZIP fallback), and stores it under `storage/tor/<project-id>/`.
-`Project.pdf_path` is the local file location while `Project.pdf_url` retains
-the original remote URL for provenance. A discovered link is retained even
-when downloading the file fails, so it can be retried later.
+The TOR resolver uses the third-party aggregator only to map a project ID to an
+encrypted official detail URL. Document metadata and file bytes remain sourced
+from the government Open Data and e-GP domains. It downloads the official
+e-Bidding ZIP and stores it under `storage/tor/<project-id>/`. ZIP downloads are
+kept as the source archive, while valid contained PDFs are safely extracted
+under `storage/tor/<project-id>/extracted/`. The resolver selects the PDF whose
+filename most strongly indicates a TOR or draft e-Bidding document.
+
+`Project.pdf_path` points to the selected PDF and `Project.pdf_url` retains the
+original remote URL for provenance, even when that URL serves a ZIP.
+`Project.document.archive_path` records the downloaded ZIP and
+`Project.document.extracted_files` records every valid extracted PDF. A
+discovered link is retained even when downloading the file fails, so it can be
+retried later.
 
 ```bash
 # Up to 10 projects whose pdf_path is missing
@@ -97,6 +109,11 @@ file size is 100 MB; change it with `TOR_MAX_FILE_SIZE_MB`. In production,
 set `TOR_STORAGE_BACKEND=gcs` and configure `TOR_GCS_BUCKET`. Objects are named
 by fiscal year, project ID, and SHA-256 hash so unchanged PDFs are not sent to
 Vertex repeatedly.
+
+ZIP extraction defaults to 200 entries, 100 MB per PDF, 200 MB total expanded
+PDF data, and a maximum compression ratio of 200. Configure these with
+`TOR_ZIP_MAX_ENTRIES`, `TOR_ZIP_MAX_PDF_MB`,
+`TOR_ZIP_MAX_EXTRACTED_MB`, and `TOR_ZIP_MAX_COMPRESSION_RATIO`.
 
 ## Vertex AI
 
@@ -124,9 +141,12 @@ The API equivalents are `POST /api/scraping/trigger` and
 `GET /api/scraping/status`. A trigger body can include `projectId`,
 `batchSize`, `onlyMissing`, and `delayMs`.
 
-The current e-GP announcement site uses Cloudflare verification. If it rejects
-a headless session, the scraper records a retryable error instead of treating
-the project as missing or writing an empty URL.
+The old e-GP search page uses Cloudflare verification, so it is disabled as a
+fallback by default. Set `ENABLE_LEGACY_EGP_SEARCH_FALLBACK=true` only if that
+search flow is usable in the deployment environment. Direct encrypted detail
+URLs do not require the scraper to submit the public search form. The official
+related-document service can intermittently return E1530; configure bounded
+reload attempts with `EGP_DETAIL_RETRY_ATTEMPTS` (default 5).
 
 ## Verification
 

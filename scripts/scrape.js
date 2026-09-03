@@ -12,6 +12,7 @@
 
 import 'dotenv/config';
 import mongoose from 'mongoose';
+import path from 'node:path';
 import {
     DEFAULT_DELAY_MS,
     normalizeDelayMs,
@@ -38,7 +39,9 @@ function pdfUpdateFromResult(result) {
     if (result.pdf_url) {
         update.pdf_url = result.pdf_url;
         update['document.source_url'] = result.pdf_url;
-        update['document.source_type'] = 'egp_browser';
+        update['document.source_type'] = result.resolver_source || 'egp_browser';
+        update['document.aggregator_url'] = result.aggregator_url;
+        update['document.official_detail_url'] = result.official_detail_url;
         update['document.status'] = result.pdf_path ? 'downloaded' : 'url_found';
     }
     if (result.pdf_path) {
@@ -49,6 +52,13 @@ function pdfUpdateFromResult(result) {
         update['document.local_path'] = result.pdf_path;
         update['document.size_bytes'] = result.pdf_size;
         update['document.mime_type'] = result.pdf_content_type;
+        update['document.archive_path'] = result.archive_path;
+        update['document.archive_filename'] = result.archive_path
+            ? path.basename(result.archive_path)
+            : undefined;
+        update['document.archive_mime_type'] = result.archive_content_type;
+        update['document.archive_size_bytes'] = result.archive_size;
+        update['document.extracted_files'] = result.extracted_pdfs || [];
         update['document.downloaded_at'] = new Date();
         update['processing.status'] = 'document_downloaded';
     }
@@ -97,6 +107,10 @@ async function main() {
             );
             if (result.pdf_path) console.log(`\n✅ Stored TOR file: ${result.pdf_path}`);
             if (result.pdf_url) console.log(`   Source URL: ${result.pdf_url}`);
+            if (result.archive_path) console.log(`   Source archive: ${result.archive_path}`);
+            if (result.extracted_pdfs.length > 0) {
+                console.log(`   Extracted PDFs: ${result.extracted_pdfs.length}`);
+            }
         } else {
             console.log(`\n⚠️  No PDF found. Error: ${result.error || 'No documents on page'}`);
         }

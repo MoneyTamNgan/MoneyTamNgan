@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^8.0.1",
+    "cheerio": "^1.2.0",
     "dotenv": "^16.6.1",
     "google-auth-library": "^10.3.0",
     "mongodb": "^7.6.0",
@@ -19,6 +20,10 @@
     "next": "^16.3.3",
     "puppeteer": "^25.9.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "yauzl": "^3.4.0"
+  },
+  "devDependencies": {
+    "yazl": "^3.3.1"
   }
 }
