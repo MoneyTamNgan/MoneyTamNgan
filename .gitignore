@@ -33,3 +33,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Next.js AI agent rule files (generated)
+AGENTS.md
+CLAUDE.md
