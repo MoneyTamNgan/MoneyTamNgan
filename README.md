@@ -12,7 +12,8 @@ MoneyTamNgan uses an API-first pipeline:
 5. Download the official draft e-Bidding ZIP from `gprocurement.go.th`, safely
    extract its PDFs, and select the most likely TOR document.
 6. Validate and hash the document, then keep it locally or upload it to GCS.
-7. Optionally send the selected PDF to Vertex AI for schema-controlled extraction.
+7. Extract embedded text per page; OCR scanned/unreadable pages using Thai +
+   English Tesseract, then send page-labelled text chunks to Vertex AI.
 8. Store the summary, qualifications, scope, tech stack, evidence pages, and
    anomaly signals without overwriting authoritative e-GP metadata.
 
@@ -129,11 +130,54 @@ VERTEX_AI_ENABLED=true
 VERTEX_MODEL=gemini-2.5-flash
 ```
 
-Local PDFs up to 20 MB can also be sent inline when GCS is not configured, but
-GCS is recommended for production. Vertex responses use a fixed JSON schema
+Vertex now receives text rather than PDF bytes. Long text is split into bounded
+chunks; their Thai summaries are joined and duplicate evidence is removed.
+Vertex responses use a fixed JSON schema
 and are validated before database updates. Results below
 `VERTEX_REVIEW_THRESHOLD` enter `review_required` instead of being silently
 accepted.
+
+## Thai OCR setup and operation
+
+Install the native tools on every worker host (OCR runs locally):
+
+```bash
+# macOS
+brew install poppler tesseract tesseract-lang
+# Debian/Ubuntu
+sudo apt-get install poppler-utils tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng
+```
+
+The engines use embedded text first, falling back to Tesseract `tha+eng` at
+200 DPI with a 3500-pixel maximum image dimension. Set `OCR_FORCE=true` if a
+PDF has a misleading text layer. Reading order and table reconstruction are
+heuristic, so visually check important clauses. Low-confidence OCR and blank
+or unreadable pages route AI results to review.
+
+Test a local document without MongoDB or Google credentials:
+
+```bash
+npm run extract:text -- 'storage/tor/68019088742/extracted/001-TOR ERP.pdf'
+```
+
+Add `--force-ocr` to test the OCR path on a digital PDF. Page checkpoints and
+the combined `document.json` are stored in a hash/version-keyed `text/` directory
+beside the PDF. A retry reuses completed pages; changing the PDF, engines, or
+OCR configuration creates a new cache. Raw text stays out of MongoDB. In GCS
+storage mode the combined JSON is also uploaded and `document.text_uri` points
+to it. Keep local storage persistent for page-level resume across worker restarts.
+
+The existing worker now runs download → text extraction → Vertex. With
+`VERTEX_AI_ENABLED=false`, it still produces OCR text and stops at `ai_pending`.
+Enable Vertex using your Google project and Application Default Credentials
+to run summarization. Neither the OCR CLI nor local OCR needs a cloud key.
+
+Inspect `GET /api/processing/status?projectId=<id>` for OCR status, completed
+pages, OCR page count, extraction error, and text location. Re-enqueue with the
+existing processing trigger to resume a failure. The worker renews its lease
+while OCR runs; OCR and AI attempt counters are tracked independently, while
+the job queue retains its existing overall retry limit. Cached completed AI
+results require matching document/text hashes, prompt version, and model.
 
 ## Legacy scraper commands
 
