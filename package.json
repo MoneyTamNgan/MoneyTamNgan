@@ -1,6 +1,7 @@
 {
   "type": "module",
   "scripts": {
+    "extract:text": "node scripts/extract-text.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
