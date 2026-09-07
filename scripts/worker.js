@@ -25,6 +25,12 @@ async function runOne() {
     if (!job) return false;
 
     console.log(`⚙️  Processing job ${job._id} for project ${job.project_id}`);
+    // OCR can take longer than the initial ten-minute lease.
+    const heartbeat = setInterval(() => {
+        job.constructor.updateOne({ _id: job._id, status: 'running' }, {
+            $set: { lease_until: new Date(Date.now() + 10 * 60 * 1000) },
+        }).catch(error => console.error(`Lease renewal failed: ${error.message}`));
+    }, 30000);
     try {
         const result = await processProject(job.project_id);
         await completeJob(job._id, result);
@@ -37,6 +43,8 @@ async function runOne() {
             });
         }
         console.error(`❌ ${job.project_id}: ${error.message}`);
+    } finally {
+        clearInterval(heartbeat);
     }
     return true;
 }

@@ -7,6 +7,11 @@ export async function GET(request) {
     try {
         await connectDB();
         const jobId = new URL(request.url).searchParams.get('jobId');
+        const projectId = new URL(request.url).searchParams.get('projectId');
+        if (projectId) {
+            const project = await Project.findOne({ project_id: projectId }).select('project_id processing ocr document').lean();
+            return NextResponse.json({ status: project ? 'ok' : 'not_found', project }, { status: project ? 200 : 404 });
+        }
         if (jobId) {
             const job = await ProcessingJob.findById(jobId).lean();
             if (!job) {

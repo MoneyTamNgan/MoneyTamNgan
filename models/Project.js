@@ -54,6 +54,9 @@ const ProjectSchema = new mongoose.Schema({
     },
 
     document: {
+        text_uri: String,
+        text_sha256: String,
+        page_count: Number,
         source_url: { type: String },
         source_type: { type: String },
         aggregator_url: { type: String },
@@ -87,12 +90,27 @@ const ProjectSchema = new mongoose.Schema({
         error: { type: String },
     },
 
+    ocr: {
+        status: { type: String, enum: ['pending', 'running', 'completed', 'retry_pending'], default: 'pending' },
+        provider: String,
+        processor_version: String,
+        pages_processed: Number,
+        ocr_pages: Number,
+        attempts: { type: Number, default: 0 },
+        needs_review: Boolean,
+        completed_at: Date,
+        error: String,
+    },
     processing: {
+        download_attempts: { type: Number, default: 0 },
+        text_sha256: String,
+        ai_attempts: { type: Number, default: 0 },
         status: {
             type: String,
             enum: [
                 'metadata_ingested', 'classification_pending', 'irrelevant',
                 'document_pending', 'document_downloaded', 'ai_pending',
+                'text_extraction_pending', 'text_extracted',
                 'completed', 'metadata_only', 'review_required',
                 'retry_pending', 'failed',
             ],
