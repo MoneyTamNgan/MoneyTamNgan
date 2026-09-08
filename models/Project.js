@@ -98,6 +98,7 @@ const ProjectSchema = new mongoose.Schema({
         ocr_pages: Number,
         attempts: { type: Number, default: 0 },
         needs_review: Boolean,
+        review_pages: [{ page_number: Number, codes: [String] }],
         completed_at: Date,
         error: String,
     },
