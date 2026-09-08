@@ -47,7 +47,7 @@ test('mixed PDF resumes an interrupted OCR page and invalidates cache when input
         if (args.includes('-v')) return 'poppler-test';
         if (args.includes('--version')) return 'tesseract-test';
         if (args.includes('--list-langs')) return 'tha\neng';
-        if (binary === 'pdfinfo') return 'Pages: 2';
+        if (binary === 'pdfinfo') return 'Pages: 2\nPage 2 size: 595 x 842 pts';
         if (binary === 'pdftotext') {
             reads.push(args[1]);
             return args[1] === '1' ? 'ข้อความภาษาไทยสำหรับทดสอบการอ่านเอกสาร '.repeat(5) : '';
@@ -94,4 +94,28 @@ test('Vertex receives text only and rejects truncated responses', async t => {
     assert.equal(result.extraction.summary, 'สรุป');
     finishReason = 'MAX_TOKENS';
     await assert.rejects(extractTorWithVertex({ pages: [{ page_number: 1, text: 'เอกสาร' }] }, dependencies), /incomplete/);
+});
+
+test('Vertex merges multiple chunks, preserves evidence, and totals usage', async t => {
+    const old = process.env.GOOGLE_CLOUD_PROJECT;
+    process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
+    t.after(() => { if (old === undefined) delete process.env.GOOGLE_CLOUD_PROJECT; else process.env.GOOGLE_CLOUD_PROJECT = old; });
+    let calls = 0;
+    const result = await extractTorWithVertex({ pages: [{ page_number: 1, text: 'ก'.repeat(25000) }] }, {
+        headers: async () => ({}),
+        fetchImpl: async () => {
+            calls++;
+            const extraction = { summary: `chunk ${calls}`, qualifications: [{ value: 'shared', page: 1 }],
+                scope_of_work: [{ value: `scope ${calls}`, page: 1 }], tech_stack: [], flagged_clauses: [],
+                confidence: calls === 1 ? 0.9 : 0.7, document_language: 'th' };
+            return { ok: true, json: async () => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(extraction) }] } }],
+                usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 20 } }) };
+        },
+    });
+    assert.equal(calls, 2);
+    assert.equal(result.extraction.summary, 'chunk 1\n\nchunk 2');
+    assert.equal(result.extraction.qualifications.length, 1);
+    assert.equal(result.extraction.scope_of_work.length, 2);
+    assert.equal(result.extraction.confidence, 0.7);
+    assert.deepEqual(result.usage, { inputTokens: 20, outputTokens: 40 });
 });
