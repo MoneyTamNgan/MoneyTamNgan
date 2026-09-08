@@ -149,10 +149,29 @@ sudo apt-get install poppler-utils tesseract-ocr tesseract-ocr-tha tesseract-ocr
 ```
 
 The engines use embedded text first, falling back to Tesseract `tha+eng` at
-200 DPI with a 3500-pixel maximum image dimension. Set `OCR_FORCE=true` if a
+300 DPI with a 5000-pixel maximum image dimension. Set `OCR_FORCE=true` if a
 PDF has a misleading text layer. Reading order and table reconstruction are
 heuristic, so visually check important clauses. Low-confidence OCR and blank
 or unreadable pages route AI results to review.
+
+OCR quality checks now compare monetary digits (Thai or Arabic) with adjacent
+Thai amount wording. Financial or low-confidence pages receive a second OCR
+pass using segmentation mode 6, in addition to the normal mode 3. Both readings,
+raw text, selected segmentation mode, and warnings are retained in the JSON.
+The code selects a reading but never silently changes an amount to match words.
+
+All OCR pages with recognized financial language require source review, even
+when both readings agree and confidence is high. Conflicts are exposed as
+`ocr.review_pages` (page numbers and warning codes) through the project/status
+APIs. Detailed conflicting values are kept in each page's JSON `warnings`.
+This can over-flag pages and does not validate all dates or qualification terms.
+
+Configure `OCR_DPI` (200–600, default 300) and `OCR_MAX_DIMENSION`
+(3500–10000, default 5000). Rendering respects the requested DPI and reduces it
+for oversized pages. The version/configuration fingerprint prevents older OCR
+artifacts from bypassing the new checks. Old files are retained; the next run
+may re-extract the document. Higher resolution and secondary passes increase
+CPU time. Resolution guidance: [Tesseract quality documentation](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html).
 
 Test a local document without MongoDB or Google credentials:
 
