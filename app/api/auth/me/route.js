@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { connectToDatabase } from '@/lib/mongodb';
-import { User } from '@/models/User';
+import { User } from '@/models/user';
 import { SESSION_COOKIE, verifySession } from '@/lib/auth';
 
 /** GET /api/auth/me — the signed-in user, or 401. */

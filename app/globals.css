@@ -80,3 +80,141 @@
 @keyframes feed-reveal{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @keyframes feed-nav-reveal{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
 .tor-feed .feed-nav{animation:feed-nav-reveal .55s cubic-bezier(.22,1,.36,1) both}.feed-heading>div:first-child{animation:feed-reveal .6s .12s cubic-bezier(.22,1,.36,1) both}.feed-total{animation:feed-reveal .55s .2s cubic-bezier(.22,1,.36,1) both}.feed-filters{animation:feed-reveal .55s .28s cubic-bezier(.22,1,.36,1) both}.feed-card{animation:feed-reveal .55s cubic-bezier(.22,1,.36,1) both}.feed-card:nth-child(1){animation-delay:.36s}.feed-card:nth-child(2){animation-delay:.44s}.feed-card:nth-child(3){animation-delay:.52s}.feed-card:nth-child(4){animation-delay:.6s}.feed-card:nth-child(5){animation-delay:.68s}.feed-card>*{animation:feed-reveal .38s cubic-bezier(.22,1,.36,1) both}.feed-card>*:nth-child(1){animation-delay:.48s}.feed-card>*:nth-child(2){animation-delay:.54s}.feed-card>*:nth-child(3){animation-delay:.6s}.feed-card>*:nth-child(4){animation-delay:.66s}.feed-card>*:nth-child(5){animation-delay:.72s}.feed-card>*:nth-child(6){animation-delay:.78s}
+
+/* Profile Delete Account Section & Modal Confirmation */
+.profile-delete-card {
+  margin-top: 28px;
+  padding: 24px 28px;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  border-radius: 18px;
+  background: rgba(220, 38, 38, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.profile-delete-card h2 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  color: #ef4444;
+}
+.profile-delete-card p {
+  margin: 0;
+  color: var(--ink-secondary);
+  font-size: 0.92rem;
+}
+.profile-delete-button {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid #ef4444;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.profile-delete-button:hover {
+  background: #b91c1c;
+  transform: translateY(-2px);
+}
+
+/* Modal Popup */
+.profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  animation: feed-reveal 0.2s ease both;
+}
+.profile-modal-box {
+  max-width: 480px;
+  width: 100%;
+  padding: 32px;
+  border: 1px solid var(--orange-border);
+  border-radius: 20px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+.profile-modal-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  display: grid;
+  place-items: center;
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+.profile-modal-box h3 {
+  margin: 0 0 10px;
+  font-size: 1.45rem;
+  color: var(--ink);
+}
+.profile-modal-box p {
+  margin: 0 0 24px;
+  color: var(--ink-secondary);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+.profile-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.profile-cancel-button {
+  min-height: 46px;
+  flex: 1;
+  padding: 0 18px;
+  border: 1px solid var(--orange-border);
+  border-radius: 999px;
+  background: var(--cream-input);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.profile-cancel-button:hover {
+  background: var(--cream-soft);
+}
+.profile-confirm-delete-button {
+  min-height: 46px;
+  flex: 1;
+  padding: 0 18px;
+  border: 1px solid #ef4444;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.profile-confirm-delete-button:hover:not(:disabled) {
+  background: #b91c1c;
+}
+@media (max-width: 600px) {
+  .profile-delete-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .profile-delete-button {
+    width: 100%;
+  }
+  .profile-modal-actions {
+    flex-direction: column-reverse;
+  }
+}
+
