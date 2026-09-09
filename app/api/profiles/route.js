@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import connectDB from '@/lib/db';
-import { User } from '@/models/user';
+import { User } from '@/models/User';
 import { SESSION_COOKIE, verifySession } from '@/lib/auth';
 
 // Helper to get authenticated user ID from session cookie or Authorization header

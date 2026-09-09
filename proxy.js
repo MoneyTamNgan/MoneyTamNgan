@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { SESSION_COOKIE, verifySession } from '@/lib/auth';
 
 /**
- * Gate the admin area behind a valid session. Unauthenticated requests are
+ * Gate the signed-in area behind a valid session. Unauthenticated requests are
  * redirected to the login page ("/") with a ?next= hint so the callback can
  * send them back where they were headed.
  *
@@ -22,5 +22,11 @@ export async function proxy(request) {
 }
 
 export const config = {
-    matcher: ['/admin/:path*'],
+    matcher: [
+        '/admin/:path*',
+        '/dashboard/:path*',
+        '/profile/:path*',
+        '/analytics/:path*',
+        '/tors/:path*',
+    ],
 };
