@@ -81,7 +81,7 @@ paths:
         - name: status
           in: query
           schema:
-            $ref: "#/components/schemas/TorStatus"
+            type: string
         - name: dateFrom
           in: query
           description: Inclusive lower bound on releaseDate (ISO 8601 date).
@@ -95,38 +95,29 @@ paths:
             type: string
             format: date
         - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
+        - $ref: "#/components/parameters/LimitParam"
       responses:
         "200":
           description: Paginated list of TORs
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/PaginatedList"
-                  - type: object
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Tor"
+                $ref: "#/components/schemas/TorListResponse"
               example:
-                items:
+                status: success
+                page: 1
+                limit: 10
+                total: 186
+                data:
                   - id: "TOR-2569-014"
                     title: "ระบบบริหารจัดการจราจรอัจฉริยะ"
                     agency: "สำนักการจราจรและขนส่ง"
                     budget: 15000000
-                    releaseDate: "2026-08-09"
-                    sourceUrl: "https://procurement.bangkok.go.th/tor/2569-014"
-                    pdfUrl: "https://procurement.bangkok.go.th/tor/2569-014.pdf"
-                    status: "Active"
+                    projectStatus: "ระหว่างดำเนินการ"
+                    announceDate: "2026-08-09T00:00:00.000Z"
                     isSoftware: true
-                    classificationConfidence: 0.92
-                    createdAt: "2026-08-09T08:15:00Z"
-                    updatedAt: "2026-08-09T08:15:00Z"
-                total: 186
-                page: 1
-                pageSize: 20
+                    classification: { status: software, confidence: 0.92 }
+                    documentStatus: pending
         "400":
           description: Invalid filter parameters
           content:
@@ -147,7 +138,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Tor"
+                $ref: "#/components/schemas/TorDetail"
         "404":
           description: TOR not found
           content:
@@ -326,15 +317,13 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   # ---------------------------------------------------------------------------
-  # Planned - PDF parsing / summarization (FR-2.1)
+  # Current - PDF parsing / summarization (FR-2.1)
   # ---------------------------------------------------------------------------
   /tors/{id}/summary:
     get:
       summary: Get the LLM-extracted structured summary for a TOR
-      description: >
-        Planned. Populated once the OCR + Vertex AI extraction pipeline has
-        processed the source PDF; 404 until then (or return the Tor's summary
-        fields as null - to be settled with BE once this is built).
+      description: Returns extraction fields even when processing is pending.
+        In that case summary is null and list fields are empty arrays.
       tags: [PDF Summary]
       operationId: getTorSummary
       parameters:
@@ -345,9 +334,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TorSummary"
+                $ref: "#/components/schemas/TorApiSummary"
         "404":
-          description: TOR not found, or summary not yet generated
+          description: TOR not found
           content:
             application/json:
               schema:
@@ -584,7 +573,7 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   # ---------------------------------------------------------------------------
-  # Planned - Anomaly Detection (FR-3.1, FR-3.2)
+  # Current - Anomaly Detection (FR-3.1, FR-3.2)
   # ---------------------------------------------------------------------------
   /tors/{id}/anomalies:
     get:
@@ -600,7 +589,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AnomalyReport"
+                $ref: "#/components/schemas/TorApiAnomalyReport"
         "404":
           description: TOR not found
           content:
@@ -784,6 +773,15 @@ components:
         minimum: 1
         maximum: 100
         default: 20
+    LimitParam:
+      name: limit
+      in: query
+      description: Items per page. Defaults to 10, max 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
 
   schemas:
     TorStatus:
@@ -863,6 +861,149 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    TorApiClassification:
+      type: object
+      required: [status, confidence]
+      properties:
+        status:
+          type: string
+          nullable: true
+          enum: [pending, software, not_software, uncertain, manual_override, null]
+        confidence:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+
+    TorListItem:
+      type: object
+      required: [id, title, agency, budget, projectStatus, announceDate, isSoftware, classification, documentStatus]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        agency: { type: string }
+        budget: { type: number, description: Announced budget in THB. }
+        projectStatus: { type: string }
+        announceDate: { type: string, format: date-time, nullable: true }
+        isSoftware: { type: boolean, nullable: true }
+        classification:
+          $ref: "#/components/schemas/TorApiClassification"
+        documentStatus: { type: string, nullable: true }
+
+    TorListResponse:
+      type: object
+      required: [status, page, limit, total, data]
+      properties:
+        status: { type: string, enum: [success] }
+        page: { type: integer, minimum: 1 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0 }
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TorListItem"
+
+    TorApiAnomaly:
+      oneOf:
+        - type: object
+          required: [type, budgetDeviationMultiplier]
+          properties:
+            type: { type: string, enum: [high_budget] }
+            budgetDeviationMultiplier: { type: number }
+        - type: object
+          required: [type, clauseText, reason]
+          properties:
+            type: { type: string, enum: [flagged_clause] }
+            clauseText: { type: string }
+            reason: { type: string }
+            page: { type: integer, minimum: 1 }
+
+    TorDetail:
+      type: object
+      required: [id, title, agency, budget, projectStatus, timeline, classification, documentStatus, processingStatus, requirements, scopeOfWork, techStack, summary, anomalies, version]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        agency:
+          type: object
+          required: [name, subName]
+          properties:
+            name: { type: string }
+            subName: { type: string, nullable: true }
+        budget: { type: number }
+        projectStatus: { type: string }
+        timeline:
+          type: object
+          required: [announceDate, contractStart, contractEnd, durationDays]
+          properties:
+            announceDate: { type: string, format: date-time, nullable: true }
+            contractStart: { type: string, format: date-time, nullable: true }
+            contractEnd: { type: string, format: date-time, nullable: true }
+            durationDays: { type: integer, nullable: true }
+        classification:
+          allOf:
+            - $ref: "#/components/schemas/TorApiClassification"
+            - type: object
+              required: [isSoftware, reason]
+              properties:
+                isSoftware: { type: boolean, nullable: true }
+                reason: { type: string, nullable: true }
+        documentStatus: { type: string, nullable: true }
+        processingStatus: { type: string, nullable: true }
+        requirements: { type: array, items: { type: string } }
+        scopeOfWork: { type: array, items: { type: string } }
+        techStack: { type: array, items: { type: string } }
+        summary: { type: string, nullable: true }
+        anomalies:
+          type: array
+          items:
+            $ref: "#/components/schemas/TorApiAnomaly"
+        version:
+          type: object
+          required: [number, isLatest, supersededBy]
+          properties:
+            number: { type: integer, minimum: 1 }
+            isLatest: { type: boolean }
+            supersededBy: { type: string, nullable: true }
+
+    TorApiEvidence:
+      type: object
+      required: [value]
+      properties:
+        value: { type: string }
+        page: { type: integer, minimum: 1 }
+
+    TorApiSummary:
+      type: object
+      required: [id, documentStatus, processingStatus, summary, requirements, scopeOfWork, techStack, evidence]
+      properties:
+        id: { type: string }
+        documentStatus: { type: string, nullable: true }
+        processingStatus: { type: string, nullable: true }
+        summary: { type: string, nullable: true }
+        requirements: { type: array, items: { type: string } }
+        scopeOfWork: { type: array, items: { type: string } }
+        techStack: { type: array, items: { type: string } }
+        evidence:
+          type: object
+          required: [requirements, scopeOfWork, techStack]
+          properties:
+            requirements: { type: array, items: { $ref: "#/components/schemas/TorApiEvidence" } }
+            scopeOfWork: { type: array, items: { $ref: "#/components/schemas/TorApiEvidence" } }
+            techStack: { type: array, items: { $ref: "#/components/schemas/TorApiEvidence" } }
+
+    TorApiAnomalyReport:
+      type: object
+      required: [id, highBudgetFlag, budgetDeviationMultiplier, anomalies]
+      properties:
+        id: { type: string }
+        highBudgetFlag: { type: boolean }
+        budgetDeviationMultiplier: { type: number }
+        anomalies:
+          type: array
+          items:
+            $ref: "#/components/schemas/TorApiAnomaly"
 
     TorSummary:
       type: object
