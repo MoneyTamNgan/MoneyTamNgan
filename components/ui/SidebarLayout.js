@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const navigationItems = [
   { href: "/dashboard", label: "หน้าหลัก", icon: "⌂" },
@@ -15,7 +15,20 @@ export default function SidebarLayout({ children }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isOrangeTheme, setIsOrangeTheme] = useState(true);
+  const [account, setAccount] = useState(null);
   const isHome = pathname === "/dashboard" || pathname.startsWith("/tors/");
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setAccount(data?.user ?? null))
+      .catch(() => setAccount(null));
+  }, [pathname]);
+
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/";
+  }
 
   if (pathname === "/") return <>{children}</>;
 
@@ -27,7 +40,12 @@ export default function SidebarLayout({ children }) {
         const active = item.href === "/dashboard" ? isHome : pathname === item.href;
         return <Link className={active ? "is-active" : ""} href={item.href} key={item.href} title={item.label}><span className="sidebar-icon" aria-hidden="true">{item.icon}</span><span className="sidebar-label">{item.label}</span>{item.restricted && <span className="sidebar-restricted">ต้องมีสิทธิ์</span>}</Link>;
       })}</nav>
-      <div className="sidebar-bottom"><p className="sidebar-version">โหมดข้อมูลตัวอย่าง</p></div>
+      <div className="sidebar-bottom">
+        {account
+          ? <button className="sidebar-signout" type="button" onClick={signOut} title="ออกจากระบบ"><span aria-hidden="true">⏻</span><span className="sidebar-label"><strong>ออกจากระบบ</strong><small>{account.email}</small></span></button>
+          : <Link className="sidebar-signout" href="/" title="เข้าสู่ระบบ"><span aria-hidden="true">⏻</span><span className="sidebar-label"><strong>เข้าสู่ระบบ</strong></span></Link>}
+        <p className="sidebar-version">โหมดข้อมูลตัวอย่าง</p>
+      </div>
     </aside>
     <div className="sidebar-page">{children}</div>
   </div>;
