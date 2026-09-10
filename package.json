@@ -1,22 +1,35 @@
 {
+  "type": "module",
   "scripts": {
+    "extract:text": "node scripts/extract-text.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "scrape": "node scripts/scrape.js",
+    "worker": "node scripts/worker.js --watch",
+    "worker:once": "node scripts/worker.js",
+    "test": "node --test"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.0.1",
+    "cheerio": "^1.2.0",
+    "dotenv": "^16.6.1",
+    "google-auth-library": "^10.3.0",
     "jose": "^6.2.10",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.6.0",
     "mongoose": "^9.9.4",
     "next": "^16.3.3",
+    "puppeteer": "^25.9.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "yauzl": "^3.4.0"
   },
   "devDependencies": {
     "@types/node": "26.3.0",
     "@types/react": "19.2.18",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "yazl": "^3.3.1"
   }
 }
