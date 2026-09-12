@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+#
+# Shared image for the two background Node processes: the e-GP scraper
+# (scripts/scrape.js) and the processing worker (scripts/worker.js). Both
+# need Poppler (text extraction), Tesseract with Thai data (OCR), and a
+# headless Chromium (the e-GP browser fallback in lib/scraper.js). Which one
+# runs is chosen by docker-compose's `command:` for each service.
+
+FROM node:22-bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        chromium \
+        poppler-utils \
+        tesseract-ocr \
+        tesseract-ocr-tha \
+        fonts-thai-tlwg \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Use Debian's Chromium (already wired to its own shared-library deps) instead
+# of Puppeteer's bundled download.
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    NODE_ENV=production
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY lib ./lib
+COPY models ./models
+COPY scripts ./scripts
+
+RUN mkdir -p storage/tor
+VOLUME ["/app/storage"]
+
+# Overridden per-service in docker-compose.yml (scrape.js vs worker.js).
+CMD ["node", "scripts/worker.js", "--watch"]
