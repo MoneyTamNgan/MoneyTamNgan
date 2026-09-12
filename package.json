@@ -1,20 +1,32 @@
 {
+  "type": "module",
   "scripts": {
+    "extract:text": "node scripts/extract-text.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "scrape": "node scripts/scrape.js",
+    "worker": "node scripts/worker.js --watch",
+    "worker:once": "node scripts/worker.js",
+    "test": "node --test test/ lib/classification.test.js",
+    "test:vitest": "vitest run",
+    "test:vitest:watch": "vitest"
   },
   "dependencies": {
+    "@google-cloud/storage": "^8.0.1",
+    "cheerio": "^1.2.0",
+    "dotenv": "^16.6.1",
+    "google-auth-library": "^10.3.0",
     "jose": "^6.2.10",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.6.0",
     "mongoose": "^9.9.4",
     "next": "^16.3.3",
+    "puppeteer": "^25.9.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "yauzl": "^3.4.0"
   },
   "devDependencies": {
     "@types/node": "26.3.0",
@@ -23,6 +35,7 @@
     "ajv-formats": "^3.0.1",
     "js-yaml": "^5.4.1",
     "typescript": "7.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "yazl": "^3.3.1"
   }
 }
