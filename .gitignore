@@ -25,6 +25,7 @@ build/
 coverage/
 .next/
 out/
+storage/
 
 # Generated API docs preview
 docs/api/preview.html
