@@ -869,7 +869,7 @@ components:
         status:
           type: string
           nullable: true
-          enum: [pending, software, not_software, uncertain, manual_override, null]
+          enum: [pending, software, not_software, uncertain, manual_override]
         confidence:
           type: number
           nullable: true

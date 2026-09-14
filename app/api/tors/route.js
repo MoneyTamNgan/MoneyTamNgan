@@ -9,7 +9,7 @@ function errorResponse(code, message, status = 400) {
     return NextResponse.json({ error: { code, message } }, { status });
 }
 
-function parsePositiveInteger(value, fallback, name, max = Number.MAX_SAFE_INTEGER) {
+export function parsePositiveInteger(value, fallback, name, max = Number.MAX_SAFE_INTEGER) {
     if (value === null || value === '') return { value: fallback };
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 1 || parsed > max) {
@@ -18,7 +18,7 @@ function parsePositiveInteger(value, fallback, name, max = Number.MAX_SAFE_INTEG
     return { value: parsed };
 }
 
-function parseDate(value, name, endOfDay = false) {
+export function parseDate(value, name, endOfDay = false) {
     if (!value) return { value: null };
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) {
