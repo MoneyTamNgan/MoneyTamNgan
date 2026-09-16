@@ -937,7 +937,7 @@ components:
 
     TorDetail:
       type: object
-      required: [id, title, agency, budget, projectStatus, timeline, classification, documentStatus, processingStatus, requirements, scopeOfWork, techStack, summary, anomalies, version]
+      required: [id, title, agency, budget, projectStatus, pdfUrl, createdAt, updatedAt, timeline, classification, documentStatus, processingStatus, requirements, scopeOfWork, techStack, summary, anomalies, version]
       properties:
         id: { type: string }
         title: { type: string }
@@ -949,6 +949,9 @@ components:
             subName: { type: string, nullable: true }
         budget: { type: number }
         projectStatus: { type: string }
+        pdfUrl: { type: string, format: uri, nullable: true }
+        createdAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
         timeline:
           type: object
           required: [announceDate, contractStart, contractEnd, durationDays]
