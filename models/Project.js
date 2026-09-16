@@ -206,4 +206,16 @@ const ProjectSchema = new mongoose.Schema({
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
+// Full-text search across project title, issuing agency, and extracted tech stack.
+ProjectSchema.index(
+    { project_name: 'text', dept_name: 'text', 'extracted_data.tech_stack': 'text' },
+    {
+        name: 'tor_search_text_index',
+        weights: { project_name: 5, dept_name: 3, 'extracted_data.tech_stack': 2 },
+    }
+);
+
+// Supports agency-filtered listings sorted/ranged by budget.
+ProjectSchema.index({ dept_name: 1, budget: -1 }, { name: 'agency_budget_index' });
+
 export default mongoose.models.Project || mongoose.model('Project', ProjectSchema);
