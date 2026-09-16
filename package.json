@@ -9,6 +9,7 @@
     "scrape": "node scripts/scrape.js",
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",
+    "db:ensure-indexes": "node scripts/ensure-indexes.js",
     "test": "node --test"
   },
   "dependencies": {
