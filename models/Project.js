@@ -54,6 +54,8 @@ const ProjectSchema = new mongoose.Schema({
     },
 
     document: {
+        record_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+        text_storage: { type: String, enum: ['mongodb', 'local', 'gcs'] },
         text_uri: String,
         text_sha256: String,
         page_count: Number,
@@ -80,7 +82,7 @@ const ProjectSchema = new mongoose.Schema({
         status: {
             type: String,
             enum: [
-                'pending', 'url_found', 'downloaded', 'stored', 'unavailable',
+                'pending', 'url_found', 'downloaded', 'linked', 'stored', 'unavailable',
                 'invalid', 'retry_pending', 'failed',
             ],
             default: 'pending',
@@ -127,6 +129,7 @@ const ProjectSchema = new mongoose.Schema({
         attempts: { type: Number, default: 0, min: 0 },
         input_tokens: { type: Number, min: 0 },
         output_tokens: { type: Number, min: 0 },
+        summary_record_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary' },
         processed_at: { type: Date },
         error: { type: String },
     },
@@ -158,6 +161,15 @@ const ProjectSchema = new mongoose.Schema({
     }
 }, {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+});
+
+// A government project ID is the primary identity. The partial URL index also
+// prevents the same official download from being attached to a second project
+// while still allowing projects whose document has not been discovered yet.
+ProjectSchema.index({ pdf_url: 1 }, {
+    name: 'uniq_project_pdf_url',
+    unique: true,
+    partialFilterExpression: { pdf_url: { $type: 'string', $gt: '' } },
 });
 
 export default mongoose.models.Project || mongoose.model('Project', ProjectSchema);
