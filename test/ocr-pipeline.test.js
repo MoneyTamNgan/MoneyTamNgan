@@ -23,6 +23,13 @@ async function fixture(t) {
     t.after(() => { if (old === undefined) delete process.env.VERTEX_AI_ENABLED; else process.env.VERTEX_AI_ENABLED = old; });
     const dependencies = {
         persist: async () => ({ sha256: 'pdf-hash', size: 10, gcsUri: null }),
+        hashSource: async () => ({ sha256: 'pdf-hash', size: 10 }),
+        cleanupSource: async () => {},
+        savePdfRecords: async () => ({
+            _id: 'document-test', project_id: record.project_id, sha256: 'pdf-hash',
+        }),
+        saveOcrPages: async () => {},
+        saveVertexSummary: async () => ({ _id: 'summary-test' }),
         extractText: async (local, options) => {
             await options.onProgress({ pageCount: 2, pagesProcessed: 2, ocrPages: 1 });
             return { artifactPath: path.join(dir, 'document.json'), pages: [{ page_number: 1, text: 'ข้อความภาษาไทย'.repeat(10) }], textHash: 'text-hash',
@@ -113,6 +120,8 @@ for (const needsReview of [false, true]) {
         assert.equal(saved['processing.text_sha256'], 'text-hash');
         assert.equal(saved['processing.input_tokens'], 100);
         assert.ok(!Object.hasOwn(saved, 'budget'));
+        assert.equal(result.documentId, 'document-test');
+        assert.equal(result.documentSummaryId, 'summary-test');
     });
 }
 
