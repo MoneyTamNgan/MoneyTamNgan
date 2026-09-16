@@ -61,6 +61,18 @@ npm run worker:once
 npm run worker
 ```
 
+Create or verify the MongoDB uniqueness and lookup indexes after deployment:
+
+```bash
+npm run db:ensure-indexes
+```
+
+Duplicate prevention is enforced by unique indexes on the government project
+ID and official project document URL. Extracted documents use the compound
+identity `project_id + source_url + entry_name`, because multiple PDFs can
+legitimately come from the same e-GP ZIP. OCR pages and Vertex summaries retain
+their existing idempotent compound unique indexes.
+
 Inspect pipeline coverage and the manual-review queue:
 
 ```text
@@ -104,9 +116,15 @@ Set `MONGODB_URI` in `.env`. The batch delay defaults to four seconds and can
 be configured with `SCRAPER_DELAY_MS` or `--delay`. Values below three seconds
 are rejected to avoid overwhelming the e-GP service.
 
-Set `TOR_STORAGE_DIR` to override the storage root. Downloads are streamed to
-temporary files and atomically renamed after completion. The default maximum
-file size is 100 MB; change it with `TOR_MAX_FILE_SIZE_MB`. In production,
+Set `TOR_STORAGE_DIR` to override the temporary working root. Downloads are
+streamed to temporary files and atomically renamed before processing. By
+default, `TOR_RETAIN_SOURCE_FILES=false`: after OCR is committed to MongoDB,
+the ZIP/PDF working files are deleted while their official URL, hashes,
+filenames, sizes, page text, and summaries remain stored. Set it to `true`
+only when durable local/GCS source-file retention is required. The default maximum
+file size is 250 MB; change it with `TOR_MAX_FILE_SIZE_MB`. Large e-GP files
+have a bounded five-minute request timeout, configurable through
+`EGP_DOWNLOAD_TIMEOUT_MS`. In production,
 set `TOR_STORAGE_BACKEND=gcs` and configure `TOR_GCS_BUCKET`. Objects are named
 by fiscal year, project ID, and SHA-256 hash so unchanged PDFs are not sent to
 Vertex repeatedly.
@@ -208,8 +226,10 @@ The old e-GP search page uses Cloudflare verification, so it is disabled as a
 fallback by default. Set `ENABLE_LEGACY_EGP_SEARCH_FALLBACK=true` only if that
 search flow is usable in the deployment environment. Direct encrypted detail
 URLs do not require the scraper to submit the public search form. The official
-related-document service can intermittently return E1530; configure bounded
-reload attempts with `EGP_DETAIL_RETRY_ATTEMPTS` (default 5).
+related-document service can intermittently return E1530. The scraper captures
+the official ZIP-list request and resolves the latest archive through the
+approval and upload services in the same browser session. Configure bounded
+retry attempts with `EGP_DETAIL_RETRY_ATTEMPTS` (default 5).
 
 ## Verification
 
