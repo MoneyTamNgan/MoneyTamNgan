@@ -99,6 +99,12 @@ export interface TorApiListItem {
   isSoftware: boolean | null;
   classification: TorApiClassification;
   documentStatus: string | null;
+  processingStatus: string | null;
+  techStack: string[];
+  anomaly: {
+    highBudgetFlag: boolean;
+    budgetDeviationMultiplier: number;
+  };
 }
 
 export interface TorApiListResponse {

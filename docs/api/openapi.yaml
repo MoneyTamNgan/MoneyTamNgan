@@ -118,6 +118,9 @@ paths:
                     isSoftware: true
                     classification: { status: software, confidence: 0.92 }
                     documentStatus: pending
+                    processingStatus: ai_pending
+                    techStack: [React, Node.js, Cloud]
+                    anomaly: { highBudgetFlag: false, budgetDeviationMultiplier: 1 }
         "400":
           description: Invalid filter parameters
           content:
@@ -878,7 +881,7 @@ components:
 
     TorListItem:
       type: object
-      required: [id, title, agency, budget, projectStatus, announceDate, isSoftware, classification, documentStatus]
+      required: [id, title, agency, budget, projectStatus, announceDate, isSoftware, classification, documentStatus, processingStatus, techStack, anomaly]
       properties:
         id: { type: string }
         title: { type: string }
@@ -890,6 +893,19 @@ components:
         classification:
           $ref: "#/components/schemas/TorApiClassification"
         documentStatus: { type: string, nullable: true }
+        processingStatus: { type: string, nullable: true }
+        techStack:
+          type: array
+          items: { type: string }
+        anomaly:
+          $ref: "#/components/schemas/TorListAnomaly"
+
+    TorListAnomaly:
+      type: object
+      required: [highBudgetFlag, budgetDeviationMultiplier]
+      properties:
+        highBudgetFlag: { type: boolean }
+        budgetDeviationMultiplier: { type: number }
 
     TorListResponse:
       type: object
