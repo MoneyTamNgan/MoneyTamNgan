@@ -1,7 +1,7 @@
 import { mockProjectRecords } from "@/lib/mock-project-records";
 import { projectToAnomalyReport, projectToTor, projectToTorSummary } from "@/lib/services/project-mapper";
 import type { ProjectRecord } from "@/types/project";
-import type { AnalyticsResult, AnalyticsSearchParams, AnomalyReport, PaginatedList, Tor, TorApiListResponse, TorListParams, TorSummary } from "@/types/tor";
+import type { AnalyticsResult, AnalyticsSearchParams, AnomalyReport, PaginatedList, Tor, TorApiDetail, TorApiListResponse, TorListParams, TorSummary } from "@/types/tor";
 
 // Development mode is intentionally active until the REST API is implemented.
 // New pages must use this service, never import mock data directly.
@@ -24,6 +24,16 @@ export async function listTorCards(params: TorListParams = {}): Promise<TorApiLi
   });
   if (!response.ok) throw new Error(`TOR list request failed: ${response.status}`);
   return response.json() as Promise<TorApiListResponse>;
+}
+
+export async function getTorDetail(id: string, apiOrigin: string): Promise<TorApiDetail | null> {
+  const response = await fetch(`${apiOrigin}/api/tors/${encodeURIComponent(id)}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`TOR detail request failed: ${response.status}`);
+  return response.json() as Promise<TorApiDetail>;
 }
 
 export async function listTors(params: TorListParams = {}): Promise<PaginatedList<Tor>> {

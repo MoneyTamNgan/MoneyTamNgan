@@ -125,6 +125,9 @@ export interface TorApiDetail {
   agency: { name: string; subName: string | null };
   budget: number;
   projectStatus: string;
+  pdfUrl: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
   timeline: {
     announceDate: string | null;
     contractStart: string | null;
