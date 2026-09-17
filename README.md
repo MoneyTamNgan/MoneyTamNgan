@@ -32,6 +32,28 @@ At minimum, configure `MONGODB_URI` and `EGP_API_KEY`. Vertex is disabled by
 default so API ingestion and local PDF downloads work without Google Cloud
 credentials.
 
+## Run with Docker
+
+For evaluation hardware without a local Node/Mongo/Poppler/Tesseract/Chromium
+setup, the whole stack runs via Compose instead:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+This starts `mongo` (local database, no Atlas/firewall dependency), `app`
+(Next.js on http://localhost:3000), `worker` (polls for queued processing
+jobs), and builds (but does not run) `scraper`. Trigger a scrape on demand:
+
+```bash
+docker compose run --rm scraper
+```
+
+`Dockerfile` builds the Next.js app; `Dockerfile.worker` is shared by
+`scraper` and `worker` and additionally installs Chromium, Poppler, and
+Tesseract (with Thai data) for document acquisition and OCR.
+
 ## Run the pipeline
 
 Ingest metadata and enqueue each returned project:
