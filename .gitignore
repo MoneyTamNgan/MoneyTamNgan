@@ -11,6 +11,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+atlas-credentials.env
 
 # Logs
 *.log
@@ -18,6 +19,7 @@ logs/
 
 # Node
 node_modules/
+.next/
 dist/
 build/
 coverage/
@@ -34,6 +36,6 @@ __pycache__/
 .venv/
 venv/
 
-# AI Agent files
+# Next.js AI agent rule files (generated)
 AGENTS.md
 CLAUDE.md
