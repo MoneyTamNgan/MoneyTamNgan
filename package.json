@@ -12,6 +12,7 @@
     "db:ensure-indexes": "node scripts/ensure-indexes.js",
     "db:migrate-normalized": "node scripts/migrate-normalized-schema.js",
     "db:reconcile-normalized": "node scripts/reconcile-normalized-schema.js",
+    "db:cleanup-legacy": "node scripts/cleanup-legacy-schema.js",
     "test": "node --test"
   },
   "dependencies": {
