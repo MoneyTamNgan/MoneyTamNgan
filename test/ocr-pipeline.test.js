@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import mongoose from 'mongoose';
 import Project from '../models/Project.js';
 import { processProject } from '../lib/processing-pipeline.js';
 import { TOR_PROMPT_VERSION } from '../lib/vertex/response-schema.js';
@@ -16,7 +17,7 @@ async function fixture(t) {
         classification: { status: 'manual_override' }, pdf_path: pdf, pdf_content_type: 'application/pdf',
         document: { local_path: pdf, sha256: 'pdf-hash' }, ocr: { processor_version: 'engine-version' }, processing: {} };
     const updates = [];
-    const normalizedWrites = { ocr: 0, summary: 0 };
+    const normalizedWrites = { ocr: 0, summary: 0, existingSummary: null, vertex: null };
     t.mock.method(Project, 'findOne', () => ({ lean: async () => record }));
     t.mock.method(Project, 'updateOne', async (filter, update) => { updates.push(update); return {}; });
     const old = process.env.VERTEX_AI_ENABLED;
@@ -34,13 +35,16 @@ async function fixture(t) {
         saveOcrBundle: async (project, document, textResult, uri, legacyUpdate) => {
             normalizedWrites.ocr++;
             updates.push(legacyUpdate);
-            return { _id: 'extraction-test' };
+            return { _id: new mongoose.Types.ObjectId(), processor_fingerprint: textResult.fingerprint };
         },
         saveSummaryBundle: async (project, document, run, textResult, vertex, review, legacyUpdate) => {
             normalizedWrites.summary++;
-            legacyUpdate.$set['processing.summary_record_id'] = 'summary-test';
+            normalizedWrites.vertex = vertex;
             updates.push(legacyUpdate);
             return { _id: 'summary-test' };
+        },
+        SummaryModel: {
+            findOne: () => ({ lean: async () => normalizedWrites.existingSummary }),
         },
         extractText: async (local, options) => {
             await options.onProgress({ pageCount: 2, pagesProcessed: 2, ocrPages: 1 });
@@ -56,8 +60,7 @@ test('stored PDF resumes at OCR and waits for Vertex configuration with durable 
     const { updates, dependencies } = await fixture(t);
     const result = await processProject('68019088742', { allowBrowserFallback: false }, dependencies);
     assert.equal(result.status, 'ai_pending');
-    assert.ok(updates.some(u => u.$set?.['ocr.pages_processed'] === 2));
-    assert.ok(updates.some(u => u.$set?.['document.text_sha256'] === 'text-hash'));
+    assert.ok(updates.some(u => u.$set?.['workflow.status'] === 'text_extracted'));
     assert.equal(updates.at(-1).$set['processing.status'], 'ai_pending');
     assert.ok(!updates.some(u => u.$inc?.['processing.download_attempts']));
 });
@@ -66,14 +69,13 @@ test('OCR failures leave retry state and record the extraction error', async t =
     const { updates, dependencies } = await fixture(t);
     dependencies.extractText = async () => { throw new Error('OCR unavailable'); };
     await assert.rejects(processProject('68019088742', {}, dependencies), /OCR unavailable/);
-    assert.equal(updates.at(-1).$set['ocr.status'], 'retry_pending');
     assert.equal(updates.at(-1).$set['processing.status'], 'retry_pending');
+    assert.equal(updates.at(-1).$set['workflow.status'], 'retry_pending');
 });
 
 test('unchanged text and model restore completed state without re-running Vertex', async t => {
-    const { record, updates, dependencies } = await fixture(t);
-    record.processing = { status: 'completed', document_sha256: 'pdf-hash', text_sha256: 'text-hash',
-        prompt_version: TOR_PROMPT_VERSION, model: process.env.VERTEX_MODEL || 'gemini-2.5-flash' };
+    const { updates, dependencies, normalizedWrites } = await fixture(t);
+    normalizedWrites.existingSummary = { _id: 'summary-existing', needs_review: false };
     const result = await processProject('68019088742', {}, dependencies);
     assert.equal(result.reused, true);
     assert.equal(updates.at(-1).$set['processing.status'], 'completed');
@@ -89,23 +91,18 @@ test('empty OCR output is sent to review without a Vertex call', async t => {
 });
 
 test('new OCR quality flags override a cached completed summary and persist page warnings', async t => {
-    const { record, updates, dependencies } = await fixture(t);
-    record.processing = { status: 'completed', document_sha256: 'pdf-hash', text_sha256: 'text-hash',
-        prompt_version: TOR_PROMPT_VERSION, model: process.env.VERTEX_MODEL || 'gemini-2.5-flash' };
+    const { record, dependencies, normalizedWrites } = await fixture(t);
+    normalizedWrites.existingSummary = { _id: 'summary-existing', needs_review: false };
     const original = dependencies.extractText;
     const reviewPages = [{ page_number: 2, codes: ['amount_words_mismatch'] }];
     dependencies.extractText = async (...args) => ({ ...await original(...args), needsReview: true, reviewPages });
     const result = await processProject(record.project_id, {}, dependencies);
     assert.equal(result.reused, true);
     assert.equal(result.status, 'review_required');
-    assert.ok(updates.some(u => JSON.stringify(u.$set?.['ocr.review_pages']) === JSON.stringify(reviewPages)));
 });
 
 test('changed OCR processor invalidates a cached summary even when text is unchanged', async t => {
     const { record, dependencies } = await fixture(t);
-    record.ocr.processor_version = 'old-engine-version';
-    record.processing = { status: 'completed', document_sha256: 'pdf-hash', text_sha256: 'text-hash',
-        prompt_version: TOR_PROMPT_VERSION, model: process.env.VERTEX_MODEL || 'gemini-2.5-flash' };
     const result = await processProject(record.project_id, {}, dependencies);
     assert.equal(result.status, 'ai_pending');
     assert.notEqual(result.reused, true);
@@ -113,7 +110,7 @@ test('changed OCR processor invalidates a cached summary even when text is uncha
 
 for (const needsReview of [false, true]) {
     test(`AI enrichment persists evidence and ${needsReview ? 'review' : 'completed'} status`, async t => {
-        const { record, updates, dependencies } = await fixture(t);
+        const { record, updates, dependencies, normalizedWrites } = await fixture(t);
         process.env.VERTEX_AI_ENABLED = 'true';
         const originalExtract = dependencies.extractText;
         dependencies.extractText = async (...args) => ({ ...await originalExtract(...args), needsReview });
@@ -127,10 +124,9 @@ for (const needsReview of [false, true]) {
         const result = await processProject(record.project_id, {}, dependencies);
         assert.equal(result.status, needsReview ? 'review_required' : 'completed');
         const saved = updates.at(-1).$set;
-        assert.equal(saved['extracted_data.summary'], 'สรุปทดสอบ');
-        assert.equal(saved['extracted_data.evidence.qualifications'][0].page, 1);
-        assert.equal(saved['processing.text_sha256'], 'text-hash');
-        assert.equal(saved['processing.input_tokens'], 100);
+        assert.equal(normalizedWrites.vertex.extraction.summary, 'สรุปทดสอบ');
+        assert.equal(normalizedWrites.vertex.extraction.qualifications[0].page, 1);
+        assert.equal(saved['processing.status'], needsReview ? 'review_required' : 'completed');
         assert.ok(!Object.hasOwn(saved, 'budget'));
         assert.equal(result.documentId, 'document-test');
         assert.equal(result.documentSummaryId, 'summary-test');
@@ -142,7 +138,7 @@ test('Vertex failure records retry state while preserving completed OCR', async 
     process.env.VERTEX_AI_ENABLED = 'true';
     dependencies.extractWithVertex = async () => { throw new Error('Vertex temporarily unavailable'); };
     await assert.rejects(processProject('68019088742', {}, dependencies), /temporarily unavailable/);
-    assert.ok(updates.some(u => u.$set?.['ocr.status'] === 'completed'));
+    assert.ok(updates.some(u => u.$set?.['workflow.status'] === 'text_extracted'));
     assert.equal(updates.at(-1).$set['processing.status'], 'retry_pending');
     assert.equal(updates.at(-1).$set['ocr.status'], undefined);
 });

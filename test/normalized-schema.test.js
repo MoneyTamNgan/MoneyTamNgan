@@ -119,7 +119,7 @@ test('summary bundle stores versioned result and latest pointers atomically', as
     );
     assert.equal(writes.summary[0].filter.extraction_run_id, run._id);
     assert.equal(writes.project[0][1].$set.latest_summary_id, summary._id);
-    assert.equal(writes.project[0][1].$set['processing.summary_record_id'], summary._id);
+    assert.equal(writes.project[0][1].$set['processing.status'], 'completed');
 });
 
 test('completed legacy summary is linked to the normalized run without regeneration', async () => {
