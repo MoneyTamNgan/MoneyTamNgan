@@ -1,16 +1,5 @@
 import mongoose from 'mongoose';
 
-const EvidenceSchema = new mongoose.Schema({
-    value: { type: String, required: true },
-    page: { type: Number, min: 1 },
-}, { _id: false });
-
-const FlaggedClauseSchema = new mongoose.Schema({
-    clause_text: { type: String, required: true },
-    reason: { type: String, required: true },
-    page: { type: Number, min: 1 },
-}, { _id: false });
-
 const ProjectSchema = new mongoose.Schema({
     project_id: { type: String, required: true, unique: true, index: true },
     project_name: { type: String, required: true },
@@ -19,10 +8,8 @@ const ProjectSchema = new mongoose.Schema({
     budget: { type: Number, required: true },
     project_status: { type: String, default: 'Active' },
     is_software: { type: Boolean, default: null, index: true },
-    classification_confidence: { type: Number, min: 0, max: 1, default: null },
-
-    // Canonical normalized references. Legacy nested fields remain during the
-    // zero-downtime migration and are populated by the compatibility writer.
+    // Canonical normalized references. Document, OCR, and summary content live
+    // in their own versioned collections.
     primary_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
     latest_extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun', index: true },
     latest_summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary', index: true },
@@ -33,12 +20,6 @@ const ProjectSchema = new mongoose.Schema({
         contract_end: { type: Date },
         duration_days: { type: Number }
     },
-    pdf_url: { type: String },
-    pdf_path: { type: String },
-    pdf_size: { type: Number },
-    pdf_content_type: { type: String },
-    pdf_downloaded_at: { type: Date },
-
     source: {
         provider: { type: String, default: 'egp_open_data' },
         fetched_at: { type: Date },
@@ -59,60 +40,8 @@ const ProjectSchema = new mongoose.Schema({
         reason: { type: String },
     },
 
-    document: {
-        record_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
-        text_storage: { type: String, enum: ['mongodb', 'local', 'gcs'] },
-        text_uri: String,
-        text_sha256: String,
-        page_count: Number,
-        source_url: { type: String },
-        source_type: { type: String },
-        aggregator_url: { type: String },
-        official_detail_url: { type: String },
-        local_path: { type: String },
-        gcs_uri: { type: String },
-        filename: { type: String },
-        mime_type: { type: String },
-        size_bytes: { type: Number, min: 0 },
-        archive_path: { type: String },
-        archive_filename: { type: String },
-        archive_mime_type: { type: String },
-        archive_size_bytes: { type: Number, min: 0 },
-        extracted_files: [{
-            entryName: { type: String },
-            filename: { type: String },
-            path: { type: String },
-            size: { type: Number, min: 0 },
-        }],
-        sha256: { type: String, index: true },
-        status: {
-            type: String,
-            enum: [
-                'pending', 'url_found', 'downloaded', 'linked', 'stored', 'unavailable',
-                'invalid', 'retry_pending', 'failed',
-            ],
-            default: 'pending',
-            index: true,
-        },
-        downloaded_at: { type: Date },
-        error: { type: String },
-    },
-
-    ocr: {
-        status: { type: String, enum: ['pending', 'running', 'completed', 'retry_pending'], default: 'pending' },
-        provider: String,
-        processor_version: String,
-        pages_processed: Number,
-        ocr_pages: Number,
-        attempts: { type: Number, default: 0 },
-        needs_review: Boolean,
-        review_pages: [{ page_number: Number, codes: [String] }],
-        completed_at: Date,
-        error: String,
-    },
     processing: {
         download_attempts: { type: Number, default: 0 },
-        text_sha256: String,
         ai_attempts: { type: Number, default: 0 },
         status: {
             type: String,
@@ -126,62 +55,22 @@ const ProjectSchema = new mongoose.Schema({
             default: 'metadata_ingested',
             index: true,
         },
-        summary_source: { type: String, enum: ['pdf', 'metadata', null], default: null },
-        model: { type: String },
-        model_version: { type: String },
-        prompt_version: { type: String },
-        document_sha256: { type: String },
-        confidence: { type: Number, min: 0, max: 1 },
         attempts: { type: Number, default: 0, min: 0 },
-        input_tokens: { type: Number, min: 0 },
-        output_tokens: { type: Number, min: 0 },
-        summary_record_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary' },
-        processed_at: { type: Date },
         error: { type: String },
-    },
-
-    extracted_data: {
-        summary: { type: String },
-        qualifications: [{ type: String }],
-        scope_of_work: [{ type: String }],
-        tech_stack: [{ type: String }],
-        evidence: {
-            qualifications: [EvidenceSchema],
-            scope_of_work: [EvidenceSchema],
-            tech_stack: [EvidenceSchema],
-        },
     },
 
     anomalies: {
         high_budget_flag: { type: Boolean, default: false },
         budget_deviation_multiplier: { type: Number, default: 1.0 },
-        flagged_clauses: [FlaggedClauseSchema]
     },
 
     workflow: {
         status: { type: String, index: true },
         error: String,
         updated_at: Date,
-    },
-
-    version_info: {
-        version: { type: Number, default: 1 },
-        is_latest: { type: Boolean, default: true },
-        superseded_by: { type: String, default: null },
-        previous_document_hash: { type: String },
-        detected_at: { type: Date },
     }
 }, {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
-});
-
-// A government project ID is the primary identity. The partial URL index also
-// prevents the same official download from being attached to a second project
-// while still allowing projects whose document has not been discovered yet.
-ProjectSchema.index({ pdf_url: 1 }, {
-    name: 'uniq_project_pdf_url',
-    unique: true,
-    partialFilterExpression: { pdf_url: { $type: 'string', $gt: '' } },
 });
 
 export default mongoose.models.Project || mongoose.model('Project', ProjectSchema);
