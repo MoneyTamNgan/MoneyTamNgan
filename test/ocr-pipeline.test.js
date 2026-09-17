@@ -16,6 +16,7 @@ async function fixture(t) {
         classification: { status: 'manual_override' }, pdf_path: pdf, pdf_content_type: 'application/pdf',
         document: { local_path: pdf, sha256: 'pdf-hash' }, ocr: { processor_version: 'engine-version' }, processing: {} };
     const updates = [];
+    const normalizedWrites = { ocr: 0, summary: 0 };
     t.mock.method(Project, 'findOne', () => ({ lean: async () => record }));
     t.mock.method(Project, 'updateOne', async (filter, update) => { updates.push(update); return {}; });
     const old = process.env.VERTEX_AI_ENABLED;
@@ -30,6 +31,17 @@ async function fixture(t) {
         }),
         saveOcrPages: async () => {},
         saveVertexSummary: async () => ({ _id: 'summary-test' }),
+        saveOcrBundle: async (project, document, textResult, uri, legacyUpdate) => {
+            normalizedWrites.ocr++;
+            updates.push(legacyUpdate);
+            return { _id: 'extraction-test' };
+        },
+        saveSummaryBundle: async (project, document, run, textResult, vertex, review, legacyUpdate) => {
+            normalizedWrites.summary++;
+            legacyUpdate.$set['processing.summary_record_id'] = 'summary-test';
+            updates.push(legacyUpdate);
+            return { _id: 'summary-test' };
+        },
         extractText: async (local, options) => {
             await options.onProgress({ pageCount: 2, pagesProcessed: 2, ocrPages: 1 });
             return { artifactPath: path.join(dir, 'document.json'), pages: [{ page_number: 1, text: 'ข้อความภาษาไทย'.repeat(10) }], textHash: 'text-hash',
@@ -37,7 +49,7 @@ async function fixture(t) {
         },
         extractWithVertex: async () => { throw new Error('Vertex should not run'); },
     };
-    return { record, updates, dependencies };
+    return { record, updates, dependencies, normalizedWrites };
 }
 
 test('stored PDF resumes at OCR and waits for Vertex configuration with durable progress', async t => {
@@ -133,4 +145,21 @@ test('Vertex failure records retry state while preserving completed OCR', async 
     assert.ok(updates.some(u => u.$set?.['ocr.status'] === 'completed'));
     assert.equal(updates.at(-1).$set['processing.status'], 'retry_pending');
     assert.equal(updates.at(-1).$set['ocr.status'], undefined);
+});
+
+test('normalized dual-write mode uses transactional OCR and summary bundles', async t => {
+    const { record, dependencies, normalizedWrites } = await fixture(t);
+    process.env.VERTEX_AI_ENABLED = 'true';
+    dependencies.extractWithVertex = async () => ({
+        extraction: { summary: 'สรุป', qualifications: [], scope_of_work: [],
+            tech_stack: [], flagged_clauses: [], confidence: 0.9 },
+        model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
+        usage: { inputTokens: 10, outputTokens: 5 },
+    });
+    const result = await processProject(record.project_id, {
+        normalizedDualWrite: true,
+    }, dependencies);
+    assert.equal(result.status, 'completed');
+    assert.equal(normalizedWrites.ocr, 1);
+    assert.equal(normalizedWrites.summary, 1);
 });
