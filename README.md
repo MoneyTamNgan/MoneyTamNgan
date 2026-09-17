@@ -67,6 +67,41 @@ Create or verify the MongoDB uniqueness and lookup indexes after deployment:
 npm run db:ensure-indexes
 ```
 
+### Zero-downtime normalized schema rollout
+
+The normalized storage model adds immutable extraction runs and versioned
+summaries without removing the legacy project fields used by existing API
+clients. Both rollout flags default to `false`, so deploying this code alone
+does not switch API reads or activate the transactional history write path.
+
+Run the rollout in this order:
+
+```bash
+npm run db:ensure-indexes
+npm run db:migrate-normalized -- --dry-run
+npm run db:migrate-normalized
+npm run db:reconcile-normalized -- --strict
+npm run db:migrate-normalized -- --finalize-indexes
+```
+
+After reconciliation passes, enable transactional normalized writes first:
+
+```env
+NORMALIZED_SCHEMA_DUAL_WRITE=true
+NORMALIZED_SCHEMA_READS=false
+```
+
+Process and verify representative projects, then enable normalized reads:
+
+```env
+NORMALIZED_SCHEMA_DUAL_WRITE=true
+NORMALIZED_SCHEMA_READS=true
+```
+
+Turning `NORMALIZED_SCHEMA_READS` back to `false` immediately restores legacy
+reads. Legacy fields continue to be dual-written; their removal is intentionally
+deferred to a later cleanup release.
+
 Duplicate prevention is enforced by unique indexes on the government project
 ID and official project document URL. Extracted documents use the compound
 identity `project_id + source_url + entry_name`, because multiple PDFs can
