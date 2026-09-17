@@ -1,6 +1,7 @@
 import connectDB from '@/lib/db';
 import ProcessingJob from '@/models/ProcessingJob';
 import Project from '@/models/Project';
+import { hydrateProjectCompatibility } from '@/lib/project-compat';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
@@ -9,8 +10,13 @@ export async function GET(request) {
         const jobId = new URL(request.url).searchParams.get('jobId');
         const projectId = new URL(request.url).searchParams.get('projectId');
         if (projectId) {
-            const project = await Project.findOne({ project_id: projectId }).select('project_id processing ocr document').lean();
-            return NextResponse.json({ status: project ? 'ok' : 'not_found', project }, { status: project ? 200 : 404 });
+            const project = await Project.findOne({ project_id: projectId })
+                .select('project_id processing ocr document primary_document_id latest_extraction_run_id latest_summary_id workflow')
+                .lean();
+            return NextResponse.json({
+                status: project ? 'ok' : 'not_found',
+                project: await hydrateProjectCompatibility(project),
+            }, { status: project ? 200 : 404 });
         }
         if (jobId) {
             const job = await ProcessingJob.findById(jobId).lean();
