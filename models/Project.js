@@ -21,6 +21,12 @@ const ProjectSchema = new mongoose.Schema({
     is_software: { type: Boolean, default: null, index: true },
     classification_confidence: { type: Number, min: 0, max: 1, default: null },
 
+    // Canonical normalized references. Legacy nested fields remain during the
+    // zero-downtime migration and are populated by the compatibility writer.
+    primary_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
+    latest_extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun', index: true },
+    latest_summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary', index: true },
+
     timeline: {
         announce_date: { type: Date },
         contract_start: { type: Date },
@@ -150,6 +156,12 @@ const ProjectSchema = new mongoose.Schema({
         high_budget_flag: { type: Boolean, default: false },
         budget_deviation_multiplier: { type: Number, default: 1.0 },
         flagged_clauses: [FlaggedClauseSchema]
+    },
+
+    workflow: {
+        status: { type: String, index: true },
+        error: String,
+        updated_at: Date,
     },
 
     version_info: {

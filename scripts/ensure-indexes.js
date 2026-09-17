@@ -6,10 +6,11 @@ import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
 import Document from '../models/Document.js';
 import DocumentPage from '../models/DocumentPage.js';
 import DocumentSummary from '../models/DocumentSummary.js';
+import ExtractionRun from '../models/ExtractionRun.js';
 import ProcessingJob from '../models/ProcessingJob.js';
 import Project from '../models/Project.js';
 
-const MODELS = [Project, Document, DocumentPage, DocumentSummary, ProcessingJob];
+const MODELS = [Project, Document, ExtractionRun, DocumentPage, DocumentSummary, ProcessingJob];
 
 async function main() {
     if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is required');

@@ -13,6 +13,10 @@ const DocumentSchema = new mongoose.Schema({
         default: 'unknown', index: true,
     },
     is_primary: { type: Boolean, default: false, index: true },
+    is_current_primary: { type: Boolean, default: false, index: true },
+    version: { type: Number, min: 1, default: 1 },
+    previous_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+    discovered_at: { type: Date, default: Date.now },
     source_url: String,
     source_type: String,
     official_detail_url: String,
@@ -47,6 +51,11 @@ const DocumentSchema = new mongoose.Schema({
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 DocumentSchema.index({ project_id: 1, sha256: 1 }, { unique: true });
+DocumentSchema.index({ project_id: 1, is_current_primary: 1 }, {
+    name: 'uniq_current_primary_document',
+    unique: true,
+    partialFilterExpression: { is_current_primary: true },
+});
 // One e-GP ZIP URL can contain several PDFs, so URL alone cannot be unique.
 // Archive entry name completes the stable source identity for each PDF.
 DocumentSchema.index({ project_id: 1, source_url: 1, entry_name: 1 }, {
