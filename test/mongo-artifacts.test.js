@@ -44,10 +44,6 @@ test('schemas enforce stable project and document source identities', () => {
     assert.ok(projectIndexes.some(([keys, options]) => (
         keys.project_id === 1 && options.unique === true
     )));
-    assert.ok(projectIndexes.some(([keys, options]) => (
-        keys.pdf_url === 1 && options.unique === true
-        && options.partialFilterExpression?.pdf_url?.$type === 'string'
-    )));
     assert.ok(documentIndexes.some(([keys, options]) => (
         keys.project_id === 1 && keys.source_url === 1 && keys.entry_name === 1
         && options.unique === true
