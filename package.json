@@ -10,6 +10,8 @@
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",
     "db:ensure-indexes": "node scripts/ensure-indexes.js",
+    "db:migrate-normalized": "node scripts/migrate-normalized-schema.js",
+    "db:reconcile-normalized": "node scripts/reconcile-normalized-schema.js",
     "test": "node --test"
   },
   "dependencies": {
