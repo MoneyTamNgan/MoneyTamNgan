@@ -67,14 +67,14 @@ Create or verify the MongoDB uniqueness and lookup indexes after deployment:
 npm run db:ensure-indexes
 ```
 
-### Zero-downtime normalized schema rollout
+### Normalized schema maintenance
 
-The normalized storage model adds immutable extraction runs and versioned
-summaries without removing the legacy project fields used by existing API
-clients. Both rollout flags default to `false`, so deploying this code alone
-does not switch API reads or activate the transactional history write path.
+Document, OCR page, and Vertex summary data is stored only in the normalized
+collections. API routes reconstruct the existing client response shape from
+the project pointers, so clients do not need to understand the physical
+storage layout.
 
-Run the rollout in this order:
+For a database that still contains the former embedded project fields, run:
 
 ```bash
 npm run db:ensure-indexes
@@ -82,25 +82,13 @@ npm run db:migrate-normalized -- --dry-run
 npm run db:migrate-normalized
 npm run db:reconcile-normalized -- --strict
 npm run db:migrate-normalized -- --finalize-indexes
+npm run db:cleanup-legacy
+npm run db:cleanup-legacy -- --apply
 ```
 
-After reconciliation passes, enable transactional normalized writes first:
-
-```env
-NORMALIZED_SCHEMA_DUAL_WRITE=true
-NORMALIZED_SCHEMA_READS=false
-```
-
-Process and verify representative projects, then enable normalized reads:
-
-```env
-NORMALIZED_SCHEMA_DUAL_WRITE=true
-NORMALIZED_SCHEMA_READS=true
-```
-
-Turning `NORMALIZED_SCHEMA_READS` back to `false` immediately restores legacy
-reads. Legacy fields continue to be dual-written; their removal is intentionally
-deferred to a later cleanup release.
+The cleanup command is a dry run unless `--apply` is supplied. It refuses to
+remove legacy fields when a document, OCR page, extraction run, or summary has
+not been linked to normalized storage.
 
 Duplicate prevention is enforced by unique indexes on the government project
 ID and official project document URL. Extracted documents use the compound
@@ -129,15 +117,13 @@ kept as the source archive, while valid contained PDFs are safely extracted
 under `storage/tor/<project-id>/extracted/`. The resolver selects the PDF whose
 filename most strongly indicates a TOR or draft e-Bidding document.
 
-`Project.pdf_path` points to the selected PDF and `Project.pdf_url` retains the
-original remote URL for provenance, even when that URL serves a ZIP.
-`Project.document.archive_path` records the downloaded ZIP and
-`Project.document.extracted_files` records every valid extracted PDF. A
-discovered link is retained even when downloading the file fails, so it can be
-retried later.
+`Document.source_url` retains the original remote URL for provenance, even when
+that URL serves a ZIP. `Document.archive` records archive metadata, and each
+valid extracted PDF receives its own `documents` record. A discovered link is
+retained even when downloading the file fails so it can be retried later.
 
 ```bash
-# Up to 10 projects whose pdf_path is missing
+# Up to 10 projects whose normalized document is missing
 npm run scrape
 
 # One project
