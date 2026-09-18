@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+env:
+  # Dummy values: no live database/OAuth provider is reachable in CI (and shouldn't
+  # need to be — the build and test suites never open a real network connection).
+  MONGODB_URI: mongodb://localhost:27017/ci
+  JWT_SECRET: ci-placeholder-secret
+  NEXT_PUBLIC_REDIRECT_URI: http://localhost:3000/api/auth/google/callback
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  test:
+    name: Test (mocked data)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:vitest
+
+  contract:
+    name: API contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint OpenAPI spec
+        run: npx @redocly/cli lint docs/api/openapi.yaml
+      - name: Validate API responses against the spec
+        run: npx vitest run tests/contract
