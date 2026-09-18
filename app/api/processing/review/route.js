@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
+import { hydrateProjectsCompatibility } from '@/lib/project-compat';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
@@ -23,7 +24,12 @@ export async function GET(request) {
                 .lean(),
             Project.countDocuments(filter),
         ]);
-        return NextResponse.json({ items, total, page, pageSize });
+        return NextResponse.json({
+            items: await hydrateProjectsCompatibility(items),
+            total,
+            page,
+            pageSize,
+        });
     } catch (error) {
         return NextResponse.json({
             error: { code: 'REVIEW_QUEUE_FAILED', message: error.message },
