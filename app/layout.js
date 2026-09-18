@@ -1,8 +1,16 @@
+import "./globals.css";
+import SidebarLayout from "@/components/ui/SidebarLayout";
+
+export const metadata = {
+  title: "MoneyTamNgan",
+  description: "TOR tracking and analysis portal",
+};
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body suppressHydrationWarning={true}>
-        {children}
+    <html lang="th" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <SidebarLayout>{children}</SidebarLayout>
       </body>
     </html>
   );
