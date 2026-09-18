@@ -4,7 +4,7 @@
  * CLI TOR PDF Scraper
  *
  * Usage:
- *   node scripts/scrape.js                          # Download TORs missing pdf_path
+ *   node scripts/scrape.js                          # Download TORs missing a primary document
  *   node scripts/scrape.js --project-id=67039549408  # Scrape a single project
  *   node scripts/scrape.js --limit=20               # Scrape up to 20 projects
  *   node scripts/scrape.js --delay=5000             # 5 second delay between requests
@@ -12,7 +12,6 @@
 
 import 'dotenv/config';
 import mongoose from 'mongoose';
-import path from 'node:path';
 import {
     DEFAULT_DELAY_MS,
     normalizeDelayMs,
@@ -20,6 +19,9 @@ import {
     scrapeBatch,
 } from '../lib/scraper.js';
 import Project from '../models/Project.js';
+import Document from '../models/Document.js';
+import { hashFile } from '../lib/document-storage.js';
+import { persistPdfRecords } from '../lib/mongo-artifacts.js';
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
 
 // ── Parse CLI arguments ──
@@ -34,35 +36,24 @@ function parseArgs() {
     return args;
 }
 
-function pdfUpdateFromResult(result) {
-    const update = {};
-    if (result.pdf_url) {
-        update.pdf_url = result.pdf_url;
-        update['document.source_url'] = result.pdf_url;
-        update['document.source_type'] = result.resolver_source || 'egp_browser';
-        update['document.aggregator_url'] = result.aggregator_url;
-        update['document.official_detail_url'] = result.official_detail_url;
-        update['document.status'] = result.pdf_path ? 'downloaded' : 'url_found';
-    }
-    if (result.pdf_path) {
-        update.pdf_path = result.pdf_path;
-        update.pdf_size = result.pdf_size;
-        update.pdf_content_type = result.pdf_content_type;
-        update.pdf_downloaded_at = new Date();
-        update['document.local_path'] = result.pdf_path;
-        update['document.size_bytes'] = result.pdf_size;
-        update['document.mime_type'] = result.pdf_content_type;
-        update['document.archive_path'] = result.archive_path;
-        update['document.archive_filename'] = result.archive_path
-            ? path.basename(result.archive_path)
-            : undefined;
-        update['document.archive_mime_type'] = result.archive_content_type;
-        update['document.archive_size_bytes'] = result.archive_size;
-        update['document.extracted_files'] = result.extracted_pdfs || [];
-        update['document.downloaded_at'] = new Date();
-        update['processing.status'] = 'document_downloaded';
-    }
-    return update;
+async function persistScrapeResult(project, result) {
+    if (!project || !result.pdf_path) return null;
+    const hashed = await hashFile(result.pdf_path);
+    const document = await persistPdfRecords(
+        project,
+        result,
+        { ...hashed, backend: 'local', gcsUri: null },
+        result.resolver_source || 'egp_browser'
+    );
+    await Project.updateOne({ _id: project._id }, { $set: {
+        primary_document_id: document._id,
+        'processing.status': 'document_downloaded',
+        'processing.error': null,
+        'workflow.status': 'document_downloaded',
+        'workflow.error': null,
+        'workflow.updated_at': new Date(),
+    } });
+    return document;
 }
 
 // ── Main ──
@@ -93,18 +84,16 @@ async function main() {
     if (projectId) {
         // Single project mode
         console.log(`🔍 Scraping single project: ${projectId}`);
-        const existingProject = await Project.findOne({ project_id: projectId })
-            .select('pdf_url')
-            .lean();
+        const existingProject = await Project.findOne({ project_id: projectId }).lean();
+        const existingDocument = existingProject?.primary_document_id
+            ? await Document.findById(existingProject.primary_document_id).lean()
+            : null;
         const result = await scrapeProjectTOR(projectId, null, {
-            knownPdfUrl: existingProject?.pdf_url,
+            knownPdfUrl: existingDocument?.source_url,
         });
 
-        if (result.pdf_url || result.pdf_path) {
-            await Project.findOneAndUpdate(
-                { project_id: projectId },
-                { $set: pdfUpdateFromResult(result) }
-            );
+        if (result.pdf_path) {
+            await persistScrapeResult(existingProject, result);
             if (result.pdf_path) console.log(`\n✅ Stored TOR file: ${result.pdf_path}`);
             if (result.pdf_url) console.log(`   Source URL: ${result.pdf_url}`);
             if (result.archive_path) console.log(`   Source archive: ${result.archive_path}`);
@@ -123,10 +112,8 @@ async function main() {
         }
     } else {
         // Batch mode
-        const projects = await Project.find({
-            $or: [{ pdf_path: null }, { pdf_path: '' }, { pdf_path: { $exists: false } }],
-        })
-            .select('project_id project_name pdf_url')
+        const projects = await Project.find({ primary_document_id: { $exists: false } })
+            .select('project_id project_name primary_document_id')
             .limit(limit)
             .lean();
 
@@ -138,7 +125,6 @@ async function main() {
 
             const scrapeTargets = projects.map(project => ({
                 projectId: project.project_id,
-                pdf_url: project.pdf_url,
             }));
             const { results, summary } = await scrapeBatch(scrapeTargets, {
                 delayMs,
@@ -151,11 +137,9 @@ async function main() {
             // Update DB
             let updated = 0;
             for (const result of results) {
-                if (result.pdf_url || result.pdf_path) {
-                    await Project.findOneAndUpdate(
-                        { project_id: result.projectId },
-                        { $set: pdfUpdateFromResult(result) }
-                    );
+                if (result.pdf_path) {
+                    const project = projects.find(item => item.project_id === result.projectId);
+                    await persistScrapeResult(project, result);
                     updated++;
                 }
             }

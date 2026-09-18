@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
+import { hydrateProjectsCompatibility } from '@/lib/project-compat';
 import { NextResponse } from 'next/server';
 
 /**
@@ -74,8 +75,9 @@ export async function GET(request) {
             Project.countDocuments(filter),
         ]);
 
+        const compatibleItems = await hydrateProjectsCompatibility(items);
         return NextResponse.json({
-            items,
+            items: compatibleItems,
             total,
             page,
             pageSize,
