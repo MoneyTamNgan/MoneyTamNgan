@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
+import { hydrateProjectCompatibility } from '@/lib/project-compat';
 import { NextResponse } from 'next/server';
 
 /**
@@ -24,7 +25,7 @@ export async function GET(request, { params }) {
             }, { status: 404 });
         }
 
-        return NextResponse.json(project, {
+        return NextResponse.json(await hydrateProjectCompatibility(project), {
             headers: {
                 'Content-Type': 'application/json; charset=utf-8',
             },
