@@ -118,6 +118,9 @@ paths:
                     isSoftware: true
                     classification: { status: software, confidence: 0.92 }
                     documentStatus: pending
+                    processingStatus: ai_pending
+                    techStack: [React, Node.js, Cloud]
+                    anomaly: { highBudgetFlag: false, budgetDeviationMultiplier: 1 }
         "400":
           description: Invalid filter parameters
           content:
@@ -878,7 +881,7 @@ components:
 
     TorListItem:
       type: object
-      required: [id, title, agency, budget, projectStatus, announceDate, isSoftware, classification, documentStatus]
+      required: [id, title, agency, budget, projectStatus, announceDate, isSoftware, classification, documentStatus, processingStatus, techStack, anomaly]
       properties:
         id: { type: string }
         title: { type: string }
@@ -890,6 +893,19 @@ components:
         classification:
           $ref: "#/components/schemas/TorApiClassification"
         documentStatus: { type: string, nullable: true }
+        processingStatus: { type: string, nullable: true }
+        techStack:
+          type: array
+          items: { type: string }
+        anomaly:
+          $ref: "#/components/schemas/TorListAnomaly"
+
+    TorListAnomaly:
+      type: object
+      required: [highBudgetFlag, budgetDeviationMultiplier]
+      properties:
+        highBudgetFlag: { type: boolean }
+        budgetDeviationMultiplier: { type: number }
 
     TorListResponse:
       type: object
@@ -921,7 +937,7 @@ components:
 
     TorDetail:
       type: object
-      required: [id, title, agency, budget, projectStatus, timeline, classification, documentStatus, processingStatus, requirements, scopeOfWork, techStack, summary, anomalies, version]
+      required: [id, title, agency, budget, projectStatus, pdfUrl, createdAt, updatedAt, timeline, classification, documentStatus, processingStatus, requirements, scopeOfWork, techStack, summary, anomalies, version]
       properties:
         id: { type: string }
         title: { type: string }
@@ -933,6 +949,9 @@ components:
             subName: { type: string, nullable: true }
         budget: { type: number }
         projectStatus: { type: string }
+        pdfUrl: { type: string, format: uri, nullable: true }
+        createdAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
         timeline:
           type: object
           required: [announceDate, contractStart, contractEnd, durationDays]

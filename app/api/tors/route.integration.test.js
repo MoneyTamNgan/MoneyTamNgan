@@ -4,18 +4,16 @@ import { mockProjectRecords } from '@/lib/mock-project-records';
 // No real DB: connectDB is a no-op, and Project.find/countDocuments return fixtures.
 vi.mock('@/lib/db', () => ({ default: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/models/Project', () => {
-    function chain(records) {
-        return {
-            sort: () => chain(records),
-            skip: (n) => chain(records.slice(n)),
-            limit: (n) => chain(records.slice(0, n)),
-            lean: async () => records,
-        };
-    }
     return {
         default: {
-            find: vi.fn(() => chain(mockProjectRecords)),
-            countDocuments: vi.fn().mockResolvedValue(mockProjectRecords.length),
+            aggregate: vi.fn((pipeline) => {
+                const countStage = pipeline.find((stage) => stage.$count);
+                if (countStage) return Promise.resolve([{ total: mockProjectRecords.length }]);
+
+                const skip = pipeline.find((stage) => stage.$skip)?.$skip ?? 0;
+                const limit = pipeline.find((stage) => stage.$limit)?.$limit ?? mockProjectRecords.length;
+                return Promise.resolve(mockProjectRecords.slice(skip, skip + limit));
+            }),
         },
     };
 });
