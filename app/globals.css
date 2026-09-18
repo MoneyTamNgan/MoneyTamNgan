@@ -121,7 +121,6 @@
   background: #b91c1c;
   transform: translateY(-2px);
 }
-
 /* Modal Popup */
 .profile-modal-backdrop {
   position: fixed;
@@ -380,4 +379,3 @@
     padding-inline: 14px;
   }
 }
-

@@ -34,7 +34,6 @@ export async function POST() {
             if (is_software === null) continue;
 
             project.is_software = is_software;
-            project.classification_confidence = classification_confidence;
             project.classification = {
                 status: is_software ? 'software' : 'not_software',
                 confidence: classification_confidence,

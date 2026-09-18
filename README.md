@@ -83,6 +83,41 @@ npm run worker:once
 npm run worker
 ```
 
+Create or verify the MongoDB uniqueness and lookup indexes after deployment:
+
+```bash
+npm run db:ensure-indexes
+```
+
+### Normalized schema maintenance
+
+Document, OCR page, and Vertex summary data is stored only in the normalized
+collections. API routes reconstruct the existing client response shape from
+the project pointers, so clients do not need to understand the physical
+storage layout.
+
+For a database that still contains the former embedded project fields, run:
+
+```bash
+npm run db:ensure-indexes
+npm run db:migrate-normalized -- --dry-run
+npm run db:migrate-normalized
+npm run db:reconcile-normalized -- --strict
+npm run db:migrate-normalized -- --finalize-indexes
+npm run db:cleanup-legacy
+npm run db:cleanup-legacy -- --apply
+```
+
+The cleanup command is a dry run unless `--apply` is supplied. It refuses to
+remove legacy fields when a document, OCR page, extraction run, or summary has
+not been linked to normalized storage.
+
+Duplicate prevention is enforced by unique indexes on the government project
+ID and official project document URL. Extracted documents use the compound
+identity `project_id + source_url + entry_name`, because multiple PDFs can
+legitimately come from the same e-GP ZIP. OCR pages and Vertex summaries retain
+their existing idempotent compound unique indexes.
+
 Inspect pipeline coverage and the manual-review queue:
 
 ```text
@@ -104,15 +139,13 @@ kept as the source archive, while valid contained PDFs are safely extracted
 under `storage/tor/<project-id>/extracted/`. The resolver selects the PDF whose
 filename most strongly indicates a TOR or draft e-Bidding document.
 
-`Project.pdf_path` points to the selected PDF and `Project.pdf_url` retains the
-original remote URL for provenance, even when that URL serves a ZIP.
-`Project.document.archive_path` records the downloaded ZIP and
-`Project.document.extracted_files` records every valid extracted PDF. A
-discovered link is retained even when downloading the file fails, so it can be
-retried later.
+`Document.source_url` retains the original remote URL for provenance, even when
+that URL serves a ZIP. `Document.archive` records archive metadata, and each
+valid extracted PDF receives its own `documents` record. A discovered link is
+retained even when downloading the file fails so it can be retried later.
 
 ```bash
-# Up to 10 projects whose pdf_path is missing
+# Up to 10 projects whose normalized document is missing
 npm run scrape
 
 # One project
@@ -126,9 +159,15 @@ Set `MONGODB_URI` in `.env`. The batch delay defaults to four seconds and can
 be configured with `SCRAPER_DELAY_MS` or `--delay`. Values below three seconds
 are rejected to avoid overwhelming the e-GP service.
 
-Set `TOR_STORAGE_DIR` to override the storage root. Downloads are streamed to
-temporary files and atomically renamed after completion. The default maximum
-file size is 100 MB; change it with `TOR_MAX_FILE_SIZE_MB`. In production,
+Set `TOR_STORAGE_DIR` to override the temporary working root. Downloads are
+streamed to temporary files and atomically renamed before processing. By
+default, `TOR_RETAIN_SOURCE_FILES=false`: after OCR is committed to MongoDB,
+the ZIP/PDF working files are deleted while their official URL, hashes,
+filenames, sizes, page text, and summaries remain stored. Set it to `true`
+only when durable local/GCS source-file retention is required. The default maximum
+file size is 250 MB; change it with `TOR_MAX_FILE_SIZE_MB`. Large e-GP files
+have a bounded five-minute request timeout, configurable through
+`EGP_DOWNLOAD_TIMEOUT_MS`. In production,
 set `TOR_STORAGE_BACKEND=gcs` and configure `TOR_GCS_BUCKET`. Objects are named
 by fiscal year, project ID, and SHA-256 hash so unchanged PDFs are not sent to
 Vertex repeatedly.
@@ -230,8 +269,10 @@ The old e-GP search page uses Cloudflare verification, so it is disabled as a
 fallback by default. Set `ENABLE_LEGACY_EGP_SEARCH_FALLBACK=true` only if that
 search flow is usable in the deployment environment. Direct encrypted detail
 URLs do not require the scraper to submit the public search form. The official
-related-document service can intermittently return E1530; configure bounded
-reload attempts with `EGP_DETAIL_RETRY_ATTEMPTS` (default 5).
+related-document service can intermittently return E1530. The scraper captures
+the official ZIP-list request and resolves the latest archive through the
+approval and upload services in the same browser session. Configure bounded
+retry attempts with `EGP_DETAIL_RETRY_ATTEMPTS` (default 5).
 
 ## Verification
 

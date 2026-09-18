@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { toTorDetail } from '@/lib/api/tor-response';
+import { hydrateProjectCompatibility } from '@/lib/project-compat';
 
 /** GET /api/tors/{id} */
 export async function GET(_request, { params }) {
@@ -24,7 +25,7 @@ export async function GET(_request, { params }) {
             }, { status: 404 });
         }
 
-        return NextResponse.json(toTorDetail(project));
+        return NextResponse.json(toTorDetail(await hydrateProjectCompatibility(project)));
     } catch (error) {
         return NextResponse.json({
             error: { code: 'GET_TOR_FAILED', message: error.message },

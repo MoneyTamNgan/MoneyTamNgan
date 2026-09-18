@@ -9,7 +9,11 @@
     "scrape": "node scripts/scrape.js",
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",
-    "test": "node --test test/ lib/classification.test.js",
+    "db:ensure-indexes": "node scripts/ensure-indexes.js",
+    "db:migrate-normalized": "node scripts/migrate-normalized-schema.js",
+    "db:reconcile-normalized": "node scripts/reconcile-normalized-schema.js",
+    "db:cleanup-legacy": "node scripts/cleanup-legacy-schema.js",
+    "test": "node --test test/*.test.js lib/classification.test.js",
     "test:vitest": "vitest run",
     "test:vitest:watch": "vitest"
   },

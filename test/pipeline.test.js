@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createWriteStream } from 'node:fs';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -8,11 +8,12 @@ import test from 'node:test';
 import yazl from 'yazl';
 import { extractPdfsFromZip } from '../lib/archive-extractor.js';
 import { classifyProjectMetadata } from '../lib/classifier.js';
-import { hashFile, persistDocument } from '../lib/document-storage.js';
+import { hashFile, persistDocument, removeTransientDocuments } from '../lib/document-storage.js';
 import { validateRemoteDocumentUrl } from '../lib/document-resolver.js';
 import { buildProjectUpsert, mapToProjectSchema, parseThaiDate } from '../lib/egp-api.js';
 import { parseAggregatorHtml } from '../lib/egp-aggregator.js';
 import { validateTorExtraction } from '../lib/vertex/response-schema.js';
+import { unresolvedDocumentLookupError } from '../lib/scraper.js';
 import ProcessingJob from '../models/ProcessingJob.js';
 import Project from '../models/Project.js';
 import {
@@ -42,8 +43,17 @@ test('Thai dates are converted from Buddhist Era', () => {
     assert.equal(parseThaiDate('21 มิ.ย. 69').toISOString().slice(0, 10), '2026-06-21');
 });
 
-test('MongoDB connection fallback recognizes only SRV DNS failures', () => {
+test('MongoDB connection fallback recognizes transient Atlas SRV and TXT DNS failures', () => {
     assert.equal(isMongoSrvDnsError({ code: 'EBADRESP' }), true);
+    assert.equal(isMongoSrvDnsError({
+        code: 'ETIMEOUT',
+        message: 'queryTxt ETIMEOUT cluster.example.mongodb.net',
+    }), true);
+    assert.equal(isMongoSrvDnsError({
+        code: 'ECONNREFUSED',
+        message: 'querySrv ECONNREFUSED _mongodb._tcp.cluster.example.mongodb.net',
+    }), true);
+    assert.equal(isMongoSrvDnsError({ code: 'ETIMEOUT', message: 'socket timed out' }), false);
     assert.equal(isMongoSrvDnsError(new Error('authentication failed')), false);
     assert.equal(mongoConnectionOptions().dbName, process.env.MONGODB_DB_NAME || 'moneytamngan');
     assert.ok(configuredMongoDnsServers().length >= 1);
@@ -99,6 +109,19 @@ test('document resolver rejects private and credential-bearing URLs', () => {
     );
 });
 
+test('transient e-GP ZIP-list failures are not mistaken for missing documents', () => {
+    const timeout = new Error('terminated');
+    assert.equal(
+        unresolvedDocumentLookupError({ unavailableError: timeout }, []),
+        timeout
+    );
+    assert.equal(
+        unresolvedDocumentLookupError({ unavailableError: timeout }, [{ url: 'https://example.go.th/a.pdf' }]),
+        null
+    );
+    assert.equal(unresolvedDocumentLookupError(null, []), null);
+});
+
 test('aggregator parser resolves only the encrypted official e-GP detail link', () => {
     const projectId = '68019088742';
     const encrypted = 'abc123_encrypted-token';
@@ -142,6 +165,29 @@ test('local storage produces a stable SHA-256 identity', async () => {
     assert.equal(persisted.backend, 'local');
     assert.equal(persisted.sha256, first.sha256);
     assert.equal(persisted.size, first.size);
+});
+
+test('link-only retention removes PDF, ZIP and OCR checkpoint files', async t => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'money-tam-ngan-cleanup-'));
+    t.after(() => rm(directory, { recursive: true, force: true }));
+    const pdf = path.join(directory, 'tor.pdf');
+    const archive = path.join(directory, 'tor.zip');
+    const textDirectory = path.join(directory, 'text', 'fingerprint');
+    const artifact = path.join(textDirectory, 'document.json');
+    await mkdir(textDirectory, { recursive: true });
+    await Promise.all([
+        writeFile(pdf, '%PDF-test'),
+        writeFile(archive, 'PK-test'),
+        writeFile(artifact, '{}'),
+    ]);
+    await removeTransientDocuments({
+        pdf_path: pdf,
+        archive_path: archive,
+        extracted_pdfs: [{ path: pdf }],
+    }, { artifactPath: artifact });
+    await assert.rejects(access(pdf));
+    await assert.rejects(access(archive));
+    await assert.rejects(access(artifact));
 });
 
 test('ZIP extraction keeps the archive and selects the e-Bidding PDF', async () => {

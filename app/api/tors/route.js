@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { toTorListItem } from '@/lib/api/tor-response';
+import { hydrateProjectsCompatibility } from '@/lib/project-compat';
 
 const MAX_LIMIT = 100;
 
@@ -90,12 +91,13 @@ export async function GET(request) {
             Project.countDocuments(filter),
         ]);
 
+        const compatibleProjects = await hydrateProjectsCompatibility(projects);
         return NextResponse.json({
             status: 'success',
             page: pageResult.value,
             limit: limitResult.value,
             total,
-            data: projects.map(toTorListItem),
+            data: compatibleProjects.map(toTorListItem),
         });
     } catch (error) {
         return errorResponse('LIST_TORS_FAILED', error.message, 500);

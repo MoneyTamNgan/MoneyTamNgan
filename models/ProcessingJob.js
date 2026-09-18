@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const ProcessingJobSchema = new mongoose.Schema({
     type: { type: String, enum: ['process_project'], default: 'process_project', index: true },
     project_id: { type: String, required: true, index: true },
+    active_key: { type: String },
     status: {
         type: String,
         enum: ['queued', 'running', 'completed', 'failed'],
@@ -22,6 +23,11 @@ const ProcessingJobSchema = new mongoose.Schema({
 });
 
 ProcessingJobSchema.index({ status: 1, available_at: 1, created_at: 1 });
+ProcessingJobSchema.index({ active_key: 1 }, {
+    name: 'uniq_active_processing_job',
+    unique: true,
+    partialFilterExpression: { active_key: { $type: 'string' } },
+});
 
 export default mongoose.models.ProcessingJob
     || mongoose.model('ProcessingJob', ProcessingJobSchema);
