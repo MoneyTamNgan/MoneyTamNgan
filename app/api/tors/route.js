@@ -103,27 +103,6 @@ export async function GET(request) {
             if (dateToResult.value) filter['timeline.announce_date'].$lte = dateToResult.value;
         }
 
-        // A project can exist more than once when it has been ingested by an
-        // earlier pipeline. Select its most recently updated record before
-        // filtering and paginating so the dashboard never shows duplicates.
-        const latestProjectPipeline = [
-            { $sort: { updated_at: -1, created_at: -1, _id: -1 } },
-            { $group: { _id: '$project_id', project: { $first: '$$ROOT' } } },
-            { $replaceRoot: { newRoot: '$project' } },
-            { $match: filter },
-        ];
-
-        const [projects, totalResult] = await Promise.all([
-            Project.aggregate([
-                ...latestProjectPipeline,
-                { $sort: { 'timeline.announce_date': -1, updated_at: -1, _id: -1 } },
-                { $skip: (pageResult.value - 1) * limitResult.value },
-                { $limit: limitResult.value },
-            ]),
-            Project.aggregate([
-                ...latestProjectPipeline,
-                { $count: 'total' },
-            ]),
         if (budgetMinResult.value !== null || budgetMaxResult.value !== null) {
             filter.budget = {};
             if (budgetMinResult.value !== null) filter.budget.$gte = budgetMinResult.value;
@@ -132,16 +111,36 @@ export async function GET(request) {
 
         if (q) filter.$text = { $search: q };
 
-        const projection = q ? { score: { $meta: 'textScore' } } : null;
-        const sort = q ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1 };
+        const pipeline = [
+            { $match: filter }
+        ];
 
-        const [projects, total] = await Promise.all([
-            Project.find(filter, projection)
-                .sort(sort)
-                .skip((pageResult.value - 1) * limitResult.value)
-                .limit(limitResult.value)
-                .lean(),
-            Project.countDocuments(filter),
+        if (q) {
+            pipeline.push({ $addFields: { score: { $meta: 'textScore' } } });
+        }
+
+        // A project can exist more than once when it has been ingested by an
+        // earlier pipeline. Select its most recently updated record before
+        // paginating so the dashboard never shows duplicates.
+        pipeline.push(
+            { $sort: { updated_at: -1, created_at: -1, _id: -1 } },
+            { $group: { _id: '$project_id', project: { $first: '$$ROOT' } } },
+            { $replaceRoot: { newRoot: '$project' } }
+        );
+
+        const sort = q ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1, _id: -1 };
+
+        const [projects, totalResult] = await Promise.all([
+            Project.aggregate([
+                ...pipeline,
+                { $sort: sort },
+                { $skip: (pageResult.value - 1) * limitResult.value },
+                { $limit: limitResult.value },
+            ]),
+            Project.aggregate([
+                ...pipeline,
+                { $count: 'total' },
+            ]),
         ]);
         const total = totalResult[0]?.total ?? 0;
 
