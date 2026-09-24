@@ -101,6 +101,7 @@ export interface TorApiListItem {
   documentStatus: string | null;
   processingStatus: string | null;
   techStack: string[];
+  matchScore?: number | null;
   anomaly: {
     highBudgetFlag: boolean;
     budgetDeviationMultiplier: number;
