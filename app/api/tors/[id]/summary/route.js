@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { toTorSummary } from '@/lib/api/tor-response';
+import { hydrateProjectCompatibility } from '@/lib/project-compat';
 
 /** GET /api/tors/{id}/summary */
 export async function GET(_request, { params }) {
@@ -24,7 +25,7 @@ export async function GET(_request, { params }) {
             }, { status: 404 });
         }
 
-        return NextResponse.json(toTorSummary(project));
+        return NextResponse.json(toTorSummary(await hydrateProjectCompatibility(project)));
     } catch (error) {
         return NextResponse.json({
             error: { code: 'GET_TOR_SUMMARY_FAILED', message: error.message },
