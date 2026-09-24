@@ -1,0 +1,49 @@
+name: Promote develop to main
+
+# Runs after CI succeeds on develop (i.e. right after a PR is merged into
+# develop). Opens (or reuses) a develop -> main PR and turns on auto-merge,
+# so it merges itself once main's required status checks pass on it.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [develop]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  promote:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PROMOTE_TO_MAIN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check whether main is behind develop
+        id: diff
+        run: |
+          git fetch origin main develop
+          ahead=$(git rev-list --count origin/main..origin/develop)
+          echo "ahead=$ahead" >> "$GITHUB_OUTPUT"
+
+      - name: Create the promotion PR if one isn't open yet
+        if: steps.diff.outputs.ahead != '0'
+        id: pr
+        run: |
+          number=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            url=$(gh pr create --base main --head develop \
+              --title "chore: promote develop to main" \
+              --body "Automated promotion: CI passed on develop, opening this PR to bring main up to date.")
+            number=${url##*/}
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Enable auto-merge (merge commit)
+        if: steps.diff.outputs.ahead != '0'
+        run: gh pr merge "${{ steps.pr.outputs.number }}" --merge --auto

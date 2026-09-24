@@ -8,8 +8,10 @@ import {
     scrapeBatch,
 } from '@/lib/scraper';
 import Project from '@/models/Project';
+import Document from '@/models/Document';
+import { hashFile } from '@/lib/document-storage';
+import { persistPdfRecords } from '@/lib/mongo-artifacts';
 import { NextResponse } from 'next/server';
-import path from 'node:path';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -24,35 +26,24 @@ function badRequest(message) {
     }, { status: 400 });
 }
 
-function pdfUpdateFromResult(result) {
-    const update = {};
-    if (result.pdf_url) {
-        update.pdf_url = result.pdf_url;
-        update['document.source_url'] = result.pdf_url;
-        update['document.source_type'] = result.resolver_source || 'egp_browser';
-        update['document.aggregator_url'] = result.aggregator_url;
-        update['document.official_detail_url'] = result.official_detail_url;
-        update['document.status'] = result.pdf_path ? 'downloaded' : 'url_found';
-    }
-    if (result.pdf_path) {
-        update.pdf_path = result.pdf_path;
-        update.pdf_size = result.pdf_size;
-        update.pdf_content_type = result.pdf_content_type;
-        update.pdf_downloaded_at = new Date();
-        update['document.local_path'] = result.pdf_path;
-        update['document.size_bytes'] = result.pdf_size;
-        update['document.mime_type'] = result.pdf_content_type;
-        update['document.archive_path'] = result.archive_path;
-        update['document.archive_filename'] = result.archive_path
-            ? path.basename(result.archive_path)
-            : undefined;
-        update['document.archive_mime_type'] = result.archive_content_type;
-        update['document.archive_size_bytes'] = result.archive_size;
-        update['document.extracted_files'] = result.extracted_pdfs || [];
-        update['document.downloaded_at'] = new Date();
-        update['processing.status'] = 'document_downloaded';
-    }
-    return update;
+async function persistScrapeResult(project, result) {
+    if (!project || !result.pdf_path) return null;
+    const hashed = await hashFile(result.pdf_path);
+    const document = await persistPdfRecords(
+        project,
+        result,
+        { ...hashed, backend: 'local', gcsUri: null },
+        result.resolver_source || 'egp_browser'
+    );
+    await Project.updateOne({ _id: project._id }, { $set: {
+        primary_document_id: document._id,
+        'processing.status': 'document_downloaded',
+        'processing.error': null,
+        'workflow.status': 'document_downloaded',
+        'workflow.error': null,
+        'workflow.updated_at': new Date(),
+    } });
+    return document;
 }
 
 /**
@@ -115,22 +106,18 @@ export async function POST(request) {
         if (normalizedProjectId) {
             console.log(`🕷️  Starting scrape for single project: ${normalizedProjectId}`);
 
-            const existingProject = await Project.findOne({ project_id: normalizedProjectId })
-                .select('pdf_url')
-                .lean();
+            const existingProject = await Project.findOne({ project_id: normalizedProjectId }).lean();
+            const existingDocument = existingProject?.primary_document_id
+                ? await Document.findById(existingProject.primary_document_id).lean()
+                : null;
             const result = await scrapeProjectTOR(normalizedProjectId, null, {
-                knownPdfUrl: existingProject?.pdf_url,
+                knownPdfUrl: existingDocument?.source_url,
             });
 
             // Record both the local file and its remote provenance URL.
             let dbUpdated = false;
-            if (result.pdf_url || result.pdf_path) {
-                const pdfUpdate = pdfUpdateFromResult(result);
-                const updatedProject = await Project.findOneAndUpdate(
-                    { project_id: normalizedProjectId },
-                    { $set: pdfUpdate }
-                );
-                dbUpdated = Boolean(updatedProject);
+            if (result.pdf_path) {
+                dbUpdated = Boolean(await persistScrapeResult(existingProject, result));
                 console.log(`✅ Updated TOR link/file metadata for project ${normalizedProjectId}: ${dbUpdated}`);
             }
 
@@ -146,12 +133,10 @@ export async function POST(request) {
 
         // Batch mode — URL-only records are intentionally included so their
         // source documents are downloaded into local storage.
-        const filter = onlyMissing
-            ? { $or: [{ pdf_path: null }, { pdf_path: '' }, { pdf_path: { $exists: false } }] }
-            : {};
+        const filter = onlyMissing ? { primary_document_id: { $exists: false } } : {};
 
         const projects = await Project.find(filter)
-            .select('project_id pdf_url')
+            .select('project_id primary_document_id')
             .limit(batchSize)
             .lean();
 
@@ -166,9 +151,13 @@ export async function POST(request) {
             });
         }
 
+        const knownDocuments = await Document.find({
+            _id: { $in: projects.map(project => project.primary_document_id).filter(Boolean) },
+        }).lean();
+        const documentMap = new Map(knownDocuments.map(document => [String(document._id), document]));
         const scrapeTargets = projects.map(project => ({
             projectId: project.project_id,
-            pdf_url: project.pdf_url,
+            pdf_url: documentMap.get(String(project.primary_document_id))?.source_url,
         }));
         console.log(`🕷️  Starting batch scrape for ${scrapeTargets.length} projects`);
 
@@ -179,11 +168,9 @@ export async function POST(request) {
         // Update Project records with the stored path and remote provenance URL.
         let updated = 0;
         for (const result of results) {
-            if (result.pdf_url || result.pdf_path) {
-                await Project.findOneAndUpdate(
-                    { project_id: result.projectId },
-                    { $set: pdfUpdateFromResult(result) }
-                );
+            if (result.pdf_path) {
+                const project = projects.find(item => item.project_id === result.projectId);
+                await persistScrapeResult(project, result);
                 updated++;
             }
         }

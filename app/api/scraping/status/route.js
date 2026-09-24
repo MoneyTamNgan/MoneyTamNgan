@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
+import Document from '@/models/Document';
 import { NextResponse } from 'next/server';
 
 /**
@@ -17,12 +18,11 @@ export async function GET() {
 
         const [totalProjects, withPdfFiles, withPdfLinks] = await Promise.all([
             Project.countDocuments(),
-            Project.countDocuments({
-                pdf_path: { $exists: true, $nin: ['', null] },
+            Document.countDocuments({
+                is_current_primary: true,
+                'storage.backend': { $in: ['local', 'gcs'] },
             }),
-            Project.countDocuments({
-                pdf_url: { $exists: true, $nin: ['', null] },
-            }),
+            Document.countDocuments({ is_current_primary: true }),
         ]);
 
         const withoutPdfFiles = totalProjects - withPdfFiles;

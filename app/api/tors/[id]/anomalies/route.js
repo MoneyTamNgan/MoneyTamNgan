@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { toTorAnomalyReport } from '@/lib/api/tor-response';
+import { hydrateProjectCompatibility } from '@/lib/project-compat';
 
 /** GET /api/tors/{id}/anomalies */
 export async function GET(_request, { params }) {
@@ -24,7 +25,7 @@ export async function GET(_request, { params }) {
             }, { status: 404 });
         }
 
-        return NextResponse.json(toTorAnomalyReport(project));
+        return NextResponse.json(toTorAnomalyReport(await hydrateProjectCompatibility(project)));
     } catch (error) {
         return NextResponse.json({
             error: { code: 'GET_TOR_ANOMALIES_FAILED', message: error.message },
