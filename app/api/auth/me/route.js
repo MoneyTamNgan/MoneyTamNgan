@@ -23,6 +23,7 @@ export async function GET() {
                 id: String(user._id),
                 email: user.email,
                 name: user.name ?? null,
+                companyName: user.company_name ?? null,
                 picture: user.picture ?? null,
                 role: user.role,
             },
