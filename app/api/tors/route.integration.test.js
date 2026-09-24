@@ -57,4 +57,23 @@ describe('GET /api/tors', () => {
         expect(response.status).toBe(400);
         expect((await response.json()).error.code).toBe('INVALID_DATE_RANGE');
     });
+
+    it('rejects a negative budgetMin', async () => {
+        const response = await GET(requestFor('?budgetMin=-1'));
+        expect(response.status).toBe(400);
+        expect((await response.json()).error.code).toBe('INVALID_BUDGET_MIN');
+    });
+
+    it('rejects a budgetMin greater than budgetMax', async () => {
+        const response = await GET(requestFor('?budgetMin=5000&budgetMax=1000'));
+        expect(response.status).toBe(400);
+        expect((await response.json()).error.code).toBe('INVALID_BUDGET_RANGE');
+    });
+
+    it('accepts a full-text search query and budget range', async () => {
+        const response = await GET(requestFor('?q=software&budgetMin=0&budgetMax=1000000'));
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(body.status).toBe('success');
+    });
 });

@@ -19,6 +19,15 @@ export function parsePositiveInteger(value, fallback, name, max = Number.MAX_SAF
     return { value: parsed };
 }
 
+export function parseNonNegativeNumber(value, name) {
+    if (value === null || value === '') return { value: null };
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+        return { error: `${name} must be a non-negative number` };
+    }
+    return { value: parsed };
+}
+
 export function parseDate(value, name, endOfDay = false) {
     if (!value) return { value: null };
     const parsed = new Date(value);
@@ -41,6 +50,8 @@ export function parseDate(value, name, endOfDay = false) {
  * - agency (exact department name)
  * - status (exact project status)
  * - dateFrom / dateTo (inclusive announce-date range)
+ * - q (full-text search across project title, agency, and extracted tech stack)
+ * - budgetMin / budgetMax (inclusive budget range)
  */
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
@@ -63,6 +74,16 @@ export async function GET(request) {
         return errorResponse('INVALID_DATE_RANGE', 'dateFrom must be on or before dateTo');
     }
 
+    const budgetMinResult = parseNonNegativeNumber(searchParams.get('budgetMin'), 'budgetMin');
+    const budgetMaxResult = parseNonNegativeNumber(searchParams.get('budgetMax'), 'budgetMax');
+    if (budgetMinResult.error) return errorResponse('INVALID_BUDGET_MIN', budgetMinResult.error);
+    if (budgetMaxResult.error) return errorResponse('INVALID_BUDGET_MAX', budgetMaxResult.error);
+    if (budgetMinResult.value !== null && budgetMaxResult.value !== null && budgetMinResult.value > budgetMaxResult.value) {
+        return errorResponse('INVALID_BUDGET_RANGE', 'budgetMin must be less than or equal to budgetMax');
+    }
+
+    const q = searchParams.get('q')?.trim() || null;
+
     try {
         await connectDB();
 
@@ -82,9 +103,20 @@ export async function GET(request) {
             if (dateToResult.value) filter['timeline.announce_date'].$lte = dateToResult.value;
         }
 
+        if (budgetMinResult.value !== null || budgetMaxResult.value !== null) {
+            filter.budget = {};
+            if (budgetMinResult.value !== null) filter.budget.$gte = budgetMinResult.value;
+            if (budgetMaxResult.value !== null) filter.budget.$lte = budgetMaxResult.value;
+        }
+
+        if (q) filter.$text = { $search: q };
+
+        const projection = q ? { score: { $meta: 'textScore' } } : null;
+        const sort = q ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1 };
+
         const [projects, total] = await Promise.all([
-            Project.find(filter)
-                .sort({ 'timeline.announce_date': -1, updated_at: -1 })
+            Project.find(filter, projection)
+                .sort(sort)
                 .skip((pageResult.value - 1) * limitResult.value)
                 .limit(limitResult.value)
                 .lean(),
