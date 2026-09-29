@@ -1,0 +1,37 @@
+# Overlay that points the stack at MongoDB Atlas (the MONGODB_URI in .env)
+# instead of the local `mongo` container, and allowlists this machine's current
+# public IP on Atlas before anything connects. Needs ATLAS_PUBLIC_KEY,
+# ATLAS_PRIVATE_KEY and ATLAS_PROJECT_ID in .env (see .env.example).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.atlas.yml up --build
+
+services:
+  atlas-allowlist:
+    image: curlimages/curl:8.10.1
+    restart: "no"
+    env_file:
+      - .env
+    volumes:
+      - ./scripts/atlas-allow-ip.sh:/atlas-allow-ip.sh:ro
+    entrypoint: ["sh", "/atlas-allow-ip.sh"]
+
+  app:
+    depends_on:
+      atlas-allowlist:
+        condition: service_completed_successfully
+    environment:
+      MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI in .env to the Atlas connection string}
+
+  scraper:
+    depends_on:
+      atlas-allowlist:
+        condition: service_completed_successfully
+    environment:
+      MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI in .env to the Atlas connection string}
+
+  worker:
+    depends_on:
+      atlas-allowlist:
+        condition: service_completed_successfully
+    environment:
+      MONGODB_URI: ${MONGODB_URI:?set MONGODB_URI in .env to the Atlas connection string}
