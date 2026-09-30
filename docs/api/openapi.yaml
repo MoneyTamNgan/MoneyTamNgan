@@ -912,12 +912,21 @@ components:
             type: { type: string, enum: [high_budget] }
             budgetDeviationMultiplier: { type: number }
         - type: object
-          required: [type, clauseText, reason]
+          required: [type, clauseText, reason, explanation]
           properties:
             type: { type: string, enum: [flagged_clause] }
             clauseText: { type: string }
             reason: { type: string }
+            explanation: { type: string }
+            highlightReason: { type: string }
+            category:
+              type: string
+              enum: [unrealistic_tenure, excessive_hardware, vendor_lock_in]
+            severity:
+              type: string
+              enum: [low, medium, high]
             page: { type: integer, minimum: 1 }
+            confidence: { type: number, minimum: 0, maximum: 1 }
 
     TorDetail:
       type: object
