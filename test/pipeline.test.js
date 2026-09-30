@@ -13,7 +13,13 @@ import { validateRemoteDocumentUrl } from '../lib/document-resolver.js';
 import { buildProjectUpsert, mapToProjectSchema, parseThaiDate } from '../lib/egp-api.js';
 import { parseAggregatorHtml } from '../lib/egp-aggregator.js';
 import { validateTorExtraction } from '../lib/vertex/response-schema.js';
-import { unresolvedDocumentLookupError } from '../lib/scraper.js';
+import {
+    EGP_DOCUMENT_LAYOUT,
+    classifyScrapeFailure,
+    detectEgpDocumentLayout,
+    invitationAttachmentFromPayload,
+    unresolvedDocumentLookupError,
+} from '../lib/scraper.js';
 import ProcessingJob from '../models/ProcessingJob.js';
 import Project from '../models/Project.js';
 import {
@@ -120,6 +126,48 @@ test('transient e-GP ZIP-list failures are not mistaken for missing documents', 
         null
     );
     assert.equal(unresolvedDocumentLookupError(null, []), null);
+});
+
+test('e-GP document layout detector supports draft and invitation pages', () => {
+    assert.equal(
+        detectEgpDocumentLayout(['1 ร่างเอกสารประกวดราคา (e-Bidding) description']),
+        EGP_DOCUMENT_LAYOUT.DRAFT_EBIDDING
+    );
+    assert.equal(
+        detectEgpDocumentLayout(['2 ประกาศเชิญชวน 30/09/2569 description']),
+        EGP_DOCUMENT_LAYOUT.INVITATION_DOCUMENT
+    );
+    assert.equal(detectEgpDocumentLayout(['ประกาศราคากลาง']), null);
+});
+
+test('new e-GP invitation payload resolves the official ZIP URL', () => {
+    const attachment = invitationAttachmentFromPayload({
+        data: {
+            buildName1: '69099748056_30092569.zip',
+            zipId: '4d91ea574d91411fbba9887a91415b88',
+        },
+    }, 'https://process5.gprocurement.go.th/egp-approval-service/example');
+    assert.deepEqual(attachment, {
+        name: '69099748056_30092569.zip',
+        url: 'https://process5.gprocurement.go.th/egp-upload-service/v1/downloadFileTest?fileId=4d91ea574d91411fbba9887a91415b88',
+        type: 'zip',
+    });
+    assert.equal(invitationAttachmentFromPayload({ data: {} }, 'https://example.go.th'), null);
+});
+
+test('scraper failures expose stable retry decisions', () => {
+    assert.deepEqual(
+        classifyScrapeFailure(new Error('Waiting failed: 60000ms exceeded')),
+        { outcome: 'temporary_timeout', retryable: true }
+    );
+    assert.deepEqual(
+        classifyScrapeFailure(new Error('Aggregator returned no official e-GP detail link')),
+        { outcome: 'resolver_failed', retryable: false }
+    );
+    assert.deepEqual(
+        classifyScrapeFailure(new Error('Unsupported e-GP document layout')),
+        { outcome: 'unsupported_layout', retryable: false }
+    );
 });
 
 test('aggregator parser resolves only the encrypted official e-GP detail link', () => {
