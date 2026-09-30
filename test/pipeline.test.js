@@ -93,7 +93,25 @@ test('project and processing-job state machines accept their initial records', a
     await assert.doesNotReject(() => project.validate());
     await assert.doesNotReject(() => job.validate());
     assert.equal(project.processing.status, 'metadata_ingested');
+    assert.equal(project.processing.error_code, undefined);
     assert.equal(job.status, 'queued');
+});
+
+test('project processing accepts scraper failure codes', async () => {
+    const project = new Project({
+        project_id: baseRecord.project_id,
+        project_name: baseRecord.project_name,
+        dept_name: baseRecord.dept_name,
+        budget: 1_500_000,
+        processing: {
+            status: 'retry_pending',
+            error_code: 'temporary_timeout',
+            error: 'Waiting failed: 60000ms exceeded',
+        },
+    });
+    await assert.doesNotReject(() => project.validate());
+    project.processing.error_code = 'unknown_failure_code';
+    await assert.rejects(() => project.validate(), /error_code/);
 });
 
 test('metadata classifier recognizes software and preserves uncertainty', () => {
