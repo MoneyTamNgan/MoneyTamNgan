@@ -144,13 +144,31 @@ export async function GET(request) {
         ]);
         const total = totalResult[0]?.total ?? 0;
 
+        let userDoc = null;
+        try {
+            const { cookies } = await import('next/headers');
+            const { verifySession, SESSION_COOKIE } = await import('@/lib/auth');
+            const { User } = await import('@/models/user');
+            
+            const cookieStore = cookies();
+            const token = cookieStore.get(SESSION_COOKIE)?.value;
+            if (token) {
+                const session = await verifySession(token);
+                if (session?.sub) {
+                    userDoc = await User.findOne({ _id: session.sub }).lean();
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching user for match score:', err);
+        }
+
         const compatibleProjects = await hydrateProjectsCompatibility(projects);
         return NextResponse.json({
             status: 'success',
             page: pageResult.value,
             limit: limitResult.value,
             total,
-            data: compatibleProjects.map(toTorListItem),
+            data: compatibleProjects.map(project => toTorListItem(project, userDoc)),
         });
     } catch (error) {
         return errorResponse('LIST_TORS_FAILED', error.message, 500);
