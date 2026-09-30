@@ -389,3 +389,50 @@
     padding-inline: 14px;
   }
 }
+
+/* ── Notification: test email button ───────────────────────────────────────── */
+.profile-test-email {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.profile-test-email-btn {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--orange-primary, #6366f1);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--orange-primary, #6366f1);
+  font: inherit;
+  font-size: .92rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+
+.profile-test-email-btn:hover:not(:disabled) {
+  background: var(--orange-primary, #6366f1);
+  color: var(--paper, #fff);
+  transform: translateY(-1px);
+}
+
+.profile-test-email-btn:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+.profile-test-email-ok {
+  color: var(--success, #2f8a5a);
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.profile-test-email-err {
+  color: var(--danger, #c63d2d);
+  font-size: .9rem;
+  font-weight: 700;
+}
+

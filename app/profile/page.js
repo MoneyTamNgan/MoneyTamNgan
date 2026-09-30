@@ -10,7 +10,7 @@ import {
 
 const skills = ["React", "Node.js", "Python", "PostgreSQL", "Cloud", "TypeScript", "Docker", "UX/UI", "Data analysis", "Security"];
 const certifications = ["ISO 27001", "ISO 29110", "CMMI", "Cloud certification"];
-const emptyProfile = { company_name: "", skills: [], registered_capital: null, highest_past_project_value: null, concurrent_project_capacity: null, certifications: [], email_notifications_enabled: false, match_score_threshold: 70 };
+const emptyProfile = { company_name: "", skills: [], registered_capital: null, highest_past_project_value: null, concurrent_project_capacity: null, certifications: [], email_notifications_enabled: false, match_score_threshold: 70, notification_frequency: 'IMMEDIATE' };
 
 function toggleItem(items, item) {
   return items.includes(item) ? items.filter((value) => value !== item) : [...items, item];
@@ -26,6 +26,7 @@ export default function ProfilePage() {
   // Modal state for delete confirmation
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [testEmailStatus, setTestEmailStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
 
   useEffect(() => {
     let isMounted = true;
@@ -75,6 +76,21 @@ export default function ProfilePage() {
       setIsDeleting(false);
       setShowDeleteModal(false);
     }
+  }
+
+  async function handleSendTestEmail() {
+    setTestEmailStatus('sending');
+    try {
+      const res = await fetch('/api/notifications/test', { method: 'POST' });
+      if (res.ok) {
+        setTestEmailStatus('sent');
+      } else {
+        setTestEmailStatus('error');
+      }
+    } catch {
+      setTestEmailStatus('error');
+    }
+    setTimeout(() => setTestEmailStatus(null), 4000);
   }
 
   const saveStatusMessage = useMemo(() => {
@@ -236,11 +252,44 @@ export default function ProfilePage() {
                   setProfile((current) => ({ ...current, match_score_threshold: Number(event.target.value) }));
                 }}
               >
+                <option value="50">50%</option>
+                <option value="60">60%</option>
                 <option value="70">70%</option>
                 <option value="80">80%</option>
                 <option value="90">90%</option>
               </select>
             </label>
+            <label className="profile-threshold">
+              ความถี่ในการแจ้งเตือน
+              <select
+                value={profile.notification_frequency ?? 'IMMEDIATE'}
+                onChange={(event) => {
+                  setSaved(false);
+                  setProfile((current) => ({ ...current, notification_frequency: event.target.value }));
+                }}
+              >
+                <option value="IMMEDIATE">แจ้งเตือนทันที (Immediate)</option>
+                <option value="DAILY_DIGEST">สรุปรายวัน (Daily Digest)</option>
+              </select>
+            </label>
+            {profile.email_notifications_enabled && (
+              <div className="profile-test-email">
+                <button
+                  type="button"
+                  className="profile-test-email-btn"
+                  onClick={handleSendTestEmail}
+                  disabled={testEmailStatus === 'sending'}
+                >
+                  {testEmailStatus === 'sending' ? '📨 กำลังส่ง...' : '📧 ทดสอบส่งอีเมล'}
+                </button>
+                {testEmailStatus === 'sent' && (
+                  <span className="profile-test-email-ok">✅ ส่งอีเมลทดสอบแล้ว! กรุณาตรวจสอบกล่องจดหมาย</span>
+                )}
+                {testEmailStatus === 'error' && (
+                  <span className="profile-test-email-err">❌ ส่งไม่สำเร็จ กรุณาตรวจสอบ RESEND_API_KEY</span>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
