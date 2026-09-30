@@ -39,3 +39,5 @@ venv/
 # Next.js AI agent rule files (generated)
 AGENTS.md
 CLAUDE.md
+tsconfig.tsbuildinfo
+*.tsbuildinfo

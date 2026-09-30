@@ -8,7 +8,7 @@ import {
   deleteContractorAccount,
 } from "@/lib/services/contractor-profile-service";
 
-const skills = ["React", "Node.js", "Python", "PostgreSQL", "Cloud", "TypeScript", "Docker", "UX/UI", "Data analysis", "Security"];
+const skills = ["React", "Node.js", "Python", "PostgreSQL", "Cloud", "TypeScript", "Docker", "UX/UI", "Data analysis", "Security", "Service Virtualization", "Integration Platforms as a Service (iPaaS)", "MS Project", "MS Excel", "Utility Platform (UTP)", "Enterprise Resource Planning (ERP)", "ระบบคอมพิวเตอร์"];
 const certifications = ["ISO 27001", "ISO 29110", "CMMI", "Cloud certification"];
 const emptyProfile = { company_name: "", skills: [], registered_capital: null, highest_past_project_value: null, concurrent_project_capacity: null, certifications: [], email_notifications_enabled: false, match_score_threshold: 70 };
 
