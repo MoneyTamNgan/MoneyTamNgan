@@ -110,4 +110,24 @@ jobs:
         if: steps.diff.outputs.ahead != '0'
         env:
           GH_TOKEN: ${{ secrets.PROMOTE_TO_MAIN_TOKEN }}
-        run: gh pr merge "${{ steps.pr.outputs.number }}" --merge --auto
+          PR: ${{ steps.pr.outputs.number }}
+        # Right after `gh pr create`, main's required checks aren't registered
+        # as pending yet, so `--auto` sees a mergeable PR, tries to merge it
+        # immediately and the ruleset rejects it ("health-check is queued").
+        # Retry until auto-merge sticks (or the checks already passed and the
+        # direct merge goes through).
+        run: |
+          for attempt in $(seq 1 12); do
+            if [ "$(gh pr view "$PR" --json state --jq .state)" = "MERGED" ]; then
+              echo "PR #$PR already merged"
+              exit 0
+            fi
+            if gh pr merge "$PR" --merge --auto; then
+              echo "auto-merge enabled on PR #$PR (attempt $attempt)"
+              exit 0
+            fi
+            echo "attempt $attempt failed; waiting for required checks to register..."
+            sleep 15
+          done
+          echo "::error::could not enable auto-merge on PR #$PR"
+          exit 1
