@@ -1,4 +1,4 @@
-export type ContractorSkill = "React" | "Node.js" | "Python" | "PostgreSQL" | "Cloud" | "TypeScript" | "Docker" | "UX/UI" | "Data analysis" | "Security";
+export type ContractorSkill = "React" | "Node.js" | "Python" | "PostgreSQL" | "Cloud" | "TypeScript" | "Docker" | "UX/UI" | "Data analysis" | "Security" | "Service Virtualization" | "Integration Platforms as a Service (iPaaS)" | "MS Project" | "MS Excel" | "Utility Platform (UTP)" | "Enterprise Resource Planning (ERP)" | "ระบบคอมพิวเตอร์";
 export type ContractorCertification = "ISO 27001" | "ISO 29110" | "CMMI" | "Cloud certification";
 export type MatchScoreThreshold = 70 | 80 | 90;
 
