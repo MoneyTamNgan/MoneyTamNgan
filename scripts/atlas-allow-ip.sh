@@ -28,10 +28,28 @@ expires_at=$(date -u -d "@$(( $(date +%s) + TTL_HOURS * 3600 - 60 ))" +%Y-%m-%dT
     || date -u -r "$(( $(date +%s) + TTL_HOURS * 3600 - 60 ))" +%Y-%m-%dT%H:%M:%SZ)
 
 echo "Allowing $ip on Atlas project $ATLAS_PROJECT_ID until $expires_at"
-curl -fsS --max-time 30 --digest -u "$ATLAS_PUBLIC_KEY:$ATLAS_PRIVATE_KEY" \
+response=$(curl -sS --max-time 30 --digest -u "$ATLAS_PUBLIC_KEY:$ATLAS_PRIVATE_KEY" \
     -X POST "https://cloud.mongodb.com/api/atlas/v2/groups/$ATLAS_PROJECT_ID/accessList" \
     -H 'Accept: application/vnd.atlas.2023-01-01+json' \
     -H 'Content-Type: application/json' \
     -d "[{\"ipAddress\":\"$ip\",\"comment\":\"$COMMENT\",\"deleteAfterDate\":\"$expires_at\"}]" \
-    -o /dev/null
-echo "Atlas access list updated"
+    -w '\n%{http_code}')
+status=$(printf '%s' "$response" | tail -n 1)
+body=$(printf '%s' "$response" | sed '$d')
+
+case "$status" in
+    2??)
+        echo "Atlas access list updated" ;;
+    400)
+        # The IP was already added by hand as a permanent entry; Atlas refuses
+        # to turn that into a temporary one, but it's allowed either way.
+        if printf '%s' "$body" | grep -q PERMANENT_ENTITY_CANNOT_BE_MADE_TEMPORARY; then
+            echo "$ip is already permanently allowed on Atlas"
+        else
+            echo "Atlas API returned 400: $body" >&2
+            exit 1
+        fi ;;
+    *)
+        echo "Atlas API returned $status: $body" >&2
+        exit 1 ;;
+esac
