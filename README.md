@@ -103,6 +103,20 @@ If `atlas-allowlist` fails with `401`, the API key or project ID is wrong. If
 it fails with `403`, the key lacks the Project Owner role, or the key has its
 own API access list that doesn't include your IP.
 
+**Do I still need to add IPs in Atlas by hand?** No, not as long as you start
+Docker with `docker-compose.atlas.yml`:
+
+- Every start adds your current IP. If your network changes (home, campus,
+  café), start the stack again and the new IP is allowed.
+- Each entry expires `ATLAS_ALLOWLIST_TTL_HOURS` (default 7 days) after the
+  last start, so old IPs clean themselves up.
+- The IP is only added at startup. If your IP changes while the containers are
+  running, the app loses its connection to Atlas; run the `up` command again.
+- For `npm run dev` without Docker, run `scripts/atlas-allow-ip.sh` first (see
+  above).
+- Plain `docker compose up` (without the Atlas file) uses the local `mongo`
+  container and never touches Atlas, so no IP is needed.
+
 `Dockerfile` builds the Next.js app; `Dockerfile.worker` is shared by
 `scraper` and `worker` and additionally installs Chromium, Poppler, and
 Tesseract (with Thai data) for document acquisition and OCR.
@@ -121,6 +135,10 @@ changes through the automated promotion below.
    `github-actions[bot]`, and enables auto-merge.
 3. **Auto-merge:** when main's required checks pass on that PR, GitHub merges
    it into `main` with a merge commit.
+
+After each promotion lands, `.github/workflows/sync-develop.yml`
+fast-forwards `develop` to `main`, so the promotion merge commit is on both
+branches and `develop` never shows as behind `main`.
 
 Protection on `main`: pull request required with 1 approval, required checks
 `Build`, `Test (mocked data)`, `API contract` and `health-check`, no force
