@@ -1,10 +1,10 @@
 import Link from "next/link";
 import AppShell from "@/components/ui/AppShell";
-import { getProjectRecord } from "@/lib/services/tor-service";
+import { getLiveProjectRecord } from "@/lib/services/live-project-record";
 
 export default async function TorDocumentPage({ params }) {
   const { id } = await params;
-  const project = await getProjectRecord(id);
+  const project = await getLiveProjectRecord(id);
   if (!project) return <AppShell title="ไม่พบเอกสาร"><p className="empty-state">ไม่พบเอกสาร TOR</p></AppShell>;
   const hasExtractedData = Boolean(project.extracted_data.summary || project.extracted_data.qualifications.length || project.extracted_data.scope_of_work.length || project.extracted_data.tech_stack.length);
   if (!hasExtractedData) return <AppShell title="สรุปเอกสาร TOR"><Link className="back-link" href={`/tors/${project.project_id}`}>← กลับไปภาพรวมโครงการ</Link><section className="content-card"><p className="eyebrow">สถานะเอกสาร</p><h2>รอข้อมูลจากเอกสาร TOR</h2><p>{project.pdf_url ? "พบเอกสาร PDF แล้ว แต่ยังไม่มีข้อมูลที่สกัดจากเอกสาร" : "ยังไม่มีเอกสาร PDF สำหรับโครงการนี้"}</p></section></AppShell>;

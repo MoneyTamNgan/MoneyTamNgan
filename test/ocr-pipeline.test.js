@@ -117,7 +117,7 @@ for (const needsReview of [false, true]) {
         dependencies.extractWithVertex = async ({ pages }) => {
             assert.equal(pages[0].page_number, 1);
             return { extraction: { summary: 'สรุปทดสอบ', qualifications: [{ value: 'ประสบการณ์', page: 1 }],
-                scope_of_work: [], tech_stack: [], flagged_clauses: [], confidence: 1 },
+                scope_of_work: [], tech_stack: [], flagged_clauses: [], risk_findings: [], confidence: 1 },
                 model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
                 usage: { inputTokens: 100, outputTokens: 50 } };
         };
@@ -132,6 +132,23 @@ for (const needsReview of [false, true]) {
         assert.equal(result.documentSummaryId, 'summary-test');
     });
 }
+
+test('a high-severity procurement risk is persisted and requires review', async t => {
+    const { record, dependencies, normalizedWrites } = await fixture(t);
+    process.env.VERTEX_AI_ENABLED = 'true';
+    dependencies.extractWithVertex = async () => ({
+        extraction: { summary: 'สรุป', qualifications: [], scope_of_work: [], tech_stack: [],
+            flagged_clauses: [], risk_findings: [{ category: 'vendor_lock_in', severity: 'high',
+                clause_text: 'ต้องใช้ Brand X เท่านั้น', explanation: 'จำกัดผู้ขายโดยไม่มีทางเลือกเทียบเท่า',
+                highlight_reason: 'ระบุผลิตภัณฑ์รายเดียว', page: 1, confidence: 0.95 }],
+            confidence: 0.95, document_language: 'th' },
+        model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
+        usage: { inputTokens: 20, outputTokens: 10 },
+    });
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(result.status, 'review_required');
+    assert.equal(normalizedWrites.vertex.extraction.risk_findings[0].highlight_reason, 'ระบุผลิตภัณฑ์รายเดียว');
+});
 
 test('Vertex failure records retry state while preserving completed OCR', async t => {
     const { updates, dependencies } = await fixture(t);
@@ -148,7 +165,7 @@ test('normalized dual-write mode uses transactional OCR and summary bundles', as
     process.env.VERTEX_AI_ENABLED = 'true';
     dependencies.extractWithVertex = async () => ({
         extraction: { summary: 'สรุป', qualifications: [], scope_of_work: [],
-            tech_stack: [], flagged_clauses: [], confidence: 0.9 },
+            tech_stack: [], flagged_clauses: [], risk_findings: [], confidence: 0.9 },
         model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
         usage: { inputTokens: 10, outputTokens: 5 },
     });

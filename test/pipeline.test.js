@@ -226,12 +226,27 @@ test('Vertex extraction validation normalizes evidence and rejects invalid confi
         scope_of_work: [],
         tech_stack: [{ value: 'PostgreSQL' }],
         flagged_clauses: [],
+        risk_findings: [{
+            category: 'vendor_lock_in', severity: 'high',
+            clause_text: 'ต้องใช้ระบบ Brand X เท่านั้น',
+            explanation: 'ระบุผู้ขายรายเดียวโดยไม่มีทางเลือกเทียบเท่า',
+            highlight_reason: 'ไม่อนุญาตผลิตภัณฑ์เทียบเท่า',
+            page: 2, confidence: 0.91,
+        }],
         confidence: 0.9,
         document_language: 'th',
     });
     assert.equal(value.qualifications[0].value, 'มีประสบการณ์');
+    assert.equal(value.risk_findings[0].highlight_reason, 'ไม่อนุญาตผลิตภัณฑ์เทียบเท่า');
     assert.throws(() => validateTorExtraction({
         summary: '', qualifications: [], scope_of_work: [], tech_stack: [],
-        flagged_clauses: [], confidence: 2, document_language: 'th',
+        flagged_clauses: [], risk_findings: [], confidence: 2, document_language: 'th',
     }));
+    assert.throws(() => validateTorExtraction({
+        summary: '', qualifications: [], scope_of_work: [], tech_stack: [],
+        flagged_clauses: [], risk_findings: [{
+            category: 'invented_category', severity: 'high', clause_text: 'x',
+            explanation: 'x', highlight_reason: 'x', page: 1, confidence: 0.8,
+        }], confidence: 0.8, document_language: 'th',
+    }), /category is invalid/);
 });
