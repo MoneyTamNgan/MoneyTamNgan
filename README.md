@@ -285,14 +285,37 @@ GOOGLE_CLOUD_PROJECT=your-project
 GOOGLE_CLOUD_LOCATION=global
 VERTEX_AI_ENABLED=true
 VERTEX_MODEL=gemini-2.5-flash
+VERTEX_TIMEOUT_MS=300000
 ```
 
 Vertex now receives text rather than PDF bytes. Long text is split into bounded
 chunks; their Thai summaries are joined and duplicate evidence is removed.
+Each chunk has a bounded five-minute request timeout by default; adjust
+`VERTEX_TIMEOUT_MS` if the deployed model or region has different latency.
 Vertex responses use a fixed JSON schema
 and are validated before database updates. Results below
 `VERTEX_REVIEW_THRESHOLD` enter `review_required` instead of being silently
 accepted.
+
+The versioned risk prompt also returns page-backed procurement risk findings for
+unrealistic tenure or experience requirements, excessive hardware demands, and
+vendor lock-in. Each finding stores the exact clause, severity, explanation,
+short highlight reason, page number, and confidence in the immutable
+`documentsummaries.extraction.risk_findings` array. High-severity findings enter
+`review_required`; they are observations for human review, not legal findings.
+
+Re-run Vertex against OCR pages already stored in MongoDB without scraping,
+downloading, or OCRing the PDF again:
+
+```bash
+npm run vertex:reanalyze -- 66089621504
+```
+
+Add `--full` after the project ID to print the complete structured extraction.
+
+The prompt version is part of the summary identity, so the first run of a new
+prompt creates a historical summary and repeated runs of that version reuse it
+idempotently.
 
 ## Thai OCR setup and operation
 
