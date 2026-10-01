@@ -118,7 +118,17 @@ export interface TorApiListResponse {
 
 export type TorApiAnomaly =
   | { type: "high_budget"; budgetDeviationMultiplier: number }
-  | { type: "flagged_clause"; clauseText: string; reason: string; page?: number };
+  | {
+      type: "flagged_clause";
+      clauseText: string;
+      reason: string;
+      explanation: string;
+      highlightReason?: string;
+      category?: "unrealistic_tenure" | "excessive_hardware" | "vendor_lock_in";
+      severity?: "low" | "medium" | "high";
+      page?: number;
+      confidence?: number;
+    };
 
 export interface TorApiDetail {
   id: string;

@@ -23,7 +23,16 @@ function detailToProjectRecord(tor) {
   const highBudgetAnomaly = tor.anomalies.find((anomaly) => anomaly.type === "high_budget");
   const flaggedClauses = tor.anomalies
     .filter((anomaly) => anomaly.type === "flagged_clause")
-    .map((anomaly) => ({ clause_text: anomaly.clauseText, reason: anomaly.reason }));
+    .map((anomaly) => ({
+      clause_text: anomaly.clauseText,
+      reason: anomaly.reason,
+      explanation: anomaly.explanation,
+      highlight_reason: anomaly.highlightReason,
+      category: anomaly.category,
+      severity: anomaly.severity,
+      page: anomaly.page,
+      confidence: anomaly.confidence,
+    }));
 
   return {
     project_id: tor.id,
@@ -54,9 +63,9 @@ function detailToProjectRecord(tor) {
       flagged_clauses: flaggedClauses,
     },
     version_info: {
-      version: tor.version.number,
-      is_latest: tor.version.isLatest,
-      superseded_by: tor.version.supersededBy,
+      version: tor.version?.number ?? 1,
+      is_latest: tor.version?.isLatest ?? true,
+      superseded_by: tor.version?.supersededBy ?? null,
     },
     created_at: tor.createdAt ?? undefined,
     updated_at: tor.updatedAt ?? undefined,
@@ -80,12 +89,13 @@ export default async function TorOverviewPage({ params }) {
   if (!project) return <AppShell title="ไม่พบโครงการ"><p className="empty-state">ไม่พบ TOR ที่ต้องการ</p></AppShell>;
   const hasExtractedDocument = Boolean(project.extracted_data.summary || project.extracted_data.qualifications.length || project.extracted_data.scope_of_work.length || project.extracted_data.tech_stack.length);
   const hasDocument = Boolean(project.document?.status && project.document.status !== "unavailable");
-  const versionStatus = project.version_info.is_latest ? `ฉบับล่าสุด · เวอร์ชัน ${project.version_info.version}` : `มีฉบับใหม่ · เวอร์ชัน ${project.version_info.version}`;
+  const versionInfo = project.version_info ?? { version: 1, is_latest: true, superseded_by: null };
+  const versionStatus = versionInfo.is_latest ? `ฉบับล่าสุด · เวอร์ชัน ${versionInfo.version}` : `มีฉบับใหม่ · เวอร์ชัน ${versionInfo.version}`;
   const qualificationItems = project.extracted_data.qualifications;
 
   return <AppShell title="ภาพรวม TOR" hideTitle><div className="tor-overview-layout"><aside className="tor-overview-side"><p>ภาพรวม TOR</p><div className="tor-overview-utility"><Link className="tor-home-button" href="/dashboard">← กลับสู่หน้าแรก</Link>{project.pdf_url && <a className="tor-header-pdf" href={project.pdf_url} target="_blank" rel="noreferrer">เปิด PDF ต้นฉบับ ↗</a>}</div></aside><div className="tor-overview">
     <header className="tor-overview-header"><div><p className="tor-overview-id">รหัสโครงการ {project.project_id}</p><h1>{project.project_name}</h1><p className="tor-overview-agency">{project.dept_name}{project.dept_sub_name ? ` · ${project.dept_sub_name}` : ""}</p><div className="tor-overview-actions"><span className={project.is_software ? "tor-classification is-software" : "tor-classification"}>{project.is_software ? "โครงการซอฟต์แวร์ / ไอที" : "นอกขอบเขตซอฟต์แวร์"}</span><span className={hasExtractedDocument ? "tor-ai-badge" : "tor-ai-badge is-pending"}>{hasExtractedDocument ? "มีข้อมูลสกัดจากเอกสาร" : "รอข้อมูลจากเอกสาร"}</span></div></div></header>
-    <section className="tor-lifecycle" aria-label="สถานะเอกสารและวงจรโครงการ"><div><span>ประเภทโครงการ</span><strong>{project.is_software ? "ซอฟต์แวร์ / ไอที" : "นอกขอบเขตซอฟต์แวร์"}</strong></div><div><span>การดึงข้อมูล PDF</span><strong>{hasExtractedDocument ? "ประมวลผลแล้ว" : hasDocument ? "รอประมวลผล" : "ยังไม่มีเอกสาร"}</strong></div><div><span>เวอร์ชัน / วงจรโครงการ</span><strong>{versionStatus}</strong>{project.version_info.superseded_by && <Link href={`/tors/${project.version_info.superseded_by}`}>ไปยังฉบับใหม่ →</Link>}</div></section>
+    <section className="tor-lifecycle" aria-label="สถานะเอกสารและวงจรโครงการ"><div><span>ประเภทโครงการ</span><strong>{project.is_software ? "ซอฟต์แวร์ / ไอที" : "นอกขอบเขตซอฟต์แวร์"}</strong></div><div><span>การดึงข้อมูล PDF</span><strong>{hasExtractedDocument ? "ประมวลผลแล้ว" : hasDocument ? "รอประมวลผล" : "ยังไม่มีเอกสาร"}</strong></div><div><span>เวอร์ชัน / วงจรโครงการ</span><strong>{versionStatus}</strong>{versionInfo.superseded_by && <Link href={`/tors/${versionInfo.superseded_by}`}>ไปยังฉบับใหม่ →</Link>}</div></section>
     <section className="tor-metrics" aria-label="ข้อมูลสำคัญโครงการ"><article><span>งบประมาณ</span><strong>{project.budget.toLocaleString("th-TH")} บาท</strong></article><article><span>วันประกาศ</span><strong>{thaiDate(project.timeline.announce_date)}</strong></article><article><span>สถานะโครงการ</span><strong>{statusLabels[project.project_status] ?? valueOrUnknown(project.project_status)}</strong></article></section>
     <section className="tor-project-summary"><article className="tor-summary-card"><p className="tor-section-kicker">สรุปจากเอกสาร</p><h2>ภาพรวมโครงการ</h2><p>{project.extracted_data.summary || "ยังไม่มีข้อมูลสรุปจากเอกสาร"}</p></article></section>
     <TechStackComparisonCard items={project.extracted_data.tech_stack} />
