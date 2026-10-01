@@ -50,9 +50,105 @@ jobs), and builds (but does not run) `scraper`. Trigger a scrape on demand:
 docker compose run --rm scraper
 ```
 
+### Docker against MongoDB Atlas (no manual IP allowlisting)
+
+Use this to run the stack against the shared Atlas database instead of the
+local `mongo` container. Before any service connects, a one-shot
+`atlas-allowlist` service adds your current public IP to the Atlas IP Access
+List through the Atlas Admin API. You no longer need to open the Atlas UI and
+allow a new IP whenever your network changes.
+
+**One-time setup**
+
+1. In Atlas, open the project and go to **Project Settings → Access Manager →
+   API Keys → Create API Key**. Give it the **Project Owner** role and copy the
+   public and private keys. The private key is shown only once.
+2. Copy the project ID from the Atlas URL
+   (`cloud.mongodb.com/v2/<PROJECT_ID>#/...`) or from **Project Settings**.
+3. Fill these values in `.env`:
+
+   ```bash
+   MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
+   ATLAS_PUBLIC_KEY=<public key>
+   ATLAS_PRIVATE_KEY=<private key>
+   ATLAS_PROJECT_ID=<project id>
+   ATLAS_ALLOWLIST_TTL_HOURS=168   # optional, max 168 (one week)
+   ```
+
+**Run**
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.atlas.yml up --build
+```
+
+The `atlas-allowlist` service should log `Atlas access list updated` and exit.
+Then `app`, `worker` and `scraper` start against Atlas. To trigger a scrape:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.atlas.yml run --rm scraper
+```
+
+Each IP added this way expires after `ATLAS_ALLOWLIST_TTL_HOURS`, so old
+addresses don't pile up. Running the command again refreshes the current IP.
+
+**Without Docker** (`npm run dev` against Atlas), allowlist the current IP
+first:
+
+```bash
+set -a && . ./.env && set +a && sh scripts/atlas-allow-ip.sh
+npm run dev
+```
+
+If `atlas-allowlist` fails with `401`, the API key or project ID is wrong. If
+it fails with `403`, the key lacks the Project Owner role, or the key has its
+own API access list that doesn't include your IP.
+
+**Do I still need to add IPs in Atlas by hand?** No, not as long as you start
+Docker with `docker-compose.atlas.yml`:
+
+- Every start adds your current IP. If your network changes (home, campus,
+  café), start the stack again and the new IP is allowed.
+- Each entry expires `ATLAS_ALLOWLIST_TTL_HOURS` (default 7 days) after the
+  last start, so old IPs clean themselves up.
+- The IP is only added at startup. If your IP changes while the containers are
+  running, the app loses its connection to Atlas; run the `up` command again.
+- For `npm run dev` without Docker, run `scripts/atlas-allow-ip.sh` first (see
+  above).
+- Plain `docker compose up` (without the Atlas file) uses the local `mongo`
+  container and never touches Atlas, so no IP is needed.
+
 `Dockerfile` builds the Next.js app; `Dockerfile.worker` is shared by
 `scraper` and `worker` and additionally installs Chromium, Poppler, and
 Tesseract (with Thai data) for document acquisition and OCR.
+
+## CI/CD and branch flow
+
+Work goes into feature branches and is merged into `develop` through pull
+requests. `main` is protected: nobody pushes to it directly, and it only
+changes through the automated promotion below.
+
+1. **PR into `develop` or `main`:** `.github/workflows/ci.yml` runs `Build`,
+   `Test (mocked data)` and `API contract`, and `health-check.yml` runs the
+   health check.
+2. **Push to `develop`** (a merged PR): after those jobs pass, the `promote`
+   job opens a `develop → main` PR (or reuses the open one), approves it as
+   `github-actions[bot]`, and enables auto-merge.
+3. **Auto-merge:** when main's required checks pass on that PR, GitHub merges
+   it into `main` with a merge commit.
+
+After each promotion lands, `.github/workflows/sync-develop.yml`
+fast-forwards `develop` to `main`, so the promotion merge commit is on both
+branches and `develop` never shows as behind `main`.
+
+Protection on `main`: pull request required with 1 approval, required checks
+`Build`, `Test (mocked data)`, `API contract` and `health-check`, no force
+pushes, no deletion.
+
+The promotion depends on the `PROMOTE_TO_MAIN_TOKEN` repository secret, a PAT
+with `repo` scope (or a fine-grained token with Contents and Pull requests
+write access). A PR opened with the default `GITHUB_TOKEN` would not trigger
+the required checks. It also depends on the repository setting **Settings →
+Actions → General → Allow GitHub Actions to create and approve pull requests**.
 
 ## Run the pipeline
 

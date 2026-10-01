@@ -99,6 +99,13 @@ export interface TorApiListItem {
   isSoftware: boolean | null;
   classification: TorApiClassification;
   documentStatus: string | null;
+  processingStatus: string | null;
+  techStack: string[];
+  matchScore?: number | null;
+  anomaly: {
+    highBudgetFlag: boolean;
+    budgetDeviationMultiplier: number;
+  };
 }
 
 export interface TorApiListResponse {
@@ -129,6 +136,9 @@ export interface TorApiDetail {
   agency: { name: string; subName: string | null };
   budget: number;
   projectStatus: string;
+  pdfUrl: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
   timeline: {
     announceDate: string | null;
     contractStart: string | null;

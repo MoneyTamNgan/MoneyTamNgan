@@ -7,7 +7,9 @@ vi.mock('@/lib/db', () => ({ default: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/models/Project', () => ({
     default: {
         findOne: vi.fn(({ project_id }) => ({
+            sort: () => ({
             lean: async () => (project_id === knownProject.project_id ? knownProject : null),
+            }),
         })),
     },
 }));
@@ -21,6 +23,7 @@ describe('GET /api/tors/[id]', () => {
         const body = await response.json();
         expect(body.id).toBe(knownProject.project_id);
         expect(body.requirements).toEqual(knownProject.extracted_data.qualifications);
+        expect(body.pdfUrl).toBe(knownProject.pdf_url ?? null);
     });
 
     it('returns 404 TOR_NOT_FOUND for an unknown id', async () => {
