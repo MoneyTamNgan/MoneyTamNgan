@@ -17,7 +17,9 @@ export async function GET(_request, { params }) {
 
     try {
         await connectDB();
-        const project = await Project.findOne({ project_id: projectId }).lean();
+        const project = await Project.findOne({ project_id: projectId })
+            .sort({ updated_at: -1, created_at: -1, _id: -1 })
+            .lean();
 
         if (!project) {
             return NextResponse.json({

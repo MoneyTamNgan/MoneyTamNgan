@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDate, parsePositiveInteger } from './route';
+import { parseDate, parseNonNegativeNumber, parsePositiveInteger } from './route';
 
 describe('parsePositiveInteger', () => {
     it('returns the fallback when the value is null or empty', () => {
@@ -44,5 +44,23 @@ describe('parseDate', () => {
         const result = parseDate('2026-08-01', 'dateTo', true);
         expect(result.value.getUTCHours()).toBe(23);
         expect(result.value.getUTCMinutes()).toBe(59);
+    });
+});
+
+describe('parseNonNegativeNumber', () => {
+    it('returns null when the value is missing or empty', () => {
+        expect(parseNonNegativeNumber(null, 'budgetMin')).toEqual({ value: null });
+        expect(parseNonNegativeNumber('', 'budgetMin')).toEqual({ value: null });
+    });
+
+    it('parses a valid non-negative number, including decimals', () => {
+        expect(parseNonNegativeNumber('1000', 'budgetMin')).toEqual({ value: 1000 });
+        expect(parseNonNegativeNumber('0', 'budgetMin')).toEqual({ value: 0 });
+        expect(parseNonNegativeNumber('1500.5', 'budgetMax')).toEqual({ value: 1500.5 });
+    });
+
+    it('rejects negative or non-numeric values', () => {
+        expect(parseNonNegativeNumber('-1', 'budgetMin').error).toMatch(/budgetMin/);
+        expect(parseNonNegativeNumber('abc', 'budgetMax').error).toMatch(/budgetMax/);
     });
 });
