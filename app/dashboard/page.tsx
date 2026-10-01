@@ -7,6 +7,7 @@ import type { TorApiListItem } from "@/types/tor";
 
 type DashboardTor = TorApiListItem;
 type SortOption = "newest" | "budget-high" | "budget-low" | "best-match";
+const DASHBOARD_PAGE_SIZE = 10;
 
 const informationSlides = [
   { kicker: "ติดตาม TOR ได้ในที่เดียว", title: "ค้นหาโครงการจากหน่วยงานภาครัฐ", description: "รวมข้อมูล TOR พร้อมสถานะเอกสารและวันเผยแพร่ล่าสุด", accent: "ค้นหารายการ TOR" },
@@ -25,6 +26,8 @@ function statusLabel(status: string) {
 
 export default function DashboardPage() {
   const [items, setItems] = useState<DashboardTor[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
   const [agency, setAgency] = useState("ทั้งหมด");
   const [technology, setTechnology] = useState("ทั้งหมด");
@@ -37,9 +40,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadFeed() {
+      setLoading(true);
+      setError("");
       try {
-        const result = await listTorCards({ pageSize: 100 });
+        const result = await listTorCards({ page, pageSize: DASHBOARD_PAGE_SIZE, isSoftware: true });
         setItems(result.data);
+        setTotal(result.total);
       } catch {
         setError("ไม่สามารถโหลดรายการ TOR ได้ในขณะนี้");
       } finally {
@@ -47,7 +53,7 @@ export default function DashboardPage() {
       }
     }
     void loadFeed();
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setActiveSlide((current) => (current + 1) % informationSlides.length), 5_000);
@@ -64,7 +70,7 @@ export default function DashboardPage() {
   const agencies = useMemo(() => ["ทั้งหมด", ...new Set(items.map((tor) => tor.agency))], [items]);
   const technologies = useMemo(() => ["ทั้งหมด", ...new Set(items.flatMap((tor) => tor.techStack))], [items]);
   const visibleItems = useMemo(() => items.filter((tor) => {
-    const allText = `${tor.title} ${tor.agency} ${tor.techStack.join(" ")}`.toLowerCase();
+    const allText = `${tor.id} ${tor.title} ${tor.agency} ${tor.techStack.join(" ")}`.toLowerCase();
     return allText.includes(query.toLowerCase()) && (agency === "ทั้งหมด" || tor.agency === agency) && (technology === "ทั้งหมด" || tor.techStack.includes(technology));
   }).sort((first, second) => {
     if (sortBy === "best-match") return (second.matchScore ?? 0) - (first.matchScore ?? 0);
@@ -72,9 +78,10 @@ export default function DashboardPage() {
     if (sortBy === "budget-low") return first.budget - second.budget;
     return new Date(second.announceDate ?? 0).getTime() - new Date(first.announceDate ?? 0).getTime();
   }), [agency, items, query, sortBy, technology]);
+  const totalPages = Math.max(1, Math.ceil(total / DASHBOARD_PAGE_SIZE));
 
-  return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:475px!important;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card:hover{z-index:5!important;transform:translateY(-8px) scale(1.025)!important;border-color:var(--orange-primary)!important;background:var(--cream-soft)!important;box-shadow:0 26px 42px var(--shadow)!important}}`}</style>
-    <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card{height:475px;max-height:475px;overflow-y:hidden;scrollbar-gutter:stable}.feed-card:hover{overflow-y:auto}.feed-card:hover .technology-tags{max-height:none;overflow:visible}.feed-card::-webkit-scrollbar{width:7px}.feed-card::-webkit-scrollbar-thumb{border-radius:999px;background:#5e9280}.feed-card::-webkit-scrollbar-track{background:transparent}`}</style>
+  return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:550px!important;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card:hover{z-index:5!important;transform:translateY(-8px) scale(1.025)!important;border-color:var(--orange-primary)!important;background:var(--cream-soft)!important;box-shadow:0 26px 42px var(--shadow)!important}}`}</style>
+    <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card{height:550px;max-height:550px;overflow-y:hidden;scrollbar-gutter:stable}.feed-card:hover{overflow-y:auto}.feed-card:hover .technology-tags{max-height:none;overflow:visible}.feed-card::-webkit-scrollbar{width:7px}.feed-card::-webkit-scrollbar-thumb{border-radius:999px;background:#5e9280}.feed-card::-webkit-scrollbar-track{background:transparent}`}</style>
 
         {showStickyTools && <div className="dashboard-sticky-tools" aria-label="ค้นหาและตัวกรอง TOR"><div className="dashboard-sticky-tools-inner"><label className="dashboard-sticky-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา TOR" aria-label="ค้นหา TOR" /></label><label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => setAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label><label><span className="sr-only">เทคโนโลยีหรือหมวดหมู่</span><select value={technology} onChange={(event) => setTechnology(event.target.value)}>{technologies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกเทคโนโลยี" : name}</option>)}</select></label><label><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบสูงไปต่ำ</option><option value="budget-low">งบต่ำไปสูง</option><option value="best-match">ตรงกับโปรไฟล์</option></select></label></div></div>}
 
@@ -89,9 +96,9 @@ export default function DashboardPage() {
     </section>
 
     <div className="feed-body">
-      <section className="feed-heading"><div><p className="feed-kicker">TOR · ข้อมูลสาธารณะ</p><h1>โครงการที่อาจเหมาะกับคุณ</h1><p>ติดตาม TOR จากหน่วยงานภาครัฐ พร้อมข้อมูลคุณสมบัติ งบประมาณ และสถานะเอกสาร</p></div><div className="feed-total"><strong>{visibleItems.length}</strong><span>โครงการที่พบ</span></div></section>
+      <section className="feed-heading"><div><p className="feed-kicker">TOR · ข้อมูลสาธารณะ</p><h1>โครงการที่อาจเหมาะกับคุณ</h1><p>ติดตาม TOR จากหน่วยงานภาครัฐ พร้อมข้อมูลคุณสมบัติ งบประมาณ และสถานะเอกสาร</p></div><div className="feed-total"><strong>{total.toLocaleString("th-TH")}</strong><span>โครงการทั้งหมด</span><small>กำลังแสดง {visibleItems.length} รายการ · หน้า {page} จาก {totalPages}</small></div></section>
 
-      <label className="feed-search feed-search-main"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาโครงการ หน่วยงาน หรือเทคโนโลยี" aria-label="ค้นหา TOR" /></label>
+      <label className="feed-search feed-search-main"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสโครงการ ชื่อ หน่วยงาน หรือเทคโนโลยี" aria-label="ค้นหา TOR" /></label>
 
       <section className="feed-filters" aria-label="ตัวกรอง TOR" ref={filterBarRef}>
         <div className="filter-title"><span aria-hidden="true">☷</span> ตัวกรอง</div>
@@ -115,6 +122,12 @@ export default function DashboardPage() {
         </Link>)}
         {!loading && !error && visibleItems.length === 0 && <p className="feed-empty">ไม่พบโครงการที่ตรงกับตัวกรองที่เลือก</p>}
       </section>
+      {!loading && !error && totalPages > 1 && <nav className="feed-pagination" aria-label="เปลี่ยนหน้ารายการ TOR">
+        <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>← ก่อนหน้า</button>
+        <label className="feed-page-input"><span className="sr-only">เลือกหน้า</span><input type="number" min="1" max={totalPages} value={page} onChange={(event) => setPage(Math.min(totalPages, Math.max(1, Number(event.target.value) || 1)))} aria-label="หน้าปัจจุบัน" /></label>
+        <output aria-live="polite">จาก <strong>{totalPages}</strong> หน้า</output>
+        <button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages}>ถัดไป →</button>
+      </nav>}
     </div>
   </main>;
 }
