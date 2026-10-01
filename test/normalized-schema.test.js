@@ -171,7 +171,8 @@ test('compatibility mapper preserves legacy reads and can hydrate normalized rec
 
     const models = {
         DocumentModel: { find: () => query([{ _id: project.primary_document_id,
-            source_url: 'normalized-url', filename: 'tor.pdf', sha256: 'pdf',
+            source_url: 'normalized-url', filename: 'tor.pdf', sha256: 'pdf', version: 3,
+            is_current_primary: true,
             storage: { backend: 'remote', mime_type: 'application/pdf', size_bytes: 12 } }]) },
         ExtractionRunModel: { find: () => query([{ _id: project.latest_extraction_run_id,
             text_sha256: 'text', page_count: 2, ocr_pages: 2, status: 'completed' }]) },
@@ -187,6 +188,11 @@ test('compatibility mapper preserves legacy reads and can hydrate normalized rec
     assert.equal(normalized.pdf_url, 'normalized-url');
     assert.equal(normalized.extracted_data.summary, 'normalized');
     assert.equal(normalized.document.text_sha256, 'text');
+    assert.deepEqual(normalized.version_info, {
+        version: 3,
+        is_latest: true,
+        superseded_by: null,
+    });
     assert.deepEqual(normalized.anomalies.flagged_clauses[0], {
         category: 'excessive_hardware', severity: 'medium',
         clause_text: 'ต้องมีเครื่องแม่ข่าย 100 เครื่อง',
