@@ -1,7 +1,7 @@
 import { mockProjectRecords } from "@/lib/mock-project-records";
 import { projectToAnomalyReport, projectToTor, projectToTorSummary } from "@/lib/services/project-mapper";
 import type { ProjectRecord } from "@/types/project";
-import type { AnalyticsResult, AnalyticsSearchParams, AnomalyReport, PaginatedList, Tor, TorApiDetail, TorApiListResponse, TorListParams, TorSummary } from "@/types/tor";
+import type { AnalyticsResult, AnalyticsSearchParams, AnomalyReport, PaginatedList, Tor, TorApiDetail, TorApiFacetsResponse, TorApiListResponse, TorListParams, TorSummary } from "@/types/tor";
 
 // Development mode is intentionally active until the REST API is implemented.
 // New pages must use this service, never import mock data directly.
@@ -14,6 +14,7 @@ export async function listTorCards(params: TorListParams = {}): Promise<TorApiLi
   const query = new URLSearchParams();
   if (params.isSoftware !== undefined) query.set("isSoftware", String(params.isSoftware));
   if (params.status) query.set("status", params.status);
+  if (params.stage) query.set("stage", params.stage);
   if (params.agency) query.set("agency", params.agency);
   if (params.page) query.set("page", String(params.page));
   if (params.pageSize) query.set("limit", String(params.pageSize));
@@ -24,6 +25,20 @@ export async function listTorCards(params: TorListParams = {}): Promise<TorApiLi
   });
   if (!response.ok) throw new Error(`TOR list request failed: ${response.status}`);
   return response.json() as Promise<TorApiListResponse>;
+}
+
+export async function listTorFacets(
+  params: Pick<TorListParams, "isSoftware"> = {},
+): Promise<TorApiFacetsResponse> {
+  const query = new URLSearchParams();
+  if (params.isSoftware !== undefined) query.set("isSoftware", String(params.isSoftware));
+
+  const response = await fetch(`/api/tors/facets?${query.toString()}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`TOR facets request failed: ${response.status}`);
+  return response.json() as Promise<TorApiFacetsResponse>;
 }
 
 export async function getTorDetail(id: string, apiOrigin: string): Promise<TorApiDetail | null> {

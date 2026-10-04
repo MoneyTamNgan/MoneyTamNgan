@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { listTorCards } from "@/lib/services/tor-service";
+import { listTorCards, listTorFacets } from "@/lib/services/tor-service";
 import type { TorApiListItem } from "@/types/tor";
 
 type DashboardTor = TorApiListItem;
 type SortOption = "newest" | "budget-high" | "budget-low" | "best-match";
 const DASHBOARD_PAGE_SIZE = 10;
+const TOR_STAGES = [
+  { value: "ทั้งหมด", label: "ทุกสถานะ TOR" },
+  { value: "draft", label: "ร่าง TOR" },
+  { value: "official", label: "TOR ฉบับจริง" },
+  { value: "review", label: "อยู่ระหว่างพิจารณาผล" },
+  { value: "closed", label: "ยกเลิก / ลงนามสัญญาแล้ว" },
+];
 
 const informationSlides = [
   { kicker: "ติดตาม TOR ได้ในที่เดียว", title: "ค้นหาโครงการจากหน่วยงานภาครัฐ", description: "รวมข้อมูล TOR พร้อมสถานะเอกสารและวันเผยแพร่ล่าสุด", accent: "ค้นหารายการ TOR" },
@@ -17,11 +24,49 @@ const informationSlides = [
 
 function formatDate(date: string | null) {
   if (!date) return "ยังไม่มีข้อมูล";
-  return new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric" }).format(new Date(date));
+  return new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" }).format(new Date(date));
 }
 
-function statusLabel(status: string) {
-  return { Active: "กำลังใช้งาน", Superseded: "มีฉบับใหม่", Invalid: "ไม่ถูกต้อง", Cancelled: "ยกเลิก" }[status] ?? status;
+function fiscalYears(contractStart: string | null, contractEnd: string | null) {
+  if (!contractStart) return "ยังไม่ระบุปีงบประมาณ";
+  const start = new Date(contractStart);
+  if (Number.isNaN(start.getTime())) return "ยังไม่ระบุปีงบประมาณ";
+
+  const fiscalYearFor = (date: Date) => date.getUTCFullYear() + 543 + (date.getUTCMonth() >= 9 ? 1 : 0);
+  const firstYear = fiscalYearFor(start);
+  const end = contractEnd ? new Date(contractEnd) : null;
+  const lastYear = end && !Number.isNaN(end.getTime()) && end >= start ? fiscalYearFor(end) : firstYear;
+  return firstYear === lastYear
+    ? `ปีงบประมาณ ${firstYear}`
+    : `ปีงบประมาณ ${firstYear}–${lastYear}`;
+}
+
+function projectStage(contractStart: string | null) {
+  if (!contractStart) return { label: "ร่าง TOR", tone: "draft" };
+  const millisecondsUntilStart = new Date(contractStart).getTime() - Date.now();
+  if (Number.isNaN(millisecondsUntilStart)) return { label: "ร่าง TOR", tone: "draft" };
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+  if (millisecondsUntilStart > thirtyDays) return { label: "TOR ฉบับจริง", tone: "official" };
+  if (millisecondsUntilStart >= -thirtyDays) return { label: "อยู่ระหว่างพิจารณาผล / ประกาศผู้ชนะ", tone: "review" };
+  return { label: "ยกเลิกโครงการ / ลงนามสัญญาแล้ว", tone: "closed" };
+}
+
+function biddingStatus(status: string) {
+  const normalized = status.trim().toLowerCase();
+  if (["cancelled", "ยกเลิก"].includes(normalized)) return { label: "ยกเลิก", tone: "cancelled" };
+  if (["superseded", "invalid", "มีฉบับใหม่", "ไม่ถูกต้อง", "ปิดรับ", "ปิดรับแล้ว"].includes(normalized)) return { label: "ปิดรับ", tone: "closed" };
+  return { label: "เปิดรับ", tone: "open" };
+}
+
+function biddingTimeRemaining(contractEnd: string | null) {
+  if (!contractEnd) return { label: "ยังไม่ระบุวันสิ้นสุด", tone: "unknown" };
+  const millisecondsLeft = new Date(contractEnd).getTime() - Date.now();
+  if (Number.isNaN(millisecondsLeft)) return { label: "ยังไม่ระบุวันสิ้นสุด", tone: "unknown" };
+  if (millisecondsLeft <= 0) return { label: "หมดเวลาแล้ว", tone: "expired" };
+  const hoursLeft = Math.ceil(millisecondsLeft / (1000 * 60 * 60));
+  if (hoursLeft < 24) return { label: `เหลือ ${hoursLeft} ชั่วโมง`, tone: "urgent" };
+  const daysLeft = Math.ceil(hoursLeft / 24);
+  return { label: `เหลือ ${daysLeft} วัน`, tone: daysLeft <= 7 ? "urgent" : "open" };
 }
 
 export default function DashboardPage() {
@@ -29,8 +74,9 @@ export default function DashboardPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
+  const [agencies, setAgencies] = useState<string[]>(["ทั้งหมด"]);
   const [agency, setAgency] = useState("ทั้งหมด");
-  const [technology, setTechnology] = useState("ทั้งหมด");
+  const [stage, setStage] = useState("ทั้งหมด");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [activeSlide, setActiveSlide] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,7 +89,13 @@ export default function DashboardPage() {
       setLoading(true);
       setError("");
       try {
-        const result = await listTorCards({ page, pageSize: DASHBOARD_PAGE_SIZE, isSoftware: true });
+        const result = await listTorCards({
+          isSoftware: true,
+          page,
+          pageSize: DASHBOARD_PAGE_SIZE,
+          agency: agency === "ทั้งหมด" ? undefined : agency,
+          stage: stage === "ทั้งหมด" ? undefined : stage as "draft" | "official" | "review" | "closed",
+        });
         setItems(result.data);
         setTotal(result.total);
       } catch {
@@ -53,7 +105,17 @@ export default function DashboardPage() {
       }
     }
     void loadFeed();
-  }, [page]);
+  }, [agency, page, stage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listTorFacets({ isSoftware: true }).then((result) => {
+      if (!cancelled) setAgencies(["ทั้งหมด", ...result.agencies.map((item) => item.name)]);
+    }).catch(() => {
+      if (!cancelled) setAgencies(["ทั้งหมด"]);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => setActiveSlide((current) => (current + 1) % informationSlides.length), 5_000);
@@ -67,23 +129,23 @@ export default function DashboardPage() {
     return () => window.removeEventListener("scroll", updateStickyTools);
   }, []);
 
-  const agencies = useMemo(() => ["ทั้งหมด", ...new Set(items.map((tor) => tor.agency))], [items]);
-  const technologies = useMemo(() => ["ทั้งหมด", ...new Set(items.flatMap((tor) => tor.techStack))], [items]);
   const visibleItems = useMemo(() => items.filter((tor) => {
     const allText = `${tor.id} ${tor.title} ${tor.agency} ${tor.techStack.join(" ")}`.toLowerCase();
-    return allText.includes(query.toLowerCase()) && (agency === "ทั้งหมด" || tor.agency === agency) && (technology === "ทั้งหมด" || tor.techStack.includes(technology));
+    return allText.includes(query.toLowerCase());
   }).sort((first, second) => {
     if (sortBy === "best-match") return (second.matchScore ?? 0) - (first.matchScore ?? 0);
     if (sortBy === "budget-high") return second.budget - first.budget;
     if (sortBy === "budget-low") return first.budget - second.budget;
     return new Date(second.announceDate ?? 0).getTime() - new Date(first.announceDate ?? 0).getTime();
-  }), [agency, items, query, sortBy, technology]);
+  }), [items, query, sortBy]);
   const totalPages = Math.max(1, Math.ceil(total / DASHBOARD_PAGE_SIZE));
+  const updateAgency = (value: string) => { setAgency(value); setPage(1); };
+  const updateStage = (value: string) => { setStage(value); setPage(1); };
 
-  return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:550px!important;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card:hover{z-index:5!important;transform:translateY(-8px) scale(1.025)!important;border-color:var(--orange-primary)!important;background:var(--cream-soft)!important;box-shadow:0 26px 42px var(--shadow)!important}}`}</style>
-    <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card{height:550px;max-height:550px;overflow-y:hidden;scrollbar-gutter:stable}.feed-card:hover{overflow-y:auto}.feed-card:hover .technology-tags{max-height:none;overflow:visible}.feed-card::-webkit-scrollbar{width:7px}.feed-card::-webkit-scrollbar-thumb{border-radius:999px;background:#5e9280}.feed-card::-webkit-scrollbar-track{background:transparent}`}</style>
+  return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:440px!important;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card:hover{z-index:5!important;transform:none!important;border-color:var(--orange-primary)!important;background:var(--cream-soft)!important;box-shadow:0 26px 42px var(--shadow)!important}}`}</style>
+    <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}`}</style>
 
-        {showStickyTools && <div className="dashboard-sticky-tools" aria-label="ค้นหาและตัวกรอง TOR"><div className="dashboard-sticky-tools-inner"><label className="dashboard-sticky-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา TOR" aria-label="ค้นหา TOR" /></label><label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => setAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label><label><span className="sr-only">เทคโนโลยีหรือหมวดหมู่</span><select value={technology} onChange={(event) => setTechnology(event.target.value)}>{technologies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกเทคโนโลยี" : name}</option>)}</select></label><label><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบสูงไปต่ำ</option><option value="budget-low">งบต่ำไปสูง</option><option value="best-match">ตรงกับโปรไฟล์</option></select></label></div></div>}
+        {showStickyTools && <div className="dashboard-sticky-tools" aria-label="ค้นหาและตัวกรอง TOR"><div className="dashboard-sticky-tools-inner"><label className="dashboard-sticky-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา TOR" aria-label="ค้นหา TOR" /></label><label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label><label><span className="sr-only">สถานะ TOR</span><select value={stage} onChange={(event) => updateStage(event.target.value)}>{TOR_STAGES.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label><label><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบสูงไปต่ำ</option><option value="budget-low">งบต่ำไปสูง</option><option value="best-match">ตรงกับโปรไฟล์</option></select></label></div></div>}
 
     <section className="information-carousel" aria-label="ข้อมูลแนะนำ">
       <div className="information-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
@@ -102,24 +164,28 @@ export default function DashboardPage() {
 
       <section className="feed-filters" aria-label="ตัวกรอง TOR" ref={filterBarRef}>
         <div className="filter-title"><span aria-hidden="true">☷</span> ตัวกรอง</div>
-        <label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => setAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label>
-        <label><span className="sr-only">เทคโนโลยีหรือหมวดหมู่</span><select value={technology} onChange={(event) => setTechnology(event.target.value)}>{technologies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกเทคโนโลยี" : name}</option>)}</select></label>
+        <label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label>
+        <label><span className="sr-only">สถานะ TOR</span><select value={stage} onChange={(event) => updateStage(event.target.value)}>{TOR_STAGES.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
         <label className="sort-control"><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">เรียงตาม: ล่าสุด</option><option value="budget-high">งบประมาณ: สูงไปต่ำ</option><option value="budget-low">งบประมาณ: ต่ำไปสูง</option><option value="best-match">ความตรงกับโปรไฟล์</option></select></label>
       </section>
 
       <section className="feed-grid" aria-label="รายการ TOR">
         {loading && <p className="feed-empty">กำลังโหลดรายการ TOR…</p>}
         {error && <p className="feed-empty">{error}</p>}
-        {!loading && !error && visibleItems.map((tor) => <Link className="feed-card" href={`/tors/${tor.id}`} key={tor.id} onMouseLeave={(event) => event.currentTarget.scrollTo({ top: 0 })}>
-          <div className="feed-card-top"><div className="feed-card-meta"><span>{formatDate(tor.announceDate)}</span><span>รหัสโครงการ {tor.id}</span></div><span className={`match-badge ${tor.matchScore != null ? (tor.matchScore >= 80 ? 'match-high' : tor.matchScore >= 50 ? 'match-medium' : 'match-low') : 'match-uncertain'}`}>{tor.matchScore != null ? `${tor.matchScore}% ตรงกับคุณ` : "รอการจับคู่"}</span></div>
+        {!loading && !error && visibleItems.map((tor) => {
+          const stage = projectStage(tor.contractStart);
+          const status = biddingStatus(tor.projectStatus);
+          const remainingTime = biddingTimeRemaining(tor.contractEnd);
+          return <Link className="feed-card" href={`/tors/${tor.id}`} key={tor.id} onMouseLeave={(event) => event.currentTarget.scrollTo({ top: 0 })}>
+          <div className="feed-card-top"><div className="feed-card-meta"><span>รหัสโครงการ {tor.id}</span></div><div className="bidding-signals"><span className={`bidding-badge bidding-countdown is-${remainingTime.tone}`} title="คำนวณชั่วคราวจากวันสิ้นสุดสัญญา">{remainingTime.label}</span><span className={`bidding-badge bidding-status is-${status.tone}`}>{status.label}</span></div></div>
           <h2>{tor.title}</h2><p className="feed-agency"><span aria-hidden="true">⌂</span>{tor.agency}</p>
           <div className="feed-card-bottom">
             <div className="anomaly-slot">{tor.anomaly.highBudgetFlag && <p className="budget-warning"><span aria-hidden="true">!</span> งบประมาณสูงผิดปกติเมื่อเทียบกับข้อมูลที่มี</p>}</div>
-            <div className="feed-budget"><span>งบประมาณ</span><strong>{tor.budget.toLocaleString("th-TH")} บาท</strong></div>
-            <footer><span className="feed-status"><i />{statusLabel(tor.projectStatus)}</span></footer>
-            <div className="technology-tags">{tor.techStack.length ? tor.techStack.map((name, index) => <span key={`${name}-${index}`}>{name}</span>) : <span className="unknown-tag">ยังไม่มีข้อมูลเทคโนโลยี</span>}</div>
+            <div className="project-stage-row"><span className={`feed-status project-stage stage-${stage.tone}`}><i aria-hidden="true" />{stage.label}</span></div>
+            <div className="feed-card-metrics"><div className="feed-card-metric"><span>{fiscalYears(tor.contractStart, tor.contractEnd)}</span><strong>{tor.budget.toLocaleString("th-TH")} บาท</strong></div><div className="feed-card-metric"><span>ปิดรับข้อเสนอ</span><strong>{formatDate(tor.contractEnd)}</strong></div></div>
           </div>
-        </Link>)}
+        </Link>;
+        })}
         {!loading && !error && visibleItems.length === 0 && <p className="feed-empty">ไม่พบโครงการที่ตรงกับตัวกรองที่เลือก</p>}
       </section>
       {!loading && !error && totalPages > 1 && <nav className="feed-pagination" aria-label="เปลี่ยนหน้ารายการ TOR">

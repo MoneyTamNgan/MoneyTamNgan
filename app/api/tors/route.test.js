@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDate, parseNonNegativeNumber, parsePositiveInteger } from './route';
+import { parseDate, parseNonNegativeNumber, parsePositiveInteger, parseStage, stageFilter } from './route';
 
 describe('parsePositiveInteger', () => {
     it('returns the fallback when the value is null or empty', () => {
@@ -62,5 +62,26 @@ describe('parseNonNegativeNumber', () => {
     it('rejects negative or non-numeric values', () => {
         expect(parseNonNegativeNumber('-1', 'budgetMin').error).toMatch(/budgetMin/);
         expect(parseNonNegativeNumber('abc', 'budgetMax').error).toMatch(/budgetMax/);
+    });
+});
+
+describe('parseStage', () => {
+    it('accepts the supported temporary TOR stages', () => {
+        expect(parseStage('draft')).toEqual({ value: 'draft' });
+        expect(parseStage('official')).toEqual({ value: 'official' });
+        expect(parseStage('review')).toEqual({ value: 'review' });
+        expect(parseStage('closed')).toEqual({ value: 'closed' });
+    });
+
+    it('rejects an unsupported stage', () => {
+        expect(parseStage('active').error).toMatch(/stage/);
+    });
+});
+
+describe('stageFilter', () => {
+    it('uses a missing contract start for draft TORs', () => {
+        expect(stageFilter('draft', new Date('2026-10-05T00:00:00.000Z'))).toEqual({
+            $or: [{ 'timeline.contract_start': null }, { 'timeline.contract_start': { $exists: false } }],
+        });
     });
 });
