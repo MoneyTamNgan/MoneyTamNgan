@@ -7,6 +7,20 @@ export interface ProjectEvidence {
   page?: number;
 }
 
+export type TorRiskCategory = 'unrealistic_tenure' | 'excessive_hardware' | 'vendor_lock_in';
+export type TorRiskSeverity = 'low' | 'medium' | 'high';
+
+export interface ProjectFlaggedClause {
+  clause_text: string;
+  reason: string;
+  explanation?: string;
+  highlight_reason?: string;
+  category?: TorRiskCategory;
+  severity?: TorRiskSeverity;
+  page?: number;
+  confidence?: number;
+}
+
 // Mirrors the MongoDB Project document used by the TOR API.
 export interface ProjectRecord {
   project_id: string;
@@ -64,7 +78,7 @@ export interface ProjectRecord {
   anomalies: {
     high_budget_flag: boolean;
     budget_deviation_multiplier: number;
-    flagged_clauses: Array<{ clause_text: string; reason: string }>;
+    flagged_clauses: ProjectFlaggedClause[];
   };
   version_info: {
     version: number;
