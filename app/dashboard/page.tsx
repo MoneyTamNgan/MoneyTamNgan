@@ -77,6 +77,7 @@ export default function DashboardPage() {
   const [agencies, setAgencies] = useState<string[]>(["ทั้งหมด"]);
   const [agency, setAgency] = useState("ทั้งหมด");
   const [stage, setStage] = useState("ทั้งหมด");
+  const [softwareOnly, setSoftwareOnly] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [activeSlide, setActiveSlide] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -85,37 +86,41 @@ export default function DashboardPage() {
   const filterBarRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadFeed() {
       setLoading(true);
       setError("");
       try {
         const result = await listTorCards({
-          isSoftware: true,
+          isSoftware: softwareOnly ? true : undefined,
           page,
           pageSize: DASHBOARD_PAGE_SIZE,
           agency: agency === "ทั้งหมด" ? undefined : agency,
           stage: stage === "ทั้งหมด" ? undefined : stage as "draft" | "official" | "review" | "closed",
         });
-        setItems(result.data);
-        setTotal(result.total);
+        if (!cancelled) {
+          setItems(result.data);
+          setTotal(result.total);
+        }
       } catch {
-        setError("ไม่สามารถโหลดรายการ TOR ได้ในขณะนี้");
+        if (!cancelled) setError("ไม่สามารถโหลดรายการ TOR ได้ในขณะนี้");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     void loadFeed();
-  }, [agency, page, stage]);
+    return () => { cancelled = true; };
+  }, [agency, page, softwareOnly, stage]);
 
   useEffect(() => {
     let cancelled = false;
-    void listTorFacets({ isSoftware: true }).then((result) => {
+    void listTorFacets({ isSoftware: softwareOnly ? true : undefined }).then((result) => {
       if (!cancelled) setAgencies(["ทั้งหมด", ...result.agencies.map((item) => item.name)]);
     }).catch(() => {
       if (!cancelled) setAgencies(["ทั้งหมด"]);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [softwareOnly]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setActiveSlide((current) => (current + 1) % informationSlides.length), 5_000);
@@ -141,11 +146,12 @@ export default function DashboardPage() {
   const totalPages = Math.max(1, Math.ceil(total / DASHBOARD_PAGE_SIZE));
   const updateAgency = (value: string) => { setAgency(value); setPage(1); };
   const updateStage = (value: string) => { setStage(value); setPage(1); };
+  const updateSoftwareOnly = () => { setSoftwareOnly((current) => !current); setAgency("ทั้งหมด"); setPage(1); };
 
   return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:440px!important;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card:hover{z-index:5!important;transform:none!important;border-color:var(--orange-primary)!important;background:var(--cream-soft)!important;box-shadow:0 26px 42px var(--shadow)!important}}`}</style>
     <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}`}</style>
 
-        {showStickyTools && <div className="dashboard-sticky-tools" aria-label="ค้นหาและตัวกรอง TOR"><div className="dashboard-sticky-tools-inner"><label className="dashboard-sticky-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา TOR" aria-label="ค้นหา TOR" /></label><label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label><label><span className="sr-only">สถานะ TOR</span><select value={stage} onChange={(event) => updateStage(event.target.value)}>{TOR_STAGES.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label><label><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบสูงไปต่ำ</option><option value="budget-low">งบต่ำไปสูง</option><option value="best-match">ตรงกับโปรไฟล์</option></select></label></div></div>}
+        {showStickyTools && <div className="dashboard-sticky-tools" aria-label="ค้นหาและตัวกรอง TOR"><div className="dashboard-sticky-tools-inner"><label className="dashboard-sticky-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา TOR" aria-label="ค้นหา TOR" /></label><button type="button" className={`software-filter ${softwareOnly ? "is-active" : ""}`} onClick={updateSoftwareOnly} aria-pressed={softwareOnly}>ซอฟต์แวร์ / ไอที</button><label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label><label><span className="sr-only">สถานะ TOR</span><select value={stage} onChange={(event) => updateStage(event.target.value)}>{TOR_STAGES.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label><label><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบสูงไปต่ำ</option><option value="budget-low">งบต่ำไปสูง</option><option value="best-match">ตรงกับโปรไฟล์</option></select></label></div></div>}
 
     <section className="information-carousel" aria-label="ข้อมูลแนะนำ">
       <div className="information-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
@@ -164,6 +170,7 @@ export default function DashboardPage() {
 
       <section className="feed-filters" aria-label="ตัวกรอง TOR" ref={filterBarRef}>
         <div className="filter-title"><span aria-hidden="true">☷</span> ตัวกรอง</div>
+        <button type="button" className={`software-filter ${softwareOnly ? "is-active" : ""}`} onClick={updateSoftwareOnly} aria-pressed={softwareOnly}>ซอฟต์แวร์ / ไอที</button>
         <label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label>
         <label><span className="sr-only">สถานะ TOR</span><select value={stage} onChange={(event) => updateStage(event.target.value)}>{TOR_STAGES.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
         <label className="sort-control"><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">เรียงตาม: ล่าสุด</option><option value="budget-high">งบประมาณ: สูงไปต่ำ</option><option value="budget-low">งบประมาณ: ต่ำไปสูง</option><option value="best-match">ความตรงกับโปรไฟล์</option></select></label>
