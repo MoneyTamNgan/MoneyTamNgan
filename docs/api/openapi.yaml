@@ -82,6 +82,12 @@ paths:
           in: query
           schema:
             type: string
+        - name: stage
+          in: query
+          description: Temporary TOR stage derived from contractStart.
+          schema:
+            type: string
+            enum: [draft, official, review, closed]
         - name: dateFrom
           in: query
           description: Inclusive lower bound on releaseDate (ISO 8601 date).
@@ -115,6 +121,8 @@ paths:
                     budget: 15000000
                     projectStatus: "ระหว่างดำเนินการ"
                     announceDate: "2026-08-09T00:00:00.000Z"
+                    contractStart: null
+                    contractEnd: null
                     isSoftware: true
                     classification: { status: software, confidence: 0.92 }
                     documentStatus: pending
@@ -127,6 +135,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /tors/facets:
+    get:
+      summary: List dashboard TOR filter facets
+      tags: [TORs]
+      operationId: listTorFacets
+      parameters:
+        - name: isSoftware
+          in: query
+          description: Restrict facet values and total to software or non-software TORs.
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Complete deduplicated agency list, independent of list pagination.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, total, agencies]
+                properties:
+                  status: { type: string, enum: [success] }
+                  total: { type: integer, minimum: 0 }
+                  agencies:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, count]
+                      properties:
+                        name: { type: string }
+                        count: { type: integer, minimum: 1 }
 
   /tors/{id}:
     get:
@@ -881,7 +919,7 @@ components:
 
     TorListItem:
       type: object
-      required: [id, title, agency, budget, projectStatus, announceDate, isSoftware, classification, documentStatus, processingStatus, techStack, anomaly]
+      required: [id, title, agency, budget, projectStatus, announceDate, contractStart, contractEnd, isSoftware, classification, documentStatus, processingStatus, techStack, anomaly]
       properties:
         id: { type: string }
         title: { type: string }
@@ -889,6 +927,8 @@ components:
         budget: { type: number, description: Announced budget in THB. }
         projectStatus: { type: string }
         announceDate: { type: string, format: date-time, nullable: true }
+        contractStart: { type: string, format: date-time, nullable: true, description: "Temporary dashboard fiscal-year source until a dedicated fiscal-year field is available." }
+        contractEnd: { type: string, format: date-time, nullable: true, description: "Temporary dashboard bid-closing-date source until bidCloseAt is available." }
         isSoftware: { type: boolean, nullable: true }
         classification:
           $ref: "#/components/schemas/TorApiClassification"

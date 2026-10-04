@@ -5,6 +5,8 @@ import { toTorListItem } from '@/lib/api/tor-response';
 import { hydrateProjectsCompatibility } from '@/lib/project-compat';
 
 const MAX_LIMIT = 100;
+const TOR_STAGES = new Set(['draft', 'official', 'review', 'closed']);
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 function errorResponse(code, message, status = 400) {
     return NextResponse.json({ error: { code, message } }, { status });
@@ -40,6 +42,24 @@ export function parseDate(value, name, endOfDay = false) {
     return { value: parsed };
 }
 
+export function parseStage(value) {
+    if (value === null || value === '') return { value: null };
+    if (!TOR_STAGES.has(value)) return { error: 'stage must be draft, official, review, or closed' };
+    return { value };
+}
+
+export function stageFilter(stage, now = new Date()) {
+    if (!stage) return null;
+    const thirtyDaysBefore = new Date(now.getTime() - THIRTY_DAYS_MS);
+    const thirtyDaysAfter = new Date(now.getTime() + THIRTY_DAYS_MS);
+    if (stage === 'draft') {
+        return { $or: [{ 'timeline.contract_start': null }, { 'timeline.contract_start': { $exists: false } }] };
+    }
+    if (stage === 'official') return { 'timeline.contract_start': { $gt: thirtyDaysAfter } };
+    if (stage === 'review') return { 'timeline.contract_start': { $gte: thirtyDaysBefore, $lte: thirtyDaysAfter } };
+    return { 'timeline.contract_start': { $lt: thirtyDaysBefore } };
+}
+
 /**
  * GET /api/tors
  *
@@ -49,6 +69,7 @@ export function parseDate(value, name, endOfDay = false) {
  * - isSoftware (true or false)
  * - agency (exact department name)
  * - status (exact project status)
+ * - stage (temporary contract-start-derived TOR stage)
  * - dateFrom / dateTo (inclusive announce-date range)
  * - q (full-text search across project title, agency, and extracted tech stack)
  * - budgetMin / budgetMax (inclusive budget range)
@@ -65,6 +86,9 @@ export async function GET(request) {
     if (isSoftware !== null && isSoftware !== '' && isSoftware !== 'true' && isSoftware !== 'false') {
         return errorResponse('INVALID_IS_SOFTWARE', 'isSoftware must be true or false');
     }
+
+    const stageResult = parseStage(searchParams.get('stage'));
+    if (stageResult.error) return errorResponse('INVALID_STAGE', stageResult.error);
 
     const dateFromResult = parseDate(searchParams.get('dateFrom'), 'dateFrom');
     const dateToResult = parseDate(searchParams.get('dateTo'), 'dateTo', true);
@@ -96,6 +120,9 @@ export async function GET(request) {
 
         const status = searchParams.get('status');
         if (status) filter.project_status = status;
+
+        const temporaryStageFilter = stageFilter(stageResult.value);
+        if (temporaryStageFilter) Object.assign(filter, temporaryStageFilter);
 
         if (dateFromResult.value || dateToResult.value) {
             filter['timeline.announce_date'] = {};

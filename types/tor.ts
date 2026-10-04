@@ -1,4 +1,5 @@
 export type TorStatus = "Active" | "Superseded" | "Invalid" | "Cancelled";
+export type TorStage = "draft" | "official" | "review" | "closed";
 
 export interface BudgetAnomaly {
   baselinePrice: number;
@@ -56,6 +57,7 @@ export interface PaginatedList<T> {
 export interface TorListParams {
   isSoftware?: boolean;
   status?: TorStatus;
+  stage?: TorStage;
   agency?: string;
   page?: number;
   pageSize?: number;
@@ -96,6 +98,8 @@ export interface TorApiListItem {
   budget: number;
   projectStatus: string;
   announceDate: string | null;
+  contractStart: string | null;
+  contractEnd: string | null;
   isSoftware: boolean | null;
   classification: TorApiClassification;
   documentStatus: string | null;
@@ -114,6 +118,12 @@ export interface TorApiListResponse {
   limit: number;
   total: number;
   data: TorApiListItem[];
+}
+
+export interface TorApiFacetsResponse {
+  status: "success";
+  total: number;
+  agencies: Array<{ name: string; count: number }>;
 }
 
 export type TorApiAnomaly =
