@@ -148,9 +148,9 @@ export async function GET(request) {
         try {
             const { cookies } = await import('next/headers');
             const { verifySession, SESSION_COOKIE } = await import('@/lib/auth');
-            const { User } = await import('@/models/user');
+            const { User } = await import('@/models/User');
             
-            const cookieStore = cookies();
+            const cookieStore = await cookies();
             const token = cookieStore.get(SESSION_COOKIE)?.value;
             if (token) {
                 const session = await verifySession(token);

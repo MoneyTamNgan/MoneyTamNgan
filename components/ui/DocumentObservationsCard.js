@@ -42,8 +42,8 @@ export default function DocumentObservationsCard({ anomalies }) {
 
   return (
     <section className="tor-anomaly-card tor-anomaly-pagination-card" ref={cardRef}>
-      <p className="tor-section-kicker">ข้อมูลตรวจสอบ</p>
-      <h2>ข้อสังเกตจากเอกสาร</h2>
+      <p className="tor-section-kicker">วิเคราะห์โดย Vertex AI Gemini Flash</p>
+      <h2>ข้อกำหนดที่ควรตรวจสอบ</h2>
       {hasAnomaly ? (
         <>
           {highBudgetFlag && (
@@ -61,6 +61,12 @@ export default function DocumentObservationsCard({ anomalies }) {
                   <DocumentObservationItem
                     clauseText={clause.clause_text}
                     reason={clause.reason}
+                    explanation={clause.explanation}
+                    highlightReason={clause.highlight_reason}
+                    category={clause.category}
+                    severity={clause.severity}
+                    page={clause.page}
+                    confidence={clause.confidence}
                     key={`${clause.clause_text}-${(page - 1) * ITEMS_PER_PAGE + index}`}
                   />
                 ))}

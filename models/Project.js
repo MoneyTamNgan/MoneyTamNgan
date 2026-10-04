@@ -56,6 +56,14 @@ const ProjectSchema = new mongoose.Schema({
             index: true,
         },
         attempts: { type: Number, default: 0, min: 0 },
+        error_code: {
+            type: String,
+            enum: [
+                'document_not_published', 'temporary_timeout', 'resolver_failed',
+                'anti_bot_blocked', 'unsupported_layout', 'download_failed',
+                'archive_invalid', 'failed',
+            ],
+        },
         error: { type: String },
     },
 
@@ -66,6 +74,7 @@ const ProjectSchema = new mongoose.Schema({
 
     workflow: {
         status: { type: String, index: true },
+        error_code: String,
         error: String,
         updated_at: Date,
     }
