@@ -4,10 +4,9 @@ import AppShell from "@/components/ui/AppShell";
 import AdditionalInfoCard from "@/components/ui/AdditionalInfoCard";
 import BidderQualificationCard from "@/components/ui/BidderQualificationCard";
 import DocumentObservationsCard from "@/components/ui/DocumentObservationsCard";
+import ProjectSummaryCard from "@/components/ui/ProjectSummaryCard";
 import TechStackComparisonCard from "@/components/ui/TechStackComparisonCard";
 import { getTorDetail } from "@/lib/services/tor-service";
-
-const statusLabels = { Active: "กำลังใช้งาน", Superseded: "มีฉบับใหม่", Invalid: "ไม่ถูกต้อง", Cancelled: "ยกเลิก" };
 
 function valueOrUnknown(value) {
   return value || "ยังไม่มีข้อมูล";
@@ -17,6 +16,46 @@ function thaiDate(value) {
   if (!value) return "ยังไม่มีข้อมูล";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "ยังไม่มีข้อมูล" : new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "long", year: "numeric" }).format(date);
+}
+
+function fiscalYears(contractStart, contractEnd) {
+  if (!contractStart) return "ยังไม่ระบุปีงบประมาณ";
+  const start = new Date(contractStart);
+  if (Number.isNaN(start.getTime())) return "ยังไม่ระบุปีงบประมาณ";
+
+  const fiscalYearFor = (date) => date.getUTCFullYear() + 543 + (date.getUTCMonth() >= 9 ? 1 : 0);
+  const firstYear = fiscalYearFor(start);
+  const end = contractEnd ? new Date(contractEnd) : null;
+  const lastYear = end && !Number.isNaN(end.getTime()) && end >= start ? fiscalYearFor(end) : firstYear;
+  return firstYear === lastYear ? `ปีงบประมาณ ${firstYear}` : `ปีงบประมาณ ${firstYear}–${lastYear}`;
+}
+
+function biddingStatus(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (["cancelled", "ยกเลิก"].includes(normalized)) return { label: "ยกเลิก", tone: "cancelled" };
+  if (["superseded", "invalid", "มีฉบับใหม่", "ไม่ถูกต้อง", "ปิดรับ", "ปิดรับแล้ว"].includes(normalized)) return { label: "ปิดรับ", tone: "closed" };
+  return { label: "เปิดรับ", tone: "open" };
+}
+
+function biddingTimeRemaining(contractEnd) {
+  if (!contractEnd) return { label: "ยังไม่ระบุวันสิ้นสุด", tone: "unknown" };
+  const millisecondsLeft = new Date(contractEnd).getTime() - Date.now();
+  if (Number.isNaN(millisecondsLeft)) return { label: "ยังไม่ระบุวันสิ้นสุด", tone: "unknown" };
+  if (millisecondsLeft <= 0) return { label: "หมดเวลาแล้ว", tone: "expired" };
+  const hoursLeft = Math.ceil(millisecondsLeft / (1000 * 60 * 60));
+  if (hoursLeft < 24) return { label: `เหลือ ${hoursLeft} ชั่วโมง`, tone: "urgent" };
+  const daysLeft = Math.ceil(hoursLeft / 24);
+  return { label: `เหลือ ${daysLeft} วัน`, tone: daysLeft <= 7 ? "urgent" : "open" };
+}
+
+function projectStage(contractStart) {
+  if (!contractStart) return { label: "ร่าง TOR", tone: "draft" };
+  const millisecondsUntilStart = new Date(contractStart).getTime() - Date.now();
+  if (Number.isNaN(millisecondsUntilStart)) return { label: "ร่าง TOR", tone: "draft" };
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+  if (millisecondsUntilStart > thirtyDays) return { label: "TOR ฉบับจริง", tone: "official" };
+  if (millisecondsUntilStart >= -thirtyDays) return { label: "อยู่ระหว่างพิจารณาผล / ประกาศผู้ชนะ", tone: "review" };
+  return { label: "ยกเลิกโครงการ / ลงนามสัญญาแล้ว", tone: "closed" };
 }
 
 function detailToProjectRecord(tor) {
@@ -92,15 +131,18 @@ export default async function TorOverviewPage({ params }) {
   const versionInfo = project.version_info ?? { version: 1, is_latest: true, superseded_by: null };
   const versionStatus = versionInfo.is_latest ? `ฉบับล่าสุด · เวอร์ชัน ${versionInfo.version}` : `มีฉบับใหม่ · เวอร์ชัน ${versionInfo.version}`;
   const qualificationItems = project.extracted_data.qualifications;
+  const status = biddingStatus(project.project_status);
+  const remainingTime = biddingTimeRemaining(project.timeline.contract_end);
+  const stage = projectStage(project.timeline.contract_start);
 
   return <AppShell title="ภาพรวม TOR" hideTitle><div className="tor-overview-layout"><aside className="tor-overview-side"><p>ภาพรวม TOR</p><div className="tor-overview-utility"><Link className="tor-home-button" href="/dashboard">← กลับสู่หน้าแรก</Link>{project.pdf_url && <a className="tor-header-pdf" href={project.pdf_url} target="_blank" rel="noreferrer">เปิด PDF ต้นฉบับ ↗</a>}</div></aside><div className="tor-overview">
-    <header className="tor-overview-header"><div><p className="tor-overview-id">รหัสโครงการ {project.project_id}</p><h1>{project.project_name}</h1><p className="tor-overview-agency">{project.dept_name}{project.dept_sub_name ? ` · ${project.dept_sub_name}` : ""}</p><div className="tor-overview-actions"><span className={project.is_software ? "tor-classification is-software" : "tor-classification"}>{project.is_software ? "โครงการซอฟต์แวร์ / ไอที" : "นอกขอบเขตซอฟต์แวร์"}</span><span className={hasExtractedDocument ? "tor-ai-badge" : "tor-ai-badge is-pending"}>{hasExtractedDocument ? "มีข้อมูลสกัดจากเอกสาร" : "รอข้อมูลจากเอกสาร"}</span></div></div></header>
-    <section className="tor-lifecycle" aria-label="สถานะเอกสารและวงจรโครงการ"><div><span>ประเภทโครงการ</span><strong>{project.is_software ? "ซอฟต์แวร์ / ไอที" : "นอกขอบเขตซอฟต์แวร์"}</strong></div><div><span>การดึงข้อมูล PDF</span><strong>{hasExtractedDocument ? "ประมวลผลแล้ว" : hasDocument ? "รอประมวลผล" : "ยังไม่มีเอกสาร"}</strong></div><div><span>เวอร์ชัน / วงจรโครงการ</span><strong>{versionStatus}</strong>{versionInfo.superseded_by && <Link href={`/tors/${versionInfo.superseded_by}`}>ไปยังฉบับใหม่ →</Link>}</div></section>
-    <section className="tor-metrics" aria-label="ข้อมูลสำคัญโครงการ"><article><span>งบประมาณ</span><strong>{project.budget.toLocaleString("th-TH")} บาท</strong></article><article><span>วันประกาศ</span><strong>{thaiDate(project.timeline.announce_date)}</strong></article><article><span>สถานะโครงการ</span><strong>{statusLabels[project.project_status] ?? valueOrUnknown(project.project_status)}</strong></article></section>
-    <section className="tor-project-summary"><article className="tor-summary-card"><p className="tor-section-kicker">สรุปจากเอกสาร</p><h2>ภาพรวมโครงการ</h2><p>{project.extracted_data.summary || "ยังไม่มีข้อมูลสรุปจากเอกสาร"}</p></article></section>
-    <TechStackComparisonCard items={project.extracted_data.tech_stack} />
-    <section className="tor-detail-grid"><article className="tor-detail-card"><p className="tor-section-kicker">ข้อมูลโครงการ</p><h2>รายละเอียดที่จัดเก็บ</h2><dl><div><dt>หน่วยงาน</dt><dd>{project.dept_name}</dd></div><div><dt>หน่วยงานย่อย / ฝ่าย</dt><dd>{valueOrUnknown(project.dept_sub_name)}</dd></div><div><dt>วันเริ่มสัญญา</dt><dd>{thaiDate(project.timeline.contract_start)}</dd></div><div><dt>วันสิ้นสุดสัญญา</dt><dd>{thaiDate(project.timeline.contract_end)}</dd></div><div><dt>ระยะเวลาดำเนินการ</dt><dd>{project.timeline.duration_days ? `${project.timeline.duration_days.toLocaleString("th-TH")} วัน` : "ยังไม่มีข้อมูล"}</dd></div><div><dt>บันทึกข้อมูลเมื่อ</dt><dd>{thaiDate(project.created_at)}</dd></div><div><dt>ปรับปรุงข้อมูลเมื่อ</dt><dd>{thaiDate(project.updated_at)}</dd></div><div><dt>เอกสาร PDF ต้นฉบับ</dt><dd>{project.pdf_url ? <a href={project.pdf_url} target="_blank" rel="noreferrer">เปิดเอกสาร ↗</a> : "ยังไม่มีข้อมูล"}</dd></div></dl></article><BidderQualificationCard items={qualificationItems} hasDocument={hasDocument} /></section>
+    <header className="tor-overview-header"><div><p className="tor-overview-id">รหัสโครงการ {project.project_id}</p><h1>{project.project_name}</h1><p className="tor-overview-agency">{project.dept_name}{project.dept_sub_name ? ` · ${project.dept_sub_name}` : ""}</p><div className="tor-overview-actions tor-priority-actions"><span className={`tor-document-version ${versionInfo.is_latest ? "is-latest" : "is-superseded"}`}>{versionStatus}</span>{project.pdf_url && <a className="tor-detail-pdf-button" href={project.pdf_url} target="_blank" rel="noreferrer">เปิด PDF ต้นฉบับ ↗</a>}</div></div></header>
+    <section className="tor-metrics tor-priority-metrics" aria-label="ข้อมูลสำคัญสำหรับการยื่นข้อเสนอ"><article className="tor-budget-metric"><span>งบประมาณ</span><strong>{project.budget.toLocaleString("th-TH")} บาท</strong></article><article><span>ปีงบประมาณ</span><strong>{fiscalYears(project.timeline.contract_start, project.timeline.contract_end)}</strong></article><article><span>ปิดรับข้อเสนอ</span><strong>{thaiDate(project.timeline.contract_end)}</strong></article></section>
+    <section className="tor-lifecycle tor-priority-lifecycle" aria-label="สถานะการยื่นข้อเสนอและ TOR"><div className={`is-${remainingTime.tone}`}><span>ระยะเวลายื่นข้อเสนอ</span><strong title="คำนวณชั่วคราวจากวันสิ้นสุดสัญญา">{remainingTime.label}</strong></div><div className={`is-${status.tone}`}><span>สถานะการยื่นข้อเสนอ</span><strong>{status.label}</strong></div><div className={`stage-${stage.tone}`}><span>สถานะ TOR</span><strong>{stage.label}</strong></div></section>
+    <ProjectSummaryCard summary={project.extracted_data.summary} />
+    <section className="tor-detail-grid"><article className="tor-detail-card"><p className="tor-section-kicker">ข้อมูลโครงการ</p><h2>รายละเอียดที่จัดเก็บ</h2><dl><div><dt>หน่วยงาน</dt><dd>{project.dept_name}</dd></div><div><dt>หน่วยงานย่อย / ฝ่าย</dt><dd>{valueOrUnknown(project.dept_sub_name)}</dd></div><div><dt>สถานะการยื่นข้อเสนอ</dt><dd title="ใช้ project_status ชั่วคราว">{status.label}</dd></div><div><dt>วันเปิดรับข้อเสนอ</dt><dd>{thaiDate(project.timeline.contract_start)} <small>(ใช้วันเริ่มสัญญาชั่วคราว)</small></dd></div><div><dt>วันปิดรับข้อเสนอ</dt><dd>{thaiDate(project.timeline.contract_end)} <small>(ใช้วันสิ้นสุดสัญญาชั่วคราว)</small></dd></div><div><dt>วันเริ่มสัญญา</dt><dd>{thaiDate(project.timeline.contract_start)}</dd></div><div><dt>วันสิ้นสุดสัญญา</dt><dd>{thaiDate(project.timeline.contract_end)}</dd></div><div><dt>ระยะเวลาดำเนินการ</dt><dd>{project.timeline.duration_days ? `${project.timeline.duration_days.toLocaleString("th-TH")} วัน` : "ยังไม่มีข้อมูล"}</dd></div><div><dt>บันทึกข้อมูลเมื่อ</dt><dd>{thaiDate(project.created_at)}</dd></div><div><dt>ปรับปรุงข้อมูลเมื่อ</dt><dd>{thaiDate(project.updated_at)}</dd></div><div><dt>เอกสาร PDF ต้นฉบับ</dt><dd>{project.pdf_url ? <a href={project.pdf_url} target="_blank" rel="noreferrer">เปิดเอกสาร ↗</a> : "ยังไม่มีข้อมูล"}</dd></div></dl></article><BidderQualificationCard items={qualificationItems} hasDocument={hasDocument} /></section>
     <DocumentObservationsCard anomalies={project.anomalies} />
     <section className="tor-extracted-data"><AdditionalInfoCard scopeItems={project.extracted_data.scope_of_work} /></section>
+    <TechStackComparisonCard items={project.extracted_data.tech_stack} />
   </div></div></AppShell>;
 }
