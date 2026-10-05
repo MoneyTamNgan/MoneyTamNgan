@@ -2,6 +2,7 @@ import { mockProjectRecords } from "@/lib/mock-project-records";
 import { projectToAnomalyReport, projectToTor, projectToTorSummary } from "@/lib/services/project-mapper";
 import type { ProjectRecord } from "@/types/project";
 import type { AnalyticsResult, AnalyticsSearchParams, AnomalyReport, PaginatedList, Tor, TorApiDetail, TorApiFacetsResponse, TorApiListResponse, TorListParams, TorSummary } from "@/types/tor";
+import type { AnalyticsQuery, AnalyticsResponse } from "@/types/analytics";
 
 // Development mode is intentionally active until the REST API is implemented.
 // New pages must use this service, never import mock data directly.
@@ -124,6 +125,21 @@ export async function searchAnalytics(params: AnalyticsSearchParams = {}): Promi
   return apiFetch<AnalyticsResult>(`/analytics/search?${query.toString()}`);
   */
   throw new Error("ยังไม่ได้เชื่อมต่อ API วิเคราะห์ข้อมูล");
+}
+
+// Analytics is live even while the older mock-only TOR service adapters remain
+// available for screens that have not yet been migrated.
+export async function getAnalyticsOverview(params: AnalyticsQuery = {}): Promise<AnalyticsResponse> {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+  });
+  const response = await fetch(`/api/analytics/search?${query.toString()}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error(`Analytics request failed: ${response.status}`);
+  return response.json() as Promise<AnalyticsResponse>;
 }
 
 /* PRODUCTION — shared HTTP helper. Keep disabled until NEXT_PUBLIC_API_BASE_URL is configured.
