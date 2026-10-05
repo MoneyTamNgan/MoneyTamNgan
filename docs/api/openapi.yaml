@@ -38,7 +38,7 @@ tags:
   - name: Anomaly Detection
     description: "[Planned] Budget and qualification anomaly flags on a TOR (FR-3.1, FR-3.2)."
   - name: Public Analytics
-    description: "[Planned] Unauthenticated historical search and aggregate metrics (FR-4.1, FR-4.2)."
+    description: "[Current] Public historical search, dashboard aggregates, and export for the Analytics page."
 
 paths:
   # ---------------------------------------------------------------------------
@@ -671,12 +671,17 @@ paths:
   # ---------------------------------------------------------------------------
   /analytics/search:
     get:
-      summary: Search historical TOR records with aggregate metrics
+      summary: Search and aggregate the live TOR analytics catalog
       tags: [Public Analytics]
       operationId: searchAnalytics
       description: >
-        Unauthenticated, rate-limited per NFR-4/FR-4.2.2 (see 429 response).
+        Returns de-duplicated projects, dashboard metrics, chart series, and
+        complete filter facets. Bidding status, close date, and TOR stage are
+        temporary derivations until canonical bidding fields are stored.
       parameters:
+        - name: isSoftware
+          in: query
+          schema: { type: boolean }
         - name: dateFrom
           in: query
           schema:
@@ -699,40 +704,41 @@ paths:
           in: query
           schema:
             type: number
-        - name: category
+        - name: stage
           in: query
           schema:
             type: string
+            enum: [draft, official, review, closed]
+        - name: biddingStatus
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, cancelled]
+        - name: fiscalYear
+          in: query
+          description: Thai Buddhist Era fiscal year, calculated from contractStart or announceDate.
+          schema: { type: integer, minimum: 2400, maximum: 3000 }
         - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
+        - $ref: "#/components/parameters/LimitParam"
       responses:
         "200":
           description: Search results with aggregate metrics
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/PaginatedList"
-                  - type: object
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Tor"
-                      aggregates:
-                        $ref: "#/components/schemas/AnalyticsAggregates"
-        "429":
-          description: Rate limit exceeded
+                $ref: "#/components/schemas/AnalyticsSearchResponse"
+        "400":
+          description: Invalid filter parameters
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: "#/components/schemas/Error" }
 
   /analytics/export:
     get:
       summary: Export historical search results as CSV or JSON
       tags: [Public Analytics]
       operationId: exportAnalytics
+      description: Applies the same filters and temporary derivations as GET /analytics/search. Exports at most 5,000 records.
       parameters:
         - name: format
           in: query
@@ -754,10 +760,18 @@ paths:
           in: query
           schema:
             type: string
-        - name: category
+        - name: isSoftware
           in: query
-          schema:
-            type: string
+          schema: { type: boolean }
+        - name: stage
+          in: query
+          schema: { type: string, enum: [draft, official, review, closed] }
+        - name: biddingStatus
+          in: query
+          schema: { type: string, enum: [open, closed, cancelled] }
+        - name: fiscalYear
+          in: query
+          schema: { type: integer, minimum: 2400, maximum: 3000 }
       responses:
         "200":
           description: File contents
@@ -770,8 +784,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Tor"
-        "429":
-          description: Rate limit exceeded
+        "400":
+          description: Invalid export format or filter
           content:
             application/json:
               schema:
@@ -1285,6 +1299,117 @@ components:
           description: In days.
         totalSpend:
           type: number
+
+    AnalyticsSearchResponse:
+      type: object
+      required: [status, generatedAt, filters, dataQuality, metrics, charts, facets, page, limit, total, data]
+      properties:
+        status: { type: string, enum: [success] }
+        generatedAt: { type: string, format: date-time }
+        filters: { type: object, description: The validated filter values applied to this response. }
+        dataQuality:
+          type: object
+          description: Identifies temporary field derivations until canonical bidding data exists.
+          additionalProperties: { type: string }
+        metrics:
+          type: object
+          required: [totalTors, totalBudget, openForBidding, openBudget, closingSoon]
+          properties:
+            totalTors: { type: integer, minimum: 0 }
+            totalBudget: { type: number, minimum: 0 }
+            openForBidding: { type: integer, minimum: 0 }
+            openBudget: { type: number, minimum: 0 }
+            closingSoon: { type: integer, minimum: 0 }
+        charts:
+          type: object
+          required: [fiscalYearTrend, projectLength, biddingStatus, torStage, topAgencies]
+          properties:
+            fiscalYearTrend:
+              type: array
+              items:
+                type: object
+                required: [fiscalYear, count, totalBudget]
+                properties:
+                  fiscalYear: { type: integer }
+                  count: { type: integer, minimum: 0 }
+                  totalBudget: { type: number, minimum: 0 }
+            projectLength:
+              type: array
+              items:
+                type: object
+                required: [key, label, count, totalBudget]
+                properties:
+                  key: { type: string, enum: [one, two, threePlus, unknown] }
+                  label: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  totalBudget: { type: number, minimum: 0 }
+            biddingStatus:
+              type: array
+              items: { $ref: "#/components/schemas/AnalyticsBreakdown" }
+            torStage:
+              type: array
+              items: { $ref: "#/components/schemas/AnalyticsBreakdown" }
+            topAgencies:
+              type: array
+              items:
+                type: object
+                required: [name, count, totalBudget]
+                properties:
+                  name: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  totalBudget: { type: number, minimum: 0 }
+        facets:
+          type: object
+          required: [agencies, fiscalYears]
+          properties:
+            agencies:
+              type: array
+              items:
+                type: object
+                required: [name, count]
+                properties:
+                  name: { type: string }
+                  count: { type: integer, minimum: 0 }
+            fiscalYears:
+              type: array
+              items:
+                type: object
+                required: [year, count]
+                properties:
+                  year: { type: integer }
+                  count: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0 }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AnalyticsTorItem" }
+
+    AnalyticsBreakdown:
+      type: object
+      required: [key, count, totalBudget]
+      properties:
+        key: { type: string }
+        count: { type: integer, minimum: 0 }
+        totalBudget: { type: number, minimum: 0 }
+
+    AnalyticsTorItem:
+      type: object
+      required: [id, title, agency, budget, projectStatus, isSoftware, announceDate, contractStart, contractEnd, fiscalYear, biddingStatus, stage, projectLength]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        agency: { type: string }
+        budget: { type: number, minimum: 0 }
+        projectStatus: { type: string }
+        isSoftware: { type: boolean, nullable: true }
+        announceDate: { type: string, format: date-time, nullable: true }
+        contractStart: { type: string, format: date-time, nullable: true }
+        contractEnd: { type: string, format: date-time, nullable: true }
+        fiscalYear: { type: integer, nullable: true }
+        biddingStatus: { type: string, enum: [open, closed, cancelled] }
+        stage: { type: string, enum: [draft, official, review, closed] }
+        projectLength: { type: integer, nullable: true, minimum: 1 }
 
     PaginatedList:
       type: object
