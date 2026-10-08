@@ -71,6 +71,37 @@ for (const eligibilityStatus of ['closed', 'unknown', 'not_yet_open']) {
     });
 }
 
+test('Vertex retry uses matching stored OCR without downloading or extracting again', async t => {
+    const { record, dependencies } = await fixture(t);
+    record.primary_document_id = 'document-test';
+    record.latest_extraction_run_id = 'run-test';
+    dependencies.ExtractionRunModel = { findById: () => ({ lean: async () => ({
+        _id: 'run-test', document_id: 'document-test', status: 'completed',
+    }) }) };
+    process.env.VERTEX_AI_ENABLED = 'true';
+    dependencies.verifyEligibility = async () => assert.fail('Stored-text analysis needs no new government request');
+    dependencies.extractText = async () => assert.fail('OCR must not repeat');
+    dependencies.acquireDocument = async () => assert.fail('Download must not repeat');
+    dependencies.resumeAnalysis = async () => ({ status: 'completed', reused: true });
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(result.resumedOcr, true);
+    assert.equal(result.status, 'completed');
+});
+test('disabling Vertex never downgrades a matching completed stored summary', async t => {
+    const { record, dependencies } = await fixture(t);
+    record.primary_document_id = 'document-test';
+    record.latest_extraction_run_id = 'run-test';
+    dependencies.ExtractionRunModel = { findById: () => ({ lean: async () => ({
+        _id: 'run-test', document_id: 'document-test', status: 'completed',
+    }) }) };
+    dependencies.SummaryModel = { findOne: () => ({ lean: async () => ({ _id: 'summary-test' }) }) };
+    dependencies.resumeAnalysis = async () => ({ status: 'completed', reused: true });
+    dependencies.extractText = async () => assert.fail('OCR must not repeat');
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(result.status, 'completed');
+    assert.equal(result.reused, true);
+});
+
 test('stored PDF resumes at OCR and waits for Vertex configuration with durable progress', async t => {
     const { updates, dependencies } = await fixture(t);
     const result = await processProject('68019088742', { allowBrowserFallback: false }, dependencies);
