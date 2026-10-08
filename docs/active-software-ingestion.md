@@ -1,10 +1,12 @@
 # Active software TOR ingestion
 
-Normal ingestion (`POST /api/ingestion/trigger`) now accepts only software-classified candidates with verified open bidding. Non-software, uncertain software, closed, not-yet-open and unverified candidates are skipped before project upsert or job enqueue. The response adds skip counts and up to 20 examples. Existing historical records are not deleted.
+Normal ingestion (`POST /api/ingestion/trigger`) now stages software candidates in `discoverycandidates` and, when `enqueueProcessing:true`, queues `verify_candidate` jobs. Slow official-page verification runs in the worker, not inside the HTTP request. Only verified open software is promoted into `projects`, followed by a `process_project` job. `itemsNew` describes inline project writes, not staged candidates; use `candidatesSaved` and `jobsQueued` for deferred discovery. `verifyInline:true` is retained for small diagnostic batches.
+
+Non-software and explicitly contracted/closed records are excluded. Uncertain software is retained for review; unknown eligibility is retained and retried, rather than silently discarded. Not-yet-open candidates can be rechecked later. Existing historical records are not deleted. Inspect pending candidates through `GET /api/ingestion/status`, and requeue with `POST /api/processing/trigger` body `{"candidateId":"PROJECT_ID"}`.
 
 The default discovery year now follows the current Thai fiscal year (October rollover, Bangkok timezone), instead of the hardcoded 2568. It remains a candidate-search year, not proof that an invitation is still open. API requests time out after 20 seconds; reflected API keys are redacted from HTTP error bodies.
 
-The worker rechecks eligibility immediately before downloading/OCR/Vertex. Unknown eligibility produces `review_required`; closed/not-yet-open produces `metadata_only` and an explanatory `workflow.status`. No new artifact processing runs for these projects. Stored-text reanalysis remains available for historical analysis.
+The worker rechecks eligibility immediately before new document acquisition. Unknown eligibility remains reviewable and retryable; closed/not-yet-open produces `metadata_only`. Already-stored, matching OCR can finish Vertex analysis without fetching government pages or files again, including historical projects. `OCR_FORCE=true` or the internal `forceReextract` option disables this OCR-resume shortcut; new acquisition still requires open bidding.
 
 ## Evidence and limits
 
@@ -14,7 +16,7 @@ The worker rechecks eligibility immediately before downloading/OCR/Vertex. Unkno
 - A narrowly labelled bid submission closing timestamp is required. Thai digits, Buddhist years, full Thai month names and day/month/year timestamps are supported; Thai local times use UTC+07:00.
 - Date-only, conflicting deadlines, draft status, anti-bot responses, network failure and unsupported layout never mean open.
 - Contract end dates, fiscal years, project ID prefixes and generic `Active` status are not bid deadlines.
-- This is conservative verification, not a complete official announcement API adapter. Dynamic pages and date ranges not understood by the parser remain unverified. No anti-bot bypass is implemented.
+- Static HTML is checked first, then a bounded normal browser render when enabled. This is conservative verification, not a complete official announcement API adapter. Dynamic date ranges not understood by the parser remain unverified. No human-verification bypass is implemented.
 - Keyword classification can miss software and produce false positives. This gate does not establish exhaustive recall or perfect software classification.
 - EGP-CONTRACT is a contract-data source, not a comprehensive feed of currently open invitations. It may return zero eligible records. Reliable active discovery will need a verified current-announcement source/adapter; increasing the historical year range will not solve this.
 
