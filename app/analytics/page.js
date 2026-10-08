@@ -1,6 +1,7 @@
 import AppShell from "@/components/ui/AppShell";
 import AnalyticsExportButtons from "@/components/ui/AnalyticsExportButtons";
-import { listProjectRecords } from "@/lib/services/tor-service";
+import { listLiveProjectRecords } from "@/lib/services/live-project-record";
+export const dynamic = 'force-dynamic';
 
 const statusLabels = { Active: "กำลังใช้งาน", Superseded: "มีฉบับใหม่", Invalid: "ไม่ถูกต้อง", Cancelled: "ยกเลิก" };
 
@@ -17,7 +18,7 @@ function formatMillion(value) {
 }
 
 export default async function AnalyticsPage() {
-  const projects = await listProjectRecords();
+  const projects = await listLiveProjectRecords();
   const totalBudget = projects.reduce((sum, project) => sum + project.budget, 0);
   const agencyBudget = groupTotal(projects, (project) => project.dept_name, (project) => project.budget).slice(0, 7);
   const statusCount = groupTotal(projects, (project) => statusLabels[project.project_status] ?? project.project_status);
