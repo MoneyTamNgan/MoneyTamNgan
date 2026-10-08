@@ -3,6 +3,10 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import { mkdtemp, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
+import Project from '../models/Project.js';
+import { loadKeywordSets } from '../lib/keywords.js';
+import { verifySoftwareProcurement } from '../lib/procurement-eligibility.js';
 import connectDB from '../lib/db.js';
 import Document from '../models/Document.js';
 import DocumentPage from '../models/DocumentPage.js';
@@ -28,7 +32,7 @@ async function main() {
         is_current_primary: false,
         $or: [{ _id: { $nin: processedIds } }, { _id: { $nin: summarizedIds } }],
     }).sort({ 'storage.size_bytes': 1 }).lean();
-    const storageDir = process.argv[2] || await mkdtemp('/private/tmp/tor-secondary-');
+    const storageDir = process.argv[2] || await mkdtemp(path.join(os.tmpdir(), 'tor-secondary-'));
     const groups = new Map();
     for (const document of pending) {
         if (!groups.has(document.source_url)) groups.set(document.source_url, []);
@@ -36,10 +40,13 @@ async function main() {
     }
     console.log(JSON.stringify({ pending: pending.length, archives: groups.size, storageDir }));
     const results = [];
-    await Promise.all([...groups].map(async ([url, documents]) => {
+    for (const [url, documents] of groups) {
         let downloaded;
         try {
             const projectId = documents[0].project_id;
+            const project = await Project.findOne({ project_id: projectId }).lean();
+            const admission = await verifySoftwareProcurement(project, await loadKeywordSets());
+            if (!admission.allowed) throw new Error(`Acquisition skipped: ${admission.reason}`);
             const directory = path.join(storageDir, projectId);
             const cachedZip = await readdir(directory).then(names => names.find(name => name.endsWith('.zip'))).catch(() => null);
             const cachedPdfs = await readdir(path.join(directory, 'extracted')).catch(() => []);
@@ -86,7 +93,7 @@ async function main() {
                     let summary = await DocumentSummary.findOne({ extraction_run_id: run._id,
                         model: process.env.VERTEX_MODEL || 'gemini-2.5-flash', prompt_version: TOR_PROMPT_VERSION });
                     if (!summary && process.env.VERTEX_AI_ENABLED === 'true') {
-                        const vertex = await extractTorWithVertex({ pages: textResult.pages });
+                        const vertex = await extractTorWithVertex({ pages: textResult.pages, extractionRunId: String(run._id) });
                         const review = textResult.needsReview || vertex.extraction.confidence < 0.8
                             || vertex.extraction.fiscal_budget?.status === 'ambiguous'
                             || Boolean(vertex.extraction.fiscal_budget?.warnings?.length)
@@ -109,7 +116,7 @@ async function main() {
             if (downloaded) await removeTransientDocuments({ archive_path: downloaded.archivePath,
                 extracted_pdfs: downloaded.extractedPdfs || [] });
         }
-    }));
+    }
     console.log(JSON.stringify({ results }, null, 2));
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; }).finally(() => mongoose.disconnect());

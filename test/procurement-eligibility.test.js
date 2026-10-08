@@ -78,3 +78,14 @@ test('official content must identify the requested project; stale deadline is re
     });
     assert.equal(extended.status, 'open');
 });
+test('a rendered page can verify JS-only deadlines, but a rendered human challenge cannot', async () => {
+    let html = '<body>123456\nวันสิ้นสุดการเสนอราคา: 08/10/2569 16:30</body>';
+    const dependencies = { now, minDelayMs: 0,
+        resolve: async () => ({ officialDetailUrl: 'https://process5.gprocurement.go.th/egp-agpc01-web/announcement/procurement/example' }),
+        fetchPage: async () => new Response('<body><div id="app"></div></body>', { headers: { 'Content-Type': 'text/html' } }),
+        renderPage: async () => html,
+    };
+    assert.equal((await verifyProcurementEligibility({ project_id: '123456' }, dependencies)).status, 'open');
+    html = '<body>123456 Verify you are human</body>';
+    assert.equal((await verifyProcurementEligibility({ project_id: '123456' }, dependencies)).status, 'unknown');
+});
