@@ -21,8 +21,9 @@ const DocumentSchema = new mongoose.Schema({
     source_type: String,
     official_detail_url: String,
     storage: {
-        backend: { type: String, enum: ['remote', 'local', 'gcs'], default: 'remote' },
+        backend: { type: String, enum: ['remote', 'local', 'gcs', 'gridfs'], default: 'remote' },
         local_path: String, gcs_uri: String,
+        gridfs_id: mongoose.Schema.Types.ObjectId,
         mime_type: { type: String, default: 'application/pdf' },
         size_bytes: { type: Number, min: 0 },
     },
