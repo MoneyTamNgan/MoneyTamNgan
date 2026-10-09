@@ -7,6 +7,8 @@
     "start": "next start",
     "lint": "next lint",
     "scrape": "node scripts/scrape.js",
+    "ingest:tenders": "node scripts/ingest-open-tenders.js",
+    "bench": "node scripts/bench-pipelines.js",
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",
     "vertex:reanalyze": "node scripts/reanalyze-vertex.js",
