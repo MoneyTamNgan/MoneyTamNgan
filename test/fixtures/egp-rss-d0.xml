@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="Windows-874" ?>
+<rss version="2.0">
+	<channel>
+		<title>ประกาศจัดซื้อจัดจ้างภาครัฐ</title>
+		<link>http://process.gprocurement.go.th/egp2procmainWeb/procsearch.sch?homeflag=A&amp;proc_id=FPRO9965&amp;servlet=FPRO9965Servlet&amp;methodId=&amp;announceType=2</link>
+		<description>ประกาศจัดซื้อจัดจ้างภาครัฐล่าสุด</description>
+		<language>th-TH</language>
+		<lastBuildDate>Fri, 02 Oct 2026 01:57:37 ICT</lastBuildDate>
+		<copyright>Copyright ? 2008 All rights reserved.</copyright>
+		<image>
+			<title>ประกาศจัดซื้อจัดจ้างภาครัฐ</title>
+			<url>http://process.gprocurement.go.th/EPROCRssFeedWeb/images/header_eGP1.jpg</url>
+			<link>http://www.gprocurement.go.th</link>
+		</image>
+		<countbyday>0</countbyday>
+		<item>
+			<title>ประกวดราคาซื้อโครงการจัดซื้อเครื่องพิมพ์ Multifunction และเครื่องสแกนเนอร์ ด้วยวิธีประกวดราคาอิเล็กทรอนิกส์ (e-bidding)</title>
+			<link>https://process5.gprocurement.go.th/egp-template-service/dwnt/view-pdf-file?templateId=045c7b5d-df14-44c8-9a69-a9e7d5d935d0</link>
+			<description>69099722203, ประกวดราคาอิเล็กทรอนิกส์ (e-bidding), ประกาศเชิญชวน</description>
+			<pubDate>2026-09-30</pubDate>
+			<guid></guid>
+		</item>
+		<item>
+			<title>ประกวดราคาจ้างก่อสร้างซ่อมแซมและปรับปรุงบ้านพักข้าราชการสำนักงานคลังจังหวัดแพร่ ด้วยวิธีประกวดราคาอิเล็กทรอนิกส์ (e-bidding)</title>
+			<link>https://process5.gprocurement.go.th/egp-template-service/dwnt/view-pdf-file?templateId=6572bdad-5898-4bb8-9095-8378e36c9801</link>
+			<description>69099693138, ประกวดราคาอิเล็กทรอนิกส์ (e-bidding), ประกาศเชิญชวน</description>
+			<pubDate>2026-09-30</pubDate>
+			<guid></guid>
+		</item>
+	</channel>
+</rss>
