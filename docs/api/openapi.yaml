@@ -845,7 +845,7 @@ components:
         supersededByTorId:
           type: string
           nullable: true
-          description: "[Planned, FR-1.3] Id of the newer revision, if this record's status is Superseded."
+          description: "[FR-1.3] Id of the newer revision, if this record's status is Superseded."
         matchScore:
           type: number
           nullable: true
@@ -887,7 +887,9 @@ components:
         title: { type: string }
         agency: { type: string }
         budget: { type: number, description: Announced budget in THB. }
-        projectStatus: { type: string }
+        projectStatus: { type: string, description: Superseded when a newer revision exists. }
+        isLatestVersion: { type: boolean }
+        supersededBy: { type: string, nullable: true, description: Id of the newer revision, if any. }
         announceDate: { type: string, format: date-time, nullable: true }
         isSoftware: { type: boolean, nullable: true }
         classification:
@@ -989,11 +991,17 @@ components:
             $ref: "#/components/schemas/TorApiAnomaly"
         version:
           type: object
-          required: [number, isLatest, supersededBy]
+          required: [number, isLatest, supersededBy, supersedes, lineageId]
+          description: >-
+            Position in the re-announcement lineage (FR-1.3). Re-announced tenders
+            from the same agency with matching titles are linked V1 -> V2 -> ...;
+            for a project outside a lineage, number counts revisions of its own TOR PDF.
           properties:
             number: { type: integer, minimum: 1 }
             isLatest: { type: boolean }
-            supersededBy: { type: string, nullable: true }
+            supersededBy: { type: string, nullable: true, description: Id of the next revision. }
+            supersedes: { type: string, nullable: true, description: Id of the previous revision. }
+            lineageId: { type: string, nullable: true, description: Id of the first revision, null outside a lineage. }
 
     TorApiEvidence:
       type: object

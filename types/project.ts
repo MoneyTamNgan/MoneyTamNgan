@@ -84,6 +84,8 @@ export interface ProjectRecord {
     version: number;
     is_latest: boolean;
     superseded_by: string | null;
+    supersedes?: string | null;
+    lineage_id?: string | null;
   };
   created_at?: DatabaseDate;
   updated_at?: DatabaseDate;
