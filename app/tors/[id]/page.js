@@ -84,7 +84,8 @@ function getApiOrigin(requestHeaders) {
 
 export default async function TorOverviewPage({ params }) {
   const { id } = await params;
-  const tor = await getTorDetail(id, getApiOrigin(await headers()));
+  const requestHeaders = await headers();
+  const tor = await getTorDetail(id, getApiOrigin(requestHeaders), requestHeaders);
   const project = tor ? detailToProjectRecord(tor) : null;
   if (!project) return <AppShell title="ไม่พบโครงการ"><p className="empty-state">ไม่พบ TOR ที่ต้องการ</p></AppShell>;
   const hasExtractedDocument = Boolean(project.extracted_data.summary || project.extracted_data.qualifications.length || project.extracted_data.scope_of_work.length || project.extracted_data.tech_stack.length);
