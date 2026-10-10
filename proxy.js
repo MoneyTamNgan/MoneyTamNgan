@@ -11,7 +11,7 @@ import {
 // public so guests can browse open and historical tenders (FR-4.2.1).
 const PROTECTED_PAGES = ['/admin', '/profile'];
 // Read-only endpoints guests can reach without signing in (FR-4.2.2).
-const PUBLIC_API = ['/api/tors', '/api/projects'];
+const PUBLIC_API = ['/api/tors', '/api/projects', '/api/analytics'];
 const READ_METHODS = new Set(['GET', 'HEAD']);
 
 const limiter = createRateLimiter();
@@ -70,5 +70,6 @@ export const config = {
         '/profile/:path*',
         '/api/tors/:path*',
         '/api/projects/:path*',
+        '/api/analytics/:path*',
     ],
 };
