@@ -629,60 +629,64 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   # ---------------------------------------------------------------------------
-  # Planned - Public Analytics (FR-4.1, FR-4.2)
+  # Public Analytics (FR-4.1, FR-4.2)
   # ---------------------------------------------------------------------------
   /analytics/search:
     get:
-      summary: Search historical TOR records with aggregate metrics
+      summary: Search historical TOR records with aggregate spend metrics
       tags: [Public Analytics]
       operationId: searchAnalytics
       description: >
-        Unauthenticated, rate-limited per NFR-4/FR-4.2.2 (see 429 response).
+        Unauthenticated and rate-limited (FR-4.2.2, see 429). Aggregates cover
+        every matching project, not just the returned page.
       parameters:
         - name: dateFrom
           in: query
-          schema:
-            type: string
-            format: date
+          description: Inclusive lower bound on announce date.
+          schema: { type: string, format: date }
         - name: dateTo
           in: query
-          schema:
-            type: string
-            format: date
+          description: Inclusive upper bound on announce date.
+          schema: { type: string, format: date }
         - name: agency
           in: query
-          schema:
-            type: string
+          description: Exact issuing agency name.
+          schema: { type: string }
         - name: budgetMin
           in: query
-          schema:
-            type: number
+          schema: { type: number, minimum: 0 }
         - name: budgetMax
           in: query
-          schema:
-            type: number
+          schema: { type: number, minimum: 0 }
         - name: category
           in: query
           schema:
-            type: string
+            $ref: "#/components/schemas/KeywordCategory"
         - $ref: "#/components/parameters/PageParam"
         - $ref: "#/components/parameters/PageSizeParam"
       responses:
         "200":
-          description: Search results with aggregate metrics
+          description: One page of matching TORs with aggregate metrics
           content:
             application/json:
               schema:
                 allOf:
                   - $ref: "#/components/schemas/PaginatedList"
                   - type: object
+                    required: [items, aggregates]
                     properties:
                       items:
                         type: array
                         items:
-                          $ref: "#/components/schemas/Tor"
+                          $ref: "#/components/schemas/TorListItem"
                       aggregates:
                         $ref: "#/components/schemas/AnalyticsAggregates"
+        "400":
+          description: Invalid filter parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "429":
           description: Rate limit exceeded
           content:
@@ -692,9 +696,13 @@ paths:
 
   /analytics/export:
     get:
-      summary: Export historical search results as CSV or JSON
+      summary: Export matching TOR records as CSV or JSON
       tags: [Public Analytics]
       operationId: exportAnalytics
+      description: >
+        Unauthenticated and rate-limited. Downloads up to 10,000 rows as an
+        attachment; the X-Export-Truncated header is "true" when more matched.
+        CSV is UTF-8 with a BOM so Excel shows Thai text correctly.
       parameters:
         - name: format
           in: query
@@ -704,25 +712,32 @@ paths:
             enum: [csv, json]
         - name: dateFrom
           in: query
-          schema:
-            type: string
-            format: date
+          description: Inclusive lower bound on announce date.
+          schema: { type: string, format: date }
         - name: dateTo
           in: query
-          schema:
-            type: string
-            format: date
+          description: Inclusive upper bound on announce date.
+          schema: { type: string, format: date }
         - name: agency
           in: query
-          schema:
-            type: string
+          description: Exact issuing agency name.
+          schema: { type: string }
+        - name: budgetMin
+          in: query
+          schema: { type: number, minimum: 0 }
+        - name: budgetMax
+          in: query
+          schema: { type: number, minimum: 0 }
         - name: category
           in: query
           schema:
-            type: string
+            $ref: "#/components/schemas/KeywordCategory"
       responses:
         "200":
           description: File contents
+          headers:
+            X-Export-Truncated:
+              schema: { type: string, enum: ["true", "false"] }
           content:
             text/csv:
               schema:
@@ -731,7 +746,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Tor"
+                  $ref: "#/components/schemas/AnalyticsExportRow"
+        "400":
+          description: Invalid format or filter parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "429":
           description: Rate limit exceeded
           content:
@@ -1236,15 +1257,62 @@ components:
 
     AnalyticsAggregates:
       type: object
-      description: "[Planned, FR-4.1.3]"
+      description: "[FR-4.1.3] Spend metrics over every matching project."
+      required: [projectCount, totalSpend, meanBudget, medianDuration, softwareCount, summarizedCount, anomalyCount, byAgency, byStatus, topTechnologies]
       properties:
-        meanBudget:
-          type: number
-        medianDuration:
-          type: number
-          description: In days.
-        totalSpend:
-          type: number
+        projectCount: { type: integer }
+        totalSpend: { type: number, description: Sum of budgets in THB. }
+        meanBudget: { type: number, description: Mean budget in THB of projects with a budget. }
+        medianDuration: { type: number, nullable: true, description: Approximate median contract duration in days. }
+        softwareCount: { type: integer }
+        summarizedCount: { type: integer, description: Projects with an AI summary of their TOR. }
+        anomalyCount: { type: integer, description: Projects with a high budget or flagged clauses. }
+        byAgency:
+          type: array
+          description: Agencies ordered by total spend, highest first (top 20).
+          items:
+            type: object
+            required: [agency, projectCount, totalSpend, meanBudget]
+            properties:
+              agency: { type: string, nullable: true }
+              projectCount: { type: integer }
+              totalSpend: { type: number }
+              meanBudget: { type: number }
+        byStatus:
+          type: array
+          items:
+            type: object
+            required: [status, projectCount]
+            properties:
+              status: { type: string }
+              projectCount: { type: integer }
+        topTechnologies:
+          type: array
+          items:
+            type: object
+            required: [technology, projectCount]
+            properties:
+              technology: { type: string }
+              projectCount: { type: integer }
+
+    AnalyticsExportRow:
+      type: object
+      required: [id, title, agency, subAgency, budget, projectStatus, isSoftware, announceDate, contractStart, contractEnd, durationDays, highBudgetFlag, budgetDeviationMultiplier, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string, nullable: true }
+        agency: { type: string, nullable: true }
+        subAgency: { type: string, nullable: true }
+        budget: { type: number, nullable: true }
+        projectStatus: { type: string }
+        isSoftware: { type: boolean, nullable: true }
+        announceDate: { type: string, format: date-time, nullable: true }
+        contractStart: { type: string, format: date-time, nullable: true }
+        contractEnd: { type: string, format: date-time, nullable: true }
+        durationDays: { type: number, nullable: true }
+        highBudgetFlag: { type: boolean }
+        budgetDeviationMultiplier: { type: number }
+        updatedAt: { type: string, format: date-time, nullable: true }
 
     PaginatedList:
       type: object
