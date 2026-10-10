@@ -96,6 +96,18 @@ const ProjectSchema = new mongoose.Schema({
         error: { type: String },
     },
 
+    // Revision lineage across re-announced tenders (lib/tor-lineage.js).
+    lineage_key: { type: String, index: true },
+    version_info: {
+        version: { type: Number, min: 1 },
+        is_latest: Boolean,
+        lineage_id: String,
+        supersedes: String,
+        superseded_by: { type: String, index: true },
+        status_before_superseded: String,
+        linked_at: Date,
+    },
+
     anomalies: {
         high_budget_flag: { type: Boolean, default: false },
         budget_deviation_multiplier: { type: Number, default: 1.0 },
