@@ -1,6 +1,10 @@
 import AppShell from "@/components/ui/AppShell";
 import AnalyticsExportButtons from "@/components/ui/AnalyticsExportButtons";
-import { listLiveProjectRecords } from "@/lib/services/live-project-record";
+import { connection } from "next/server";
+import connectDB from "@/lib/db";
+import { computeSpendAggregates } from "@/lib/analytics";
+import Project from "@/models/Project";
+
 export const dynamic = 'force-dynamic';
 
 const statusLabels = { Active: "กำลังใช้งาน", Superseded: "มีฉบับใหม่", Invalid: "ไม่ถูกต้อง", Cancelled: "ยกเลิก" };
@@ -15,16 +19,24 @@ async function loadAggregates() {
 }
 
 export default async function AnalyticsPage() {
-  const projects = await listLiveProjectRecords();
-  const totalBudget = projects.reduce((sum, project) => sum + project.budget, 0);
-  const agencyBudget = groupTotal(projects, (project) => project.dept_name, (project) => project.budget).slice(0, 7);
-  const statusCount = groupTotal(projects, (project) => statusLabels[project.project_status] ?? project.project_status);
-  const technologyCount = groupTotal(projects.flatMap((project) => project.extracted_data.tech_stack), (technology) => technology).slice(0, 8);
-  const highestAgencyBudget = agencyBudget[0]?.amount ?? 1;
-  const highestStatusCount = statusCount[0]?.amount ?? 1;
-  const highestTechCount = technologyCount[0]?.amount ?? 1;
-  const extractedCount = projects.filter(hasExtractedData).length;
-  const anomalyCount = projects.filter((project) => project.anomalies.high_budget_flag || project.anomalies.flagged_clauses.length > 0).length;
+  // Render per request; must stay outside try so Next can bail out of prerendering.
+  await connection();
+  let aggregates;
+  try {
+    aggregates = await loadAggregates();
+  } catch (error) {
+    console.error("Analytics aggregation failed:", error);
+    return <AppShell title="ข้อมูลวิเคราะห์"><p className="empty-state">ไม่สามารถโหลดข้อมูลวิเคราะห์ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง</p></AppShell>;
+  }
+  const projectCount = aggregates.projectCount;
+  const agencyBudget = aggregates.byAgency.map((item) => ({ label: item.agency ?? "ไม่ระบุหน่วยงาน", amount: item.totalSpend, mean: item.meanBudget, count: item.projectCount }));
+  const statusCount = aggregates.byStatus.map((item) => ({ label: statusLabels[item.status] ?? item.status, amount: item.projectCount }));
+  const technologyCount = aggregates.topTechnologies.map((item) => ({ label: item.technology, amount: item.projectCount }));
+  const highestAgencyBudget = agencyBudget[0]?.amount || 1;
+  const highestStatusCount = statusCount[0]?.amount || 1;
+  const highestTechCount = technologyCount[0]?.amount || 1;
+  const extractedCount = aggregates.summarizedCount;
+  const anomalyCount = aggregates.anomalyCount;
 
   return <AppShell title="ข้อมูลวิเคราะห์"><div className="analytics-page"><section className="analytics-hero"><p>ข้อมูลสาธารณะ · ไม่ต้องเข้าสู่ระบบ</p><h1>ภาพรวมข้อมูล TOR</h1><span>สรุปจากข้อมูลโครงการที่จัดเก็บในระบบ ได้แก่ หน่วยงาน งบประมาณ สถานะ ประเภทโครงการ ข้อมูลเอกสาร และข้อสังเกต</span><AnalyticsExportButtons /></section>
     <section className="analytics-metrics" aria-label="สรุปข้อมูลโครงการ"><article><span>โครงการทั้งหมด</span><strong>{projectCount.toLocaleString("th-TH")}</strong></article><article><span>งบประมาณรวม</span><strong>{formatMillion(aggregates.totalSpend)}</strong><small>เฉลี่ย {formatMillion(aggregates.meanBudget)} ต่อโครงการ</small></article><article><span>โครงการซอฟต์แวร์ / ไอที</span><strong>{aggregates.softwareCount.toLocaleString("th-TH")}</strong></article><article><span>โครงการที่มีข้อสังเกต</span><strong>{anomalyCount.toLocaleString("th-TH")}</strong></article></section>

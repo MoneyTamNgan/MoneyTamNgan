@@ -55,7 +55,7 @@ export default function AdminTorConsole({ projects }) {
         const hasAnomaly = project.anomalies.high_budget_flag || project.anomalies.flagged_clauses.length > 0;
         return <article className="admin-tor-row" key={project.project_id}>
           <div className="admin-tor-main"><p><span>{project.project_id}</span>{hasAnomaly && <b>มีข้อสังเกต</b>}</p><h3>{project.project_name}</h3><small>{project.dept_name} · ประกาศ {formatDate(project.timeline.announce_date)}</small></div>
-          <div className="admin-tor-meta"><span>งบประมาณ</span><strong>{project.budget.toLocaleString("th-TH")} บาท</strong></div>
+          <div className="admin-tor-meta"><span>งบประมาณ</span><strong>{project.budget != null ? `${project.budget.toLocaleString("th-TH")} บาท` : "ยังไม่ระบุงบประมาณ"}</strong></div>
           <div className="admin-tor-state"><span className={extracted ? "is-ready" : "is-pending"}>{extracted ? "ข้อมูลเอกสารพร้อมใช้" : "รอข้อมูลเอกสาร"}</span><span>{project.version_info.is_latest ? `ฉบับล่าสุด v${project.version_info.version}` : `มีฉบับใหม่ v${project.version_info.version}`}</span><span>{project.processing?.status}</span></div>
           <div className="admin-tor-actions"><Link href={`/tors/${project.project_id}`}>ดูรายละเอียด</Link><button type="button" onClick={() => togglePublished(project.project_id)}>เข้าคิวประมวลผล</button></div>
         </article>;
