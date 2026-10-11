@@ -8,10 +8,7 @@ import {
     rateLimits,
 } from '@/lib/rate-limit';
 
-// Pages gated behind authentication (FR-4.2.1: public guest access allowed elsewhere)
 const PROTECTED_PAGES = ['/admin', '/profile'];
-// Read-only endpoints guests can access without signing in (FR-4.2.2)
-const PUBLIC_API = ['/api/tors', '/api/projects', '/api/analytics'];
 const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 const limiter = createRateLimiter();
@@ -67,19 +64,20 @@ export async function proxy(request) {
     const token = request.cookies.get(SESSION_COOKIE)?.value;
     const session = await verifySession(token);
 
-    // 1. Handle Public API Endpoint Rate-Limiting (FR-4.2.2)
-    if (startsWithAny(pathname, PUBLIC_API) && isReadRequest) {
+    // 1. Public API Read Requests (FR-4.2.1, FR-4.2.2):
+    // Allows guest read access to all non-admin API routes while enforcing rate limits
+    if (isApi && isReadRequest && !pathname.startsWith('/api/admin/')) {
         return rateLimit(request, session);
     }
 
-    // 2. Handle Protected & Internal API Endpoints
+    // 2. Protected & Internal API Endpoints / Mutations
     if (isApi) {
-        // Allow pipeline scripts with valid Bearer token
+        // Bypass for background pipeline scripts authenticated via Bearer token
         if (isPipelineAuthorized(request)) {
             return NextResponse.next();
         }
 
-        // Require active session and admin role for internal mutations / admin APIs
+        // Require active session
         if (!session) {
             return NextResponse.json(
                 { error: { code: 'UNAUTHORIZED', message: 'Admin authentication required' } },
@@ -87,6 +85,7 @@ export async function proxy(request) {
             );
         }
 
+        // Require admin role
         if (session.role !== 'admin') {
             return NextResponse.json(
                 { error: { code: 'FORBIDDEN', message: 'Admin role required' } },
@@ -112,7 +111,7 @@ export async function proxy(request) {
         return NextResponse.next();
     }
 
-    // 3. Handle Protected Pages (Redirect unauthenticated users to login)
+    // 3. Protected Pages (Redirect unauthenticated users to login)
     if (!session && startsWithAny(pathname, PROTECTED_PAGES)) {
         const loginUrl = new URL('/', request.url);
         loginUrl.searchParams.set('next', pathname);
@@ -130,12 +129,6 @@ export const config = {
     matcher: [
         '/admin/:path*',
         '/profile/:path*',
-        '/api/tors/:path*',
-        '/api/projects/:path*',
-        '/api/analytics/:path*',
-        '/api/admin/:path*',
-        '/api/ingestion/:path*',
-        '/api/processing/:path*',
-        '/api/scraping/:path*',
+        '/api/:path*',
     ],
 };
