@@ -4,7 +4,7 @@ import { classifyTor } from '@/lib/classification';
 import { loadKeywordSets } from '@/lib/keywords';
 import { NextResponse } from 'next/server';
 
-// TODO(auth): restrict to admin once the auth branch lands.
+// Mutations are restricted to admin sessions/operator tokens by proxy.js.
 
 /**
  * POST /api/admin/classification/run

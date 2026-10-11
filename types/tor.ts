@@ -130,6 +130,21 @@ export type TorApiAnomaly =
       confidence?: number;
     };
 
+export interface TorApiFiscalBudget {
+  warnings?: string[];
+  year: number | null;
+  years: number[];
+  status: "found" | "not_found" | "ambiguous";
+  method: "none" | "regex" | "llm" | "regex+llm";
+  evidence: {
+    year: number;
+    page: number;
+    clause_text: string;
+    section: string | null;
+    method: "regex" | "llm";
+  }[];
+}
+
 export interface TorApiDetail {
   id: string;
   title: string;
@@ -155,6 +170,7 @@ export interface TorApiDetail {
   scopeOfWork: string[];
   techStack: string[];
   summary: string | null;
+  fiscalBudget: TorApiFiscalBudget | null;
   anomalies: TorApiAnomaly[];
   version: { number: number; isLatest: boolean; supersededBy: string | null };
 }
@@ -169,6 +185,7 @@ export interface TorApiSummary {
   documentStatus: string | null;
   processingStatus: string | null;
   summary: string | null;
+  fiscalBudget: TorApiFiscalBudget | null;
   requirements: string[];
   scopeOfWork: string[];
   techStack: string[];

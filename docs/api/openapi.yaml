@@ -944,6 +944,28 @@ components:
             page: { type: integer, minimum: 1 }
             confidence: { type: number, minimum: 0, maximum: 1 }
 
+    TorFiscalBudget:
+      type: object
+      nullable: true
+      required: [year, years, status, method, evidence]
+      properties:
+        warnings: { type: array, items: { type: string } }
+        year: { type: integer, nullable: true, minimum: 2500, maximum: 2699 }
+        years: { type: array, items: { type: integer, minimum: 2500, maximum: 2699 } }
+        status: { type: string, enum: [found, not_found, ambiguous] }
+        method: { type: string, enum: [none, regex, llm, regex+llm] }
+        evidence:
+          type: array
+          items:
+            type: object
+            required: [year, page, clause_text, section, method]
+            properties:
+              year: { type: integer, minimum: 2500, maximum: 2699 }
+              page: { type: integer, minimum: 1 }
+              clause_text: { type: string }
+              section: { type: string, nullable: true }
+              method: { type: string, enum: [regex, llm] }
+
     TorDetail:
       type: object
       required: [id, title, agency, budget, projectStatus, pdfUrl, createdAt, updatedAt, timeline, classification, documentStatus, processingStatus, requirements, scopeOfWork, techStack, summary, anomalies, version]
@@ -983,6 +1005,7 @@ components:
         scopeOfWork: { type: array, items: { type: string } }
         techStack: { type: array, items: { type: string } }
         summary: { type: string, nullable: true }
+        fiscalBudget: { $ref: "#/components/schemas/TorFiscalBudget" }
         anomalies:
           type: array
           items:
@@ -1010,6 +1033,7 @@ components:
         documentStatus: { type: string, nullable: true }
         processingStatus: { type: string, nullable: true }
         summary: { type: string, nullable: true }
+        fiscalBudget: { $ref: "#/components/schemas/TorFiscalBudget" }
         requirements: { type: array, items: { type: string } }
         scopeOfWork: { type: array, items: { type: string } }
         techStack: { type: array, items: { type: string } }

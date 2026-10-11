@@ -1,6 +1,7 @@
 import connectDB from '@/lib/db';
 import { enqueueProject } from '@/lib/job-queue';
 import Project from '@/models/Project';
+import DiscoveryCandidate from '@/models/DiscoveryCandidate';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -21,6 +22,17 @@ export async function POST(request) {
         const body = await request.json().catch(() => ({}));
         const projectId = body.projectId === undefined ? null : String(body.projectId).trim();
         const batchSize = body.batchSize ?? 10;
+        if (body.candidateId !== undefined) {
+            if (body.projectId !== undefined || typeof body.candidateId !== 'string' || !body.candidateId.trim()) {
+                return badRequest('Provide candidateId or projectId, not both');
+            }
+            const candidateId = body.candidateId.trim();
+            if (!await DiscoveryCandidate.exists({ project_id: candidateId })) return badRequest('Candidate does not exist');
+            const { job, reused } = await enqueueProject(candidateId, { type: 'verify_candidate' });
+            return NextResponse.json({ status: 'accepted', queued: reused ? 0 : 1,
+                reused: reused ? 1 : 0, jobs: [{ id: String(job._id), projectId: candidateId,
+                    type: 'verify_candidate', status: job.status, reused }] }, { status: 202 });
+        }
 
         if (body.projectId !== undefined && !projectId) {
             return badRequest('projectId must be a non-empty string');
@@ -43,7 +55,7 @@ export async function POST(request) {
                         'processing.status': {
                             $in: [
                                 'metadata_ingested', 'classification_pending', 'document_pending',
-                                'metadata_only', 'retry_pending', 'failed',
+                                'metadata_only', 'retry_pending', 'failed', 'ai_pending', 'text_extracted',
                             ],
                         },
                     },
