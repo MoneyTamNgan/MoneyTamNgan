@@ -58,8 +58,9 @@ DocumentSchema.index({ project_id: 1, is_current_primary: 1 }, {
 });
 // One e-GP ZIP URL can contain several PDFs, so URL alone cannot be unique.
 // Archive entry name completes the stable source identity for each PDF.
-DocumentSchema.index({ project_id: 1, source_url: 1, entry_name: 1 }, {
-    name: 'uniq_document_source_entry',
+// The same official URL/entry may publish a revised PDF; retain both hashes.
+DocumentSchema.index({ project_id: 1, source_url: 1, entry_name: 1, sha256: 1 }, {
+    name: 'uniq_document_source_entry_version',
     unique: true,
     partialFilterExpression: {
         source_url: { $type: 'string' },

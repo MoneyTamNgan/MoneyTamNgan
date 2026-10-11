@@ -12,6 +12,8 @@ import Document from '@/models/Document';
 import { hashFile } from '@/lib/document-storage';
 import { persistPdfRecords } from '@/lib/mongo-artifacts';
 import { NextResponse } from 'next/server';
+import { loadKeywordSets } from '@/lib/keywords';
+import { verifySoftwareProcurement } from '@/lib/procurement-eligibility';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -107,6 +109,9 @@ export async function POST(request) {
             console.log(`🕷️  Starting scrape for single project: ${normalizedProjectId}`);
 
             const existingProject = await Project.findOne({ project_id: normalizedProjectId }).lean();
+            const admission = await verifySoftwareProcurement(existingProject, await loadKeywordSets());
+            if (!admission.allowed) return NextResponse.json({ status: 'skipped', mode: 'single',
+                reason: admission.reason, eligibility: admission.eligibility ?? null, dbUpdated: false }, { status: 200 });
             const existingDocument = existingProject?.primary_document_id
                 ? await Document.findById(existingProject.primary_document_id).lean()
                 : null;
@@ -135,17 +140,26 @@ export async function POST(request) {
         // source documents are downloaded into local storage.
         const filter = onlyMissing ? { primary_document_id: { $exists: false } } : {};
 
-        const projects = await Project.find(filter)
-            .select('project_id primary_document_id')
+        const candidates = await Project.find(filter)
+            .select('project_id project_name is_software classification timeline project_status primary_document_id')
             .limit(batchSize)
             .lean();
+        const projects = [];
+        const eligibilitySkipped = [];
+        const keywordSets = await loadKeywordSets();
+        for (const project of candidates) {
+            const admission = await verifySoftwareProcurement(project, keywordSets);
+            if (admission.allowed) projects.push(project);
+            else eligibilitySkipped.push({ projectId: project.project_id, reason: admission.reason });
+        }
 
         if (projects.length === 0) {
             return NextResponse.json({
                 status: 'completed',
                 mode: 'batch',
-                message: 'No projects to scrape (all have stored TOR files or no projects exist)',
-                summary: { total: 0, success: 0, failed: 0, skipped: 0 },
+                message: 'No verified open software projects to scrape',
+                eligibilitySkipped,
+                summary: { total: candidates.length, success: 0, failed: 0, skipped: eligibilitySkipped.length },
             }, {
                 headers: { 'Content-Type': 'application/json; charset=utf-8' },
             });
@@ -164,6 +178,8 @@ export async function POST(request) {
         const { results, summary } = await scrapeBatch(scrapeTargets, {
             delayMs: normalizedDelayMs,
         });
+        summary.total += eligibilitySkipped.length;
+        summary.skipped += eligibilitySkipped.length;
 
         // Update Project records with the stored path and remote provenance URL.
         let updated = 0;
@@ -182,6 +198,7 @@ export async function POST(request) {
             mode: 'batch',
             rateLimit: { delayMs: normalizedDelayMs },
             summary: { ...summary, dbUpdated: updated },
+            eligibilitySkipped,
             results: results.map(r => ({
                 projectId: r.projectId,
                 pdf_url: r.pdf_url,

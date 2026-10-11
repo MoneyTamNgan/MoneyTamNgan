@@ -8,6 +8,13 @@ const ProjectSchema = new mongoose.Schema({
     budget: { type: Number, required: true },
     project_status: { type: String, default: 'Active' },
     is_software: { type: Boolean, default: null, index: true },
+    procurement_eligibility: {
+        status: { type: String, enum: ['open', 'closed', 'not_yet_open', 'unknown'], index: true },
+        reason: String,
+        bid_deadline: Date,
+        checked_at: Date,
+        source_url: String,
+    },
     // Canonical normalized references. Document, OCR, and summary content live
     // in their own versioned collections.
     primary_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
