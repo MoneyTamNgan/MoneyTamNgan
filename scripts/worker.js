@@ -10,6 +10,8 @@ import {
 } from '../lib/job-queue.js';
 import { processProject } from '../lib/processing-pipeline.js';
 import Project from '../models/Project.js';
+import DiscoveryCandidate from '../models/DiscoveryCandidate.js';
+import { verifyDiscoveryCandidate } from '../lib/discovery-candidates.js';
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
 
 const watch = process.argv.includes('--watch');
@@ -32,14 +34,22 @@ async function runOne() {
         }).catch(error => console.error(`Lease renewal failed: ${error.message}`));
     }, 30000);
     try {
-        const result = await processProject(job.project_id);
+        const result = job.type === 'verify_candidate' ? await verifyDiscoveryCandidate(job.project_id) : await processProject(job.project_id, { onProgress: progress => {
+            console.log(`Vertex ${progress.stage}: ${progress.chunk || progress.attempt}/${progress.total || 'retry'}`);
+        } });
+        if (result.retryable) throw new Error(result.eligibility?.reason || 'Verification unavailable');
         await completeJob(job._id, result);
         console.log(`✅ ${job.project_id}: ${result.status}`);
     } catch (error) {
         const { finalFailure } = await failJob(job, error);
-        if (finalFailure) {
+        if (job.type === 'verify_candidate') {
+            await DiscoveryCandidate.updateOne({ project_id: job.project_id }, { $set: {
+                status: finalFailure ? 'review_required' : 'pending', error: error.message,
+            } });
+        } else {
             await Project.updateOne({ project_id: job.project_id }, {
-                $set: { 'processing.status': 'failed', 'processing.error': error.message },
+                $set: { 'processing.status': finalFailure ? 'failed' : 'retry_pending', 'processing.error': error.message,
+                    'workflow.status': finalFailure ? 'failed' : 'retry_pending', 'workflow.error': error.message },
             });
         }
         console.error(`❌ ${job.project_id}: ${error.message}`);
