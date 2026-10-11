@@ -11,6 +11,7 @@ import {
     toTorListItem,
     toTorSummary,
 } from "@/lib/api/tor-response";
+import { toExportRow, toSpendAggregates } from "@/lib/analytics";
 
 /**
  * OpenAPI 3.0's `nullable: true` is not a JSON Schema keyword Ajv understands.
@@ -88,6 +89,25 @@ describe("TOR API responses match docs/api/openapi.yaml", () => {
         const validate = validatorFor("TorApiAnomalyReport");
         expectValid(validate, toTorAnomalyReport(fullProject));
         expectValid(validate, toTorAnomalyReport(sparseProject));
+    });
+
+    it("analytics aggregates satisfy AnalyticsAggregates, including an empty result", () => {
+        const validate = validatorFor("AnalyticsAggregates");
+        expectValid(validate, toSpendAggregates(undefined));
+        expectValid(validate, toSpendAggregates({
+            totals: [{ projectCount: 2, totalSpend: 3, meanBudget: 1.5, medianDuration: 90,
+                softwareCount: 1, highBudgetCount: 0, summarizedCount: 1 }],
+            byAgency: [{ _id: null, projectCount: 2, totalSpend: 3, meanBudget: 1.5 }],
+            byStatus: [{ _id: "Active", projectCount: 2 }],
+            technologies: [{ _id: "React", projectCount: 1 }],
+            flaggedOnly: [],
+        }));
+    });
+
+    it("toExportRow satisfies AnalyticsExportRow for a full and a sparse project", () => {
+        const validate = validatorFor("AnalyticsExportRow");
+        expectValid(validate, toExportRow(fullProject));
+        expectValid(validate, toExportRow(sparseProject));
     });
 
     it("the error envelope shape ({error:{code,message}}) satisfies the Error schema", () => {
