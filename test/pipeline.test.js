@@ -10,7 +10,7 @@ import { extractPdfsFromZip } from '../lib/archive-extractor.js';
 import { classifyProjectMetadata } from '../lib/classifier.js';
 import { hashFile, persistDocument, removeTransientDocuments } from '../lib/document-storage.js';
 import { validateRemoteDocumentUrl } from '../lib/document-resolver.js';
-import { buildProjectUpsert, mapToProjectSchema, parseThaiDate } from '../lib/egp-api.js';
+import { buildProjectUpsert, fetchFromEGP, mapToProjectSchema, parseThaiDate } from '../lib/egp-api.js';
 import { parseAggregatorHtml } from '../lib/egp-aggregator.js';
 import { validateTorExtraction } from '../lib/vertex/response-schema.js';
 import {
@@ -35,6 +35,18 @@ const baseRecord = {
     project_money: '1500000',
     announce_date: '21 มิ.ย. 69',
 };
+
+test('upstream API HTTP errors redact reflected credentials', async t => {
+    const old = process.env.EGP_API_KEY;
+    process.env.EGP_API_KEY = 'test-secret-key';
+    t.after(() => { if (old === undefined) delete process.env.EGP_API_KEY; else process.env.EGP_API_KEY = old; });
+    t.mock.method(globalThis, 'fetch', async () => new Response('request api-key test-secret-key', { status: 500 }));
+    await assert.rejects(fetchFromEGP({ year: '2570', limit: 1 }), error => {
+        assert.match(error.message, /REDACTED/);
+        assert.ok(!error.message.includes('test-secret-key'));
+        return true;
+    });
+});
 
 async function createZip(filePath, entries) {
     const zip = new yazl.ZipFile();
