@@ -95,6 +95,8 @@ export interface TorApiListItem {
   agency: string;
   budget: number;
   projectStatus: string;
+  isLatestVersion: boolean;
+  supersededBy: string | null;
   announceDate: string | null;
   isSoftware: boolean | null;
   classification: TorApiClassification;
@@ -156,7 +158,7 @@ export interface TorApiDetail {
   techStack: string[];
   summary: string | null;
   anomalies: TorApiAnomaly[];
-  version: { number: number; isLatest: boolean; supersededBy: string | null };
+  version: { number: number; isLatest: boolean; supersededBy: string | null; supersedes: string | null; lineageId: string | null };
 }
 
 export interface TorApiEvidence {

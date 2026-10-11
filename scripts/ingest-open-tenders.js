@@ -37,6 +37,7 @@ import {
     createAcquisitionContext,
 } from '../lib/tender-acquisition.js';
 import { enqueueProject } from '../lib/job-queue.js';
+import { linkProjectRevisions } from '../lib/tor-lineage.js';
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
 
 function parseArgs() {
@@ -228,6 +229,7 @@ async function main() {
         discovered: tenders.length, candidates: 0, skippedDone: 0, attempted: 0,
         tor: 0, torFeed: 0, announcement: 0, closingDate: 0, paired: 0,
     };
+    const ingestedIds = [];
 
     try {
         for (const tender of tenders) {
@@ -240,6 +242,7 @@ async function main() {
                 continue;
             }
             const project = await upsertTenderProject(tender);
+            ingestedIds.push(project.project_id);
             const classification = await classify(project, keywordSets);
             if (classification.isSoftware === false && !args.all) continue;
             stats.candidates += 1;
@@ -268,6 +271,9 @@ async function main() {
         await closeAcquisitionContext(ctx);
     }
 
+    // Runs after documents are stored, since invitations fill in the agency name.
+    const revisions = ingestedIds.length ? await linkProjectRevisions(ingestedIds) : null;
+
     console.log('\n📊 Summary');
     console.log(`   Open tenders found:      ${stats.discovered}`);
     console.log(`   Software candidates:     ${stats.candidates}${args.all ? ' (all projects)' : ''}`);
@@ -277,6 +283,7 @@ async function main() {
     console.log(`   Announcement stored:     ${stats.announcement} (${pct(stats.announcement, stats.attempted)})`);
     console.log(`   Closing date parsed:     ${stats.closingDate} (${pct(stats.closingDate, stats.attempted)})`);
     console.log(`   TOR + announcement pair: ${stats.paired} (${pct(stats.paired, stats.attempted)})`);
+    if (revisions) console.log(`   Revision lineages:       ${revisions.lineages} (${revisions.superseded} superseded)`);
 
     await mongoose.disconnect();
 }

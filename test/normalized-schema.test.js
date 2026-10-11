@@ -192,6 +192,8 @@ test('compatibility mapper preserves legacy reads and can hydrate normalized rec
         version: 3,
         is_latest: true,
         superseded_by: null,
+        supersedes: null,
+        lineage_id: null,
     });
     assert.deepEqual(normalized.anomalies.flagged_clauses[0], {
         category: 'excessive_hardware', severity: 'medium',
