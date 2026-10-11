@@ -11,7 +11,7 @@ test('stored OCR pages can be reanalyzed without scraping or OCR', async () => {
     const project = { _id: 'project-1', project_id: '67000000001',
         primary_document_id: 'document-1', latest_extraction_run_id: 'run-1' };
     const document = { _id: 'document-1', project_id: project.project_id, sha256: 'pdf-hash' };
-    const run = { _id: 'run-1', text_sha256: 'text-hash', page_count: 2,
+    const run = { _id: 'run-1', document_id: 'document-1', text_sha256: 'text-hash', page_count: 2,
         ocr_pages: 1, needs_review: false };
     const extraction = { summary: 'สรุป', qualifications: [], scope_of_work: [], tech_stack: [],
         flagged_clauses: [], risk_findings: [{ category: 'vendor_lock_in', severity: 'high',
@@ -57,7 +57,7 @@ test('stored v3 summary is reused idempotently', async () => {
             updateOne: async (...args) => updates.push(args),
         },
         DocumentModel: { findById: () => lean({ _id: 'document-1' }) },
-        ExtractionRunModel: { findById: () => lean({ _id: 'run-1' }) },
+        ExtractionRunModel: { findById: () => lean({ _id: 'run-1', document_id: 'document-1' }) },
         SummaryModel: { findOne: () => lean({ _id: 'summary-v3', needs_review: false,
             extraction: { risk_findings: [] } }) },
     });
