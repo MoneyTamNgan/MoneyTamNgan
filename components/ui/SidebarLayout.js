@@ -7,16 +7,17 @@ import { useEffect, useState } from "react";
 
 const navigationItems = [
   { href: "/dashboard", label: "หน้าหลัก", icon: "⌂" },
-  { href: "/profile", label: "โปรไฟล์", icon: "◉" },
+  { href: "/profile", label: "โปรไฟล์", icon: "◉", signedIn: true },
   { href: "/analytics", label: "วิเคราะห์", icon: "⌁" },
-  { href: "/admin", label: "ผู้ดูแลระบบ", icon: "⚿", restricted: true },
+  { href: "/admin", label: "ผู้ดูแลระบบ", icon: "⚿", restricted: true, signedIn: true },
 ];
 
 export default function SidebarLayout({ children }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isOrangeTheme, setIsOrangeTheme] = useState(true);
-  const [account, setAccount] = useState(null);
+  // undefined while loading, null for a guest.
+  const [account, setAccount] = useState(undefined);
   const isHome = pathname === "/dashboard" || pathname.startsWith("/tors/");
 
   useEffect(() => {
@@ -31,17 +32,20 @@ export default function SidebarLayout({ children }) {
     window.location.href = "/";
   }
 
-  const profileName = account?.companyName || "ยังไม่ได้ตั้งชื่อบริษัท";
+  const isGuest = account === null;
+  const profileName = isGuest ? "ผู้เยี่ยมชม" : account?.companyName || "ยังไม่ได้ตั้งชื่อบริษัท";
   const profileInitial = profileName.trim().charAt(0) || "บ";
-  const roleLabel = account?.role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ใช้งานระบบ";
+  const roleLabel = isGuest ? "ดูข้อมูลสาธารณะ" : account?.role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ใช้งานระบบ";
 
   if (pathname === "/") return <>{children}</>;
 
   return <div className={`sidebar-layout ${isOpen ? "is-open" : ""} ${isOrangeTheme ? "theme-orange" : "theme-mint"}`}>
     <aside className="app-sidebar" aria-label="เมนูหลัก">
       <div className="sidebar-top"><Link className="sidebar-brand" href="/dashboard" aria-label="หน้าหลัก BMA TOR TRACKER"><span className="sidebar-seal">BMA</span><span className="sidebar-brand-copy">BMA TOR<br /><strong>TRACKER</strong></span></Link></div>
-      <section className="sidebar-profile-section" aria-label="ข้อมูลโปรไฟล์"><p className="sidebar-section-label">โปรไฟล์</p><div className="sidebar-profile-preview">{account?.picture ? <img className={`sidebar-profile-photo ${styles.photo}`} src={account.picture} alt="รูปโปรไฟล์" referrerPolicy="no-referrer" /> : <span className="sidebar-profile-photo" aria-hidden="true">{profileInitial}</span>}<span className="sidebar-profile-copy"><strong>{profileName}</strong><small>{roleLabel}</small></span></div><Link className="sidebar-profile-editor" href="/profile" title="แก้ไขโปรไฟล์"><span aria-hidden="true">✎</span><strong>แก้ไขโปรไฟล์</strong><i aria-hidden="true">›</i></Link></section>
-      <nav className="sidebar-nav">{navigationItems.map((item) => {
+      <section className="sidebar-profile-section" aria-label="ข้อมูลโปรไฟล์"><p className="sidebar-section-label">โปรไฟล์</p><div className="sidebar-profile-preview">{account?.picture ? <img className={`sidebar-profile-photo ${styles.photo}`} src={account.picture} alt="รูปโปรไฟล์" referrerPolicy="no-referrer" /> : <span className="sidebar-profile-photo" aria-hidden="true">{profileInitial}</span>}<span className="sidebar-profile-copy"><strong>{profileName}</strong><small>{roleLabel}</small></span></div>{isGuest
+        ? <Link className="sidebar-profile-editor" href="/" title="เข้าสู่ระบบเพื่อจับคู่โครงการกับโปรไฟล์บริษัท"><span aria-hidden="true">→</span><strong>เข้าสู่ระบบเพื่อจับคู่โครงการ</strong><i aria-hidden="true">›</i></Link>
+        : <Link className="sidebar-profile-editor" href="/profile" title="แก้ไขโปรไฟล์"><span aria-hidden="true">✎</span><strong>แก้ไขโปรไฟล์</strong><i aria-hidden="true">›</i></Link>}</section>
+      <nav className="sidebar-nav">{navigationItems.filter((item) => !isGuest || !item.signedIn).map((item) => {
         const active = item.href === "/dashboard" ? isHome : pathname === item.href;
         return <Link className={active ? "is-active" : ""} href={item.href} key={item.href} title={item.label}><span className="sidebar-icon" aria-hidden="true">{item.icon}</span><span className="sidebar-label">{item.label}</span>{item.restricted && <span className="sidebar-restricted">ต้องมีสิทธิ์</span>}</Link>;
       })}<div className="sidebar-nav-divider" aria-hidden="true" /><button className="sidebar-nav-control sidebar-toggle" type="button" onClick={() => setIsOpen((open) => !open)} aria-label={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"} aria-expanded={isOpen} title={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"}><span className="sidebar-icon" aria-hidden="true">{isOpen ? "‹" : "›"}</span><span className="sidebar-label">{isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"}</span></button><button className="sidebar-nav-control sidebar-theme-toggle" type="button" onClick={() => setIsOrangeTheme((orange) => !orange)} aria-label={isOrangeTheme ? "เปลี่ยนเป็นธีมมิ้นต์" : "เปลี่ยนเป็นธีมส้มครีม"} title={isOrangeTheme ? "เปลี่ยนเป็นธีมมิ้นต์" : "เปลี่ยนเป็นธีมส้มครีม"}><span className="sidebar-icon" aria-hidden="true">{isOrangeTheme ? "◐" : "◑"}</span><span className="sidebar-label">{isOrangeTheme ? "Light mode" : "Dark mode"}</span></button></nav>
