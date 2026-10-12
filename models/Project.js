@@ -1,11 +1,13 @@
 import mongoose from 'mongoose';
 
+function requiredUnlessRss() { return this.source?.provider !== 'egp_rss'; }
+
 const ProjectSchema = new mongoose.Schema({
     project_id: { type: String, required: true, unique: true, index: true },
     project_name: { type: String, required: true },
-    dept_name: { type: String, required: true },
+    dept_name: { type: String, required: requiredUnlessRss },
     dept_sub_name: { type: String },
-    budget: { type: Number, required: true },
+    budget: { type: Number, required: requiredUnlessRss },
     project_status: { type: String, default: 'Active' },
     is_software: { type: Boolean, default: null, index: true },
     procurement_eligibility: {
@@ -21,6 +23,54 @@ const ProjectSchema = new mongoose.Schema({
     latest_extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun', index: true },
     latest_summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary', index: true },
 
+    // Invitation PDF (ประกาศเชิญชวน), paired with the primary TOR document.
+    announcement_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
+    // Date-only values stay strings; timed values are absolute Bangkok instants.
+    bidding_date: {
+        type: new mongoose.Schema({
+            date: String, time: String, at: Date,
+            kind: { type: String, enum: ['bid_submission', 'bid_opening'] },
+            timezone: String,
+        }, { _id: false }), default: null,
+    },
+    submission_schedule: {
+        type: new mongoose.Schema({
+            date: String, start_time: String, end_time: String,
+            starts_at: Date, ends_at: Date, timezone: String,
+        }, { _id: false }), default: null,
+    },
+    announcement_schedule: {
+        parser_version: String,
+        status: { type: String, enum: ['parsed', 'not_found', 'needs_review'] },
+        document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+        source_url: String, extraction_method: String, text_sha256: String,
+        extracted_at: Date, error: String, warnings: [String],
+        evidence: [{ _id: false, kind: String, date: String, time: String,
+            start_time: String, end_time: String, page: Number, text: String }],
+    },
+
+    // Open-tender state from the e-GP announcement feed and invitation PDF.
+    tender: {
+        status: {
+            type: String,
+            enum: ['draft_open', 'bidding_open', 'closed', 'unknown'],
+            index: true,
+        },
+        rss_dept_id: String,
+        method: String,
+        draft_url: String,
+        invitation_url: String,
+        published_at: Date,
+        submission_date: String,
+        submission_start_time: String,
+        submission_end_time: String,
+        closes_at: { type: Date, index: true },
+        reference_price: Number,
+        tor_route: { type: String, enum: ['feed', 'browser'] },
+        checked_at: Date,
+        error: String,
+    },
+
     timeline: {
         announce_date: { type: Date },
         contract_start: { type: Date },
@@ -28,6 +78,7 @@ const ProjectSchema = new mongoose.Schema({
         duration_days: { type: Number }
     },
     source: {
+        rss_dept_id: String,
         provider: { type: String, default: 'egp_open_data' },
         fetched_at: { type: Date },
         payload_hash: { type: String },
