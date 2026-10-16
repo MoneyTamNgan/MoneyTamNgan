@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { decodeFeed, fetchAnnouncementFeed, parseFeed } from '../lib/egp-rss.js';
-import { normalizeThaiDigits, parseSubmissionWindow } from '../lib/egp-announcement.js';
+import { decodeFeed, fetchAnnouncementFeed, parseFeed } from '../../lib/egp-rss.js';
+import { normalizeThaiDigits, parseSubmissionWindow } from '../../lib/egp-announcement.js';
 
 const fixture = () => readFile(new URL('./fixtures/egp-rss-d0.xml', import.meta.url));
 

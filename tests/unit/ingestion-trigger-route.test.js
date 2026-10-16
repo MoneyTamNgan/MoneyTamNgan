@@ -6,7 +6,7 @@ vi.mock('@/lib/procurement-eligibility', async importOriginal => ({ ...await imp
 vi.mock('@/lib/job-queue', () => ({ enqueueProject: vi.fn(async () => ({ reused: false })) }));
 vi.mock('@/models/Project', () => ({ default: { findOne: vi.fn(() => ({ lean: async () => null })), exists: vi.fn(async () => false), findOneAndUpdate: vi.fn() } }));
 vi.mock('@/models/DiscoveryCandidate', () => ({ default: { updateOne: vi.fn() } }));
-const { POST } = await import('./route');
+const { POST } = await import('@/app/api/ingestion/trigger/route');
 const { fetchAllFromEGP } = await import('@/lib/egp-api');
 const { verifyProcurementEligibility } = await import('@/lib/procurement-eligibility');
 const { enqueueProject } = await import('@/lib/job-queue');

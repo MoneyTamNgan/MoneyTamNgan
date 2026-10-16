@@ -35,7 +35,7 @@ vi.mock('@/models/User', () => ({
 
 const { verifySession } = await import('@/lib/auth');
 const { User } = await import('@/models/User');
-const { GET, PATCH, DELETE } = await import('./route');
+const { GET, PATCH, DELETE } = await import('@/app/api/profiles/route');
 
 function requestWithBody(body) {
     return { headers: { get: () => null }, json: async () => body };

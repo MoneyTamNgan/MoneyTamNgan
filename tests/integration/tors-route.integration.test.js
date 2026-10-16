@@ -18,7 +18,7 @@ vi.mock('@/models/Project', () => {
     };
 });
 
-const { GET } = await import('./route');
+const { GET } = await import('@/app/api/tors/route');
 
 function requestFor(query) {
     return new Request(`http://localhost/api/tors${query}`);
