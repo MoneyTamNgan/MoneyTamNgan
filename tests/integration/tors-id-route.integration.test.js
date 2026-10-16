@@ -14,7 +14,7 @@ vi.mock('@/models/Project', () => ({
     },
 }));
 
-const { GET } = await import('./route');
+const { GET } = await import('@/app/api/tors/[id]/route');
 
 describe('GET /api/tors/[id]', () => {
     it('returns the TOR detail for a known id', async () => {
