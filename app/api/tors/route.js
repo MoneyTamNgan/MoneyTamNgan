@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { toTorListItem } from '@/lib/api/tor-response';
-import { hydrateProjectsCompatibility } from '@/lib/project-compat';
 
 const MAX_LIMIT = 100;
 const TOR_STAGES = new Set(['draft', 'official', 'review', 'closed']);
+const BIDDING_STATUSES = new Set(['open', 'closed', 'unknown']);
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const CURRENT_TENDER_FILTER = { tender: { $exists: true, $ne: null } };
 
 function errorResponse(code, message, status = 400) {
     return NextResponse.json({ error: { code, message } }, { status });
@@ -48,6 +49,61 @@ export function parseStage(value) {
     return { value };
 }
 
+export function parseBiddingStatus(value) {
+    if (value === null || value === '') return { value: null };
+    if (!BIDDING_STATUSES.has(value)) return { error: 'biddingStatus must be open, closed, or unknown' };
+    return { value };
+}
+
+function biddingDeadlineExpression() {
+    const submissionDate = { $ifNull: ['$tender.submission_date', '$submission_schedule.date'] };
+    const submissionEndTime = { $ifNull: ['$tender.submission_end_time', '$submission_schedule.end_time'] };
+    return {
+        $ifNull: [
+            '$submission_schedule.ends_at',
+            {
+                $ifNull: [
+                    {
+                        $dateFromString: {
+                            dateString: { $concat: [submissionDate, 'T', submissionEndTime, ':00'] },
+                            format: '%Y-%m-%dT%H:%M:%S',
+                            timezone: 'Asia/Bangkok',
+                            onError: null,
+                            onNull: null,
+                        },
+                    },
+                    '$tender.closes_at',
+                ],
+            },
+        ],
+    };
+}
+
+function biddingStatusPipeline(status, now = new Date()) {
+    if (!status) return [];
+    const notCancelled = {
+        $ne: [{ $toLower: { $ifNull: ['$tender.status', ''] } }, 'cancelled'],
+    };
+    // MongoDB comparison operators order null/missing values before Dates.
+    // Check the BSON type explicitly so missing or unparseable deadlines can
+    // never be treated as already closed.
+    const hasDeadline = { $eq: [{ $type: '$_biddingCloseAt' }, 'date'] };
+    const deadlineMatches = status === 'open'
+        ? { $gt: ['$_biddingCloseAt', now] }
+        : status === 'closed'
+            ? { $lte: ['$_biddingCloseAt', now] }
+            : { $eq: ['$_biddingCloseAt', null] };
+
+    const conditions = status === 'unknown'
+        ? [{ $ne: [{ $type: '$_biddingCloseAt' }, 'date'] }]
+        : [notCancelled, hasDeadline, deadlineMatches];
+
+    return [
+        { $addFields: { _biddingCloseAt: biddingDeadlineExpression() } },
+        { $match: { $expr: { $and: conditions } } },
+    ];
+}
+
 export function stageFilter(stage, now = new Date()) {
     if (!stage) return null;
     const thirtyDaysBefore = new Date(now.getTime() - THIRTY_DAYS_MS);
@@ -70,6 +126,7 @@ export function stageFilter(stage, now = new Date()) {
  * - agency (exact department name)
  * - status (exact project status)
  * - stage (temporary contract-start-derived TOR stage)
+ * - biddingStatus (live open/closed/unknown value calculated from submission deadline)
  * - dateFrom / dateTo (inclusive announce-date range)
  * - q (full-text search across project title, agency, and extracted tech stack)
  * - budgetMin / budgetMax (inclusive budget range)
@@ -89,6 +146,9 @@ export async function GET(request) {
 
     const stageResult = parseStage(searchParams.get('stage'));
     if (stageResult.error) return errorResponse('INVALID_STAGE', stageResult.error);
+
+    const biddingStatusResult = parseBiddingStatus(searchParams.get('biddingStatus'));
+    if (biddingStatusResult.error) return errorResponse('INVALID_BIDDING_STATUS', biddingStatusResult.error);
 
     const dateFromResult = parseDate(searchParams.get('dateFrom'), 'dateFrom');
     const dateToResult = parseDate(searchParams.get('dateTo'), 'dateTo', true);
@@ -152,8 +212,16 @@ export async function GET(request) {
         pipeline.push(
             { $sort: { updated_at: -1, created_at: -1, _id: -1 } },
             { $group: { _id: '$project_id', project: { $first: '$$ROOT' } } },
-            { $replaceRoot: { newRoot: '$project' } }
+            { $replaceRoot: { newRoot: '$project' } },
+            // The dashboard is temporarily scoped to the current tender
+            // schema. Apply this after de-duplication so an obsolete version
+            // of a project cannot make its latest record appear eligible.
+            { $match: CURRENT_TENDER_FILTER }
         );
+
+        // Evaluate the live deadline after deduplication so an old snapshot
+        // cannot make a newer project appear open or closed incorrectly.
+        pipeline.push(...biddingStatusPipeline(biddingStatusResult.value));
 
         const sort = q ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1, _id: -1 };
 
@@ -189,13 +257,14 @@ export async function GET(request) {
             console.error('Error fetching user for match score:', err);
         }
 
-        const compatibleProjects = await hydrateProjectsCompatibility(projects);
         return NextResponse.json({
             status: 'success',
             page: pageResult.value,
             limit: limitResult.value,
             total,
-            data: compatibleProjects.map(project => toTorListItem(project, userDoc)),
+            // Dashboard cards only need data held on Project. Document, OCR,
+            // and summary hydration is reserved for the TOR detail routes.
+            data: projects.map(project => toTorListItem(project, userDoc)),
         });
     } catch (error) {
         return errorResponse('LIST_TORS_FAILED', error.message, 500);

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 
+const CURRENT_TENDER_FILTER = { tender: { $exists: true, $ne: null } };
+
 /**
  * GET /api/tors/facets
  *
@@ -26,6 +28,7 @@ export async function GET(request) {
                 { $sort: { updated_at: -1, created_at: -1, _id: -1 } },
                 { $group: { _id: '$project_id', project: { $first: '$$ROOT' } } },
                 { $replaceRoot: { newRoot: '$project' } },
+                { $match: CURRENT_TENDER_FILTER },
                 { $group: { _id: '$dept_name', count: { $sum: 1 } } },
                 { $match: { _id: { $type: 'string', $ne: '' } } },
                 { $sort: { _id: 1 } },
@@ -33,7 +36,11 @@ export async function GET(request) {
             Project.aggregate([
                 { $match: filter },
                 { $sort: { updated_at: -1, created_at: -1, _id: -1 } },
-                { $group: { _id: '$project_id' } },
+                { $group: { _id: '$project_id', project: { $first: '$$ROOT' } } },
+                // Keep the total aligned with the list and agency facets:
+                // only current-schema records with a tender object count.
+                { $replaceRoot: { newRoot: '$project' } },
+                { $match: CURRENT_TENDER_FILTER },
                 { $count: 'total' },
             ]),
         ]);

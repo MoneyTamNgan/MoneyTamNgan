@@ -42,6 +42,29 @@ export interface ProjectRecord {
     fetched_at?: DatabaseDate;
     payload_hash?: string;
   };
+  announcement_document_id?: string;
+  tender?: {
+    invitation_url?: string;
+    method?: string;
+    published_at?: DatabaseDate;
+    rss_dept_id?: string;
+    checked_at?: DatabaseDate;
+    closes_at?: DatabaseDate;
+    error?: string | null;
+    reference_price?: number;
+    status?: 'open' | 'closed' | 'cancelled' | 'unknown';
+    submission_date?: string;
+    submission_start_time?: string;
+    submission_end_time?: string;
+  };
+  submission_schedule?: {
+    date?: string;
+    start_time?: string;
+    end_time?: string;
+    starts_at?: DatabaseDate;
+    ends_at?: DatabaseDate;
+    timezone?: string;
+  };
   classification?: {
     status?: 'pending' | 'software' | 'not_software' | 'uncertain' | 'manual_override';
     confidence?: number | null;

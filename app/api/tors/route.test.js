@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDate, parseNonNegativeNumber, parsePositiveInteger, parseStage, stageFilter } from './route';
+import { parseBiddingStatus, parseDate, parseNonNegativeNumber, parsePositiveInteger, parseStage, stageFilter } from './route';
 
 describe('parsePositiveInteger', () => {
     it('returns the fallback when the value is null or empty', () => {
@@ -75,6 +75,19 @@ describe('parseStage', () => {
 
     it('rejects an unsupported stage', () => {
         expect(parseStage('active').error).toMatch(/stage/);
+    });
+});
+
+describe('parseBiddingStatus', () => {
+    it('accepts the live open and closed bidding filters', () => {
+        expect(parseBiddingStatus('open')).toEqual({ value: 'open' });
+        expect(parseBiddingStatus('closed')).toEqual({ value: 'closed' });
+        expect(parseBiddingStatus('unknown')).toEqual({ value: 'unknown' });
+        expect(parseBiddingStatus(null)).toEqual({ value: null });
+    });
+
+    it('rejects unsupported bidding filters', () => {
+        expect(parseBiddingStatus('cancelled').error).toMatch(/biddingStatus/);
     });
 });
 
