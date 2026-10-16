@@ -15,6 +15,23 @@ const LENGTH_LABELS = {
     unknown: 'ยังไม่ระบุช่วงเวลา',
 };
 
+const DOCUMENT_READINESS_LABELS = {
+    analysis_ready: 'สรุปเอกสารพร้อมใช้',
+    tor_ready: 'มี TOR รอประมวลผล',
+    announcement_only: 'มีเฉพาะประกาศเชิญชวน',
+    no_documents: 'ยังไม่มีเอกสาร',
+};
+
+const CLOSING_WINDOW_LABELS = {
+    within_24h: 'ปิดรับภายใน 24 ชั่วโมง',
+    within_3d: 'ปิดรับภายใน 3 วัน',
+    within_7d: 'ปิดรับภายใน 7 วัน',
+    later: 'ปิดรับเกิน 7 วัน',
+    closed: 'ปิดรับแล้ว',
+    cancelled: 'ยกเลิก',
+    unknown: 'ยังไม่ทราบวันปิดรับ',
+};
+
 function lengthBucketExpression() {
     return {
         $switch: {
@@ -29,41 +46,62 @@ function lengthBucketExpression() {
 }
 
 function analyticsFacets(now) {
+    const oneDay = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const threeDays = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const closingWindow = {
+        $switch: {
+            branches: [
+                { case: { $eq: ['$analyticsBiddingStatus', 'cancelled'] }, then: 'cancelled' },
+                { case: { $eq: ['$analyticsBiddingStatus', 'closed'] }, then: 'closed' },
+                { case: { $eq: ['$analyticsBiddingStatus', 'unknown'] }, then: 'unknown' },
+                { case: { $lte: ['$analyticsBidCloseAt', oneDay] }, then: 'within_24h' },
+                { case: { $lte: ['$analyticsBidCloseAt', threeDays] }, then: 'within_3d' },
+                { case: { $lte: ['$analyticsBidCloseAt', sevenDays] }, then: 'within_7d' },
+            ],
+            default: 'later',
+        },
+    };
     return {
         metrics: [
             { $group: {
                 _id: null,
                 totalTors: { $sum: 1 },
-                totalBudget: { $sum: { $ifNull: ['$budget', 0] } },
+                totalBudget: { $sum: { $ifNull: ['$analyticsBudget', 0] } },
                 openForBidding: { $sum: { $cond: [{ $eq: ['$analyticsBiddingStatus', 'open'] }, 1, 0] } },
-                openBudget: { $sum: { $cond: [{ $eq: ['$analyticsBiddingStatus', 'open'] }, { $ifNull: ['$budget', 0] }, 0] } },
+                openBudget: { $sum: { $cond: [{ $eq: ['$analyticsBiddingStatus', 'open'] }, { $ifNull: ['$analyticsBudget', 0] }, 0] } },
                 closingSoon: { $sum: { $cond: [{ $and: [
                     { $eq: ['$analyticsBiddingStatus', 'open'] },
-                    { $gt: ['$timeline.contract_end', now] },
-                    { $lte: ['$timeline.contract_end', new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)] },
+                    { $gt: ['$analyticsBidCloseAt', now] },
+                    { $lte: ['$analyticsBidCloseAt', sevenDays] },
                 ] }, 1, 0] } },
             } },
         ],
         fiscalYearTrend: [
             { $match: { analyticsFiscalYear: { $ne: null } } },
-            { $group: { _id: '$analyticsFiscalYear', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$budget', 0] } } } },
+            { $group: { _id: '$analyticsFiscalYear', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$analyticsBudget', 0] } } } },
             { $sort: { _id: 1 } },
         ],
         projectLength: [
             { $addFields: { analyticsLengthBucket: lengthBucketExpression() } },
-            { $group: { _id: '$analyticsLengthBucket', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$budget', 0] } } } },
+            { $group: { _id: '$analyticsLengthBucket', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$analyticsBudget', 0] } } } },
         ],
         biddingStatus: [
-            { $group: { _id: '$analyticsBiddingStatus', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$budget', 0] } } } },
+            { $group: { _id: '$analyticsBiddingStatus', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$analyticsBudget', 0] } } } },
             { $sort: { count: -1, _id: 1 } },
         ],
-        torStage: [
-            { $group: { _id: '$analyticsStage', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$budget', 0] } } } },
+        closingWindow: [
+            { $addFields: { analyticsClosingWindow: closingWindow } },
+            { $group: { _id: '$analyticsClosingWindow', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$analyticsBudget', 0] } } } },
+            { $sort: { count: -1, _id: 1 } },
+        ],
+        documentReadiness: [
+            { $group: { _id: '$analyticsDocumentReadiness', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$analyticsBudget', 0] } } } },
             { $sort: { count: -1, _id: 1 } },
         ],
         topAgencies: [
             { $match: { dept_name: { $type: 'string', $ne: '' } } },
-            { $group: { _id: '$dept_name', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$budget', 0] } } } },
+            { $group: { _id: '$dept_name', count: { $sum: 1 }, totalBudget: { $sum: { $ifNull: ['$analyticsBudget', 0] } } } },
             { $sort: { totalBudget: -1, _id: 1 } },
             { $limit: 5 },
         ],
@@ -73,7 +111,7 @@ function analyticsFacets(now) {
 
 function itemPipeline(page, limit) {
     return [
-        { $sort: { 'timeline.contract_end': 1, 'timeline.announce_date': -1, updated_at: -1, _id: -1 } },
+        { $sort: { analyticsBidSortAt: 1, 'timeline.announce_date': -1, updated_at: -1, _id: -1 } },
         { $skip: (page - 1) * limit },
         { $limit: limit },
     ];
@@ -135,7 +173,8 @@ export async function GET(request) {
                 fiscalYearTrend: (payload.fiscalYearTrend ?? []).map((item) => ({ fiscalYear: item._id, count: item.count, totalBudget: item.totalBudget })),
                 projectLength: (payload.projectLength ?? []).map((item) => ({ key: item._id, label: LENGTH_LABELS[item._id], count: item.count, totalBudget: item.totalBudget })),
                 biddingStatus: normalizeBreakdown(payload.biddingStatus ?? []),
-                torStage: normalizeBreakdown(payload.torStage ?? []),
+                closingWindow: (payload.closingWindow ?? []).map((item) => ({ key: item._id, label: CLOSING_WINDOW_LABELS[item._id], count: item.count, totalBudget: item.totalBudget })),
+                documentReadiness: (payload.documentReadiness ?? []).map((item) => ({ key: item._id, label: DOCUMENT_READINESS_LABELS[item._id], count: item.count, totalBudget: item.totalBudget })),
                 topAgencies: (payload.topAgencies ?? []).map((item) => ({ name: item._id, count: item.count, totalBudget: item.totalBudget })),
             },
             facets: {
