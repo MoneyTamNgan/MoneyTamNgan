@@ -1,11 +1,8 @@
-import type { TorStage } from '@/types/tor';
-
-export type AnalyticsBiddingStatus = 'open' | 'closed' | 'cancelled';
+export type AnalyticsBiddingStatus = 'open' | 'closed' | 'cancelled' | 'unknown';
 
 export interface AnalyticsQuery {
   isSoftware?: boolean;
   agency?: string;
-  stage?: TorStage;
   biddingStatus?: AnalyticsBiddingStatus;
   fiscalYear?: number;
   dateFrom?: string;
@@ -24,12 +21,15 @@ export interface AnalyticsTorItem {
   projectStatus: string;
   isSoftware: boolean | null;
   announceDate: string | null;
-  contractStart: string | null;
-  contractEnd: string | null;
+  bidClosesAt: string | null;
+  bidStartsAt: string | null;
+  bidSubmissionDate: string | null;
+  bidStartTime: string | null;
+  bidEndTime: string | null;
   fiscalYear: number | null;
   biddingStatus: AnalyticsBiddingStatus;
-  stage: TorStage;
   projectLength: number | null;
+  documentReadiness: string;
 }
 
 interface AnalyticsBreakdown {
@@ -54,7 +54,8 @@ export interface AnalyticsResponse {
     fiscalYearTrend: Array<{ fiscalYear: number; count: number; totalBudget: number }>;
     projectLength: Array<{ key: string; label: string; count: number; totalBudget: number }>;
     biddingStatus: AnalyticsBreakdown[];
-    torStage: AnalyticsBreakdown[];
+    closingWindow: Array<{ key: string; label: string; count: number; totalBudget: number }>;
+    documentReadiness: Array<{ key: string; label: string; count: number; totalBudget: number }>;
     topAgencies: Array<{ name: string; count: number; totalBudget: number }>;
   };
   facets: {

@@ -10,11 +10,11 @@ function csvCell(value) {
 }
 
 function toCsv(items) {
-    const headers = ['project_id', 'project_name', 'agency', 'budget', 'project_status', 'is_software', 'announce_date', 'contract_start', 'contract_end', 'fiscal_year', 'bidding_status', 'tor_stage', 'project_length'];
+    const headers = ['project_id', 'project_name', 'agency', 'budget_or_reference_price', 'project_status', 'is_software', 'announce_date', 'bid_submission_date', 'bid_start_time', 'bid_end_time', 'bid_closes_at', 'fiscal_year', 'bidding_status', 'project_length', 'document_readiness'];
     const rows = items.map((item) => [
         item.id, item.title, item.agency, item.budget, item.projectStatus, item.isSoftware,
-        item.announceDate, item.contractStart, item.contractEnd, item.fiscalYear,
-        item.biddingStatus, item.stage, item.projectLength,
+        item.announceDate, item.bidSubmissionDate, item.bidStartTime, item.bidEndTime, item.bidClosesAt,
+        item.fiscalYear, item.biddingStatus, item.projectLength, item.documentReadiness,
     ].map(csvCell).join(','));
     return `\uFEFF${headers.join(',')}\n${rows.join('\n')}`;
 }
@@ -36,7 +36,7 @@ export async function GET(request) {
         await connectDB();
         const items = await Project.aggregate([
             ...buildAnalyticsPipeline(parsed.value, new Date()),
-            { $sort: { 'timeline.contract_end': 1, 'timeline.announce_date': -1, updated_at: -1, _id: -1 } },
+            { $sort: { analyticsBidSortAt: 1, 'timeline.announce_date': -1, updated_at: -1, _id: -1 } },
             { $limit: MAX_EXPORT_ROWS },
         ]);
         const data = items.map(toAnalyticsItem);
