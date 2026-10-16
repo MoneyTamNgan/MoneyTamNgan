@@ -13,6 +13,9 @@ const ProjectSchema = new mongoose.Schema({
     primary_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
     latest_extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun', index: true },
     latest_summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary', index: true },
+    // Announcement documents can exist even when the actual TOR PDF has not
+    // been found or processed yet.
+    announcement_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
 
     timeline: {
         announce_date: { type: Date },
@@ -24,6 +27,38 @@ const ProjectSchema = new mongoose.Schema({
         provider: { type: String, default: 'egp_open_data' },
         fetched_at: { type: Date },
         payload_hash: { type: String },
+    },
+
+    // Canonical public tender data. This is intentionally separate from
+    // project_status: a project may remain active after bidding has closed.
+    tender: {
+        invitation_url: String,
+        method: String,
+        published_at: Date,
+        rss_dept_id: String,
+        checked_at: Date,
+        closes_at: Date,
+        error: String,
+        reference_price: { type: Number, min: 0 },
+        status: {
+            type: String,
+            enum: ['open', 'closed', 'cancelled', 'unknown'],
+            default: 'unknown',
+            index: true,
+        },
+        submission_date: String,
+        submission_start_time: String,
+        submission_end_time: String,
+    },
+    // Parsed submission session. These timestamps are the source of truth for
+    // live bidding availability because they preserve the exact Bangkok time.
+    submission_schedule: {
+        date: String,
+        start_time: String,
+        end_time: String,
+        starts_at: Date,
+        ends_at: Date,
+        timezone: { type: String, default: 'Asia/Bangkok' },
     },
 
     classification: {

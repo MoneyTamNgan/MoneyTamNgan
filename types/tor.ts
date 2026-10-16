@@ -58,6 +58,7 @@ export interface TorListParams {
   isSoftware?: boolean;
   status?: TorStatus;
   stage?: TorStage;
+  biddingStatus?: "open" | "closed" | "unknown";
   agency?: string;
   page?: number;
   pageSize?: number;
@@ -91,12 +92,26 @@ export interface TorApiClassification {
   confidence: number | null;
 }
 
+export type TorBiddingStatus = "open" | "closed" | "cancelled" | "unknown";
+
+export interface TorApiBidding {
+  status: TorBiddingStatus;
+  opensAt: string | null;
+  closesAt: string | null;
+  submissionDate: string | null;
+  submissionStartTime: string | null;
+  submissionEndTime: string | null;
+  invitationUrl: string | null;
+  method: string | null;
+}
+
 export interface TorApiListItem {
   id: string;
   title: string;
   agency: string;
-  budget: number;
+  budget: number | null;
   projectStatus: string;
+  bidding: TorApiBidding;
   announceDate: string | null;
   contractStart: string | null;
   contractEnd: string | null;
