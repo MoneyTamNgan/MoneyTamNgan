@@ -96,6 +96,8 @@ export type TorBiddingStatus = "open" | "closed" | "cancelled" | "unknown";
 
 export interface TorApiBidding {
   status: TorBiddingStatus;
+  /** Ingestion phase from tender.status, kept separate from status above. */
+  phase: string | null;
   opensAt: string | null;
   closesAt: string | null;
   submissionDate: string | null;
@@ -103,6 +105,19 @@ export interface TorApiBidding {
   submissionEndTime: string | null;
   invitationUrl: string | null;
   method: string | null;
+}
+
+export interface TorApiDocument {
+  id: string | null;
+  type: string;
+  filename: string | null;
+  /** Public e-GP source link; local and cloud storage paths are never exposed. */
+  sourceUrl: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  status: string | null;
+  version: number | null;
+  isCurrentPrimary: boolean;
 }
 
 export interface TorApiListItem {
@@ -159,9 +174,11 @@ export interface TorApiDetail {
   id: string;
   title: string;
   agency: { name: string; subName: string | null };
-  budget: number;
+  budget: number | null;
   projectStatus: string;
+  bidding: TorApiBidding;
   pdfUrl: string | null;
+  documents: { tor: TorApiDocument | null; announcement: TorApiDocument | null };
   createdAt: string | null;
   updatedAt: string | null;
   timeline: {

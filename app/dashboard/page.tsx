@@ -73,14 +73,11 @@ function fiscalYearFromBidClose(closesAt: string | null) {
   return `ปีงบประมาณ ${year + 543 + (month >= 10 ? 1 : 0)}`;
 }
 
-function projectStage(contractStart: string | null) {
-  if (!contractStart) return { label: "ยังไม่ระบุสถานะ TOR", tone: "unknown" };
-  const millisecondsUntilStart = new Date(contractStart).getTime() - Date.now();
-  if (Number.isNaN(millisecondsUntilStart)) return { label: "ยังไม่ระบุสถานะ TOR", tone: "unknown" };
-  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-  if (millisecondsUntilStart > thirtyDays) return { label: "TOR ฉบับจริง", tone: "official" };
-  if (millisecondsUntilStart >= -thirtyDays) return { label: "อยู่ระหว่างพิจารณาผล / ประกาศผู้ชนะ", tone: "review" };
-  return { label: "ยกเลิกโครงการ / ลงนามสัญญาแล้ว", tone: "closed" };
+function projectStage(phase: string | null) {
+  const normalized = String(phase ?? "").trim().toLowerCase().replace(/-/g, "_");
+  if (["draft_open", "draftopen"].includes(normalized)) return { label: "ร่าง TOR", tone: "draft" };
+  if (["bidding_open", "biddingopen"].includes(normalized)) return { label: "ประกาศเชิญชวน", tone: "official" };
+  return { label: "ยังไม่ระบุสถานะ TOR", tone: "unknown" };
 }
 
 function liveBiddingStatus(bidding: DashboardTor["bidding"], now: number) {
@@ -261,7 +258,7 @@ export default function DashboardPage() {
         {isRefreshing && <p className="feed-refreshing" role="status">กำลังอัปเดตรายการ TOR…</p>}
         {error && <p className={items.length > 0 ? "feed-refreshing" : "feed-empty"}>{error}</p>}
         {items.length > 0 && visibleItems.map((tor) => {
-          const stage = projectStage(tor.contractStart);
+          const stage = projectStage(tor.bidding.phase);
           const status = liveBiddingStatus(tor.bidding, currentTime);
           const remainingTime = biddingTimeRemaining(tor.bidding.closesAt, currentTime);
           return <Link className="feed-card" href={`/tors/${tor.id}`} key={tor.id} onMouseLeave={(event) => event.currentTarget.scrollTo({ top: 0 })}>
