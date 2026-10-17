@@ -32,7 +32,7 @@ const ProjectSchema = new mongoose.Schema({
     tender: {
         status: {
             type: String,
-            enum: ['draft_open', 'bidding_open', 'closed', 'unknown'],
+            enum: ['draft_open', 'bidding_open', 'open', 'closed', 'cancelled', 'unknown'],
             index: true,
         },
         rss_dept_id: String,
@@ -60,6 +60,17 @@ const ProjectSchema = new mongoose.Schema({
         provider: { type: String, default: 'egp_open_data' },
         fetched_at: { type: Date },
         payload_hash: { type: String },
+    },
+
+    // Parsed submission session. These timestamps are the source of truth for
+    // live bidding availability because they preserve the exact Bangkok time.
+    submission_schedule: {
+        date: String,
+        start_time: String,
+        end_time: String,
+        starts_at: Date,
+        ends_at: Date,
+        timezone: { type: String, default: 'Asia/Bangkok' },
     },
 
     classification: {
