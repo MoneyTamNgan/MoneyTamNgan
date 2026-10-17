@@ -7,10 +7,10 @@ const { GET } = await import('./route');
 const { default: Project } = await import('@/models/Project');
 
 function requestFor(query = '') {
-    return new Request(`http://localhost/api/analytics/search${query}`);
+    return new Request(`http://localhost/api/analytics/overview${query}`);
 }
 
-describe('GET /api/analytics/search', () => {
+describe('GET /api/analytics/overview', () => {
     it('returns dashboard-ready metrics, charts, facets, and a page of TORs', async () => {
         Project.aggregate
             .mockResolvedValueOnce([{

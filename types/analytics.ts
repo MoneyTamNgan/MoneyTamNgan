@@ -17,7 +17,7 @@ export interface AnalyticsTorItem {
   id: string;
   title: string;
   agency: string;
-  budget: number;
+  budget: number | null;
   projectStatus: string;
   isSoftware: boolean | null;
   announceDate: string | null;
@@ -27,6 +27,7 @@ export interface AnalyticsTorItem {
   bidStartTime: string | null;
   bidEndTime: string | null;
   fiscalYear: number | null;
+  fiscalYearSource: 'document' | 'ambiguous' | 'bid_close_estimate' | 'unknown';
   biddingStatus: AnalyticsBiddingStatus;
   projectLength: number | null;
   documentReadiness: string;
