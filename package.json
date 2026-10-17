@@ -8,6 +8,8 @@
     "lint": "next lint",
     "scrape": "node scripts/scrape.js",
     "ingest:tenders": "node scripts/ingest-open-tenders.js",
+    "schedule:extract": "node scripts/extract-announcement-schedule.js",
+    "test:schedule-atlas": "node scripts/test-announcement-schedule-atlas.js",
     "bench": "node scripts/bench-pipelines.js",
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",

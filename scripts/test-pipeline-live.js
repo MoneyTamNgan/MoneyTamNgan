@@ -25,6 +25,7 @@ import ExtractionRun from '../models/ExtractionRun.js';
 import ProcessingJob from '../models/ProcessingJob.js';
 import VertexChunk from '../models/VertexChunk.js';
 import DiscoveryCandidate from '../models/DiscoveryCandidate.js';
+import { syncProjectAnnouncement } from '../lib/project-announcement.js';
 
 async function main() {
     const pdfPath = process.argv[2];
@@ -58,9 +59,22 @@ async function main() {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'mtn-live-e2e-'));
     const temporaryPdf = path.join(dir, 'fixture.pdf');
     await copyFile(pdfPath, temporaryPdf);
+    const announcementPath = process.argv.find(arg => arg.startsWith('--announcement='))?.slice(15);
+    // An archived invitation and TOR page are controlled acquisition fixtures,
+    // not proof of a matching currently-open live government project.
+    const syncAnnouncement = announcementPath ? async project => syncProjectAnnouncement(project, {
+        now: new Date('2026-10-07T00:00:00+07:00'),
+        lookup: async () => ({ url: 'https://process5.gprocurement.go.th/egp-template-service/dwnt/view-pdf-file?templateId=6572bdad-5898-4bb8-9095-8378e36c9801' }),
+        download: async () => {
+            const local = path.join(dir, 'announcement.pdf');
+            await copyFile(announcementPath, local);
+            return { path: local, size: (await stat(local)).size, contentType: 'application/pdf' };
+        },
+    }) : async project => ({ project, status: 'not_requested' });
     let ocrCalls = 0;
     const result = await processProject(projectId, { allowBrowserFallback: false, onProgress: console.log }, {
         verifyEligibility: async () => eligibility,
+        syncAnnouncement,
         acquireDocument: async () => ({ sourceType: 'e2e_fixture', result: {
             pdf_url: 'https://example.org/e2e-archived-tor.pdf', pdf_path: temporaryPdf,
             pdf_size: (await stat(temporaryPdf)).size, pdf_content_type: 'application/pdf',
@@ -73,6 +87,14 @@ async function main() {
     const detail = toTorDetail(await hydrateProjectCompatibility(project));
     assert.ok(detail.summary);
     assert.equal(detail.fiscalBudget?.year, 2565);
+    if (announcementPath) {
+        assert.equal(project.bidding_date.date, '2026-10-08');
+        assert.equal(project.submission_schedule.start_time, '09:00');
+        assert.equal(project.submission_schedule.end_time, '12:00');
+        assert.ok(project.announcement_document_id);
+        assert.notEqual(String(project.announcement_document_id), String(project.primary_document_id));
+        assert.equal(project.announcement_schedule.status, 'parsed');
+    }
     const run = await ExtractionRun.findById(project.latest_extraction_run_id).lean();
     assert.equal(run.page_count, 1);
     assert.equal(run.ocr_pages, 1);
@@ -81,6 +103,7 @@ async function main() {
     const counts = await Promise.all(models.map(model => model.countDocuments()));
     const resumed = await processProject(projectId, {}, {
         verifyEligibility: async () => eligibility,
+        syncAnnouncement,
         acquireDocument: async () => assert.fail('Repeat run must not download'),
         extractText: async () => assert.fail('Repeat run must not OCR'),
         extractWithVertex: async () => assert.fail('Repeat run must reuse summary'),
@@ -116,6 +139,8 @@ async function main() {
         checks: ['candidate promotion', 'unique active job', 'real OCR', 'real Vertex', 'normalized API view',
             'fiscal year', 'temporary cleanup', 'idempotent resume', 'transaction rollback', 'changed PDF at same URL retains history'],
         detail,
+        announcement: announcementPath ? { bidding_date: project.bidding_date,
+            submission_schedule: project.submission_schedule, document_id: project.announcement_document_id } : null,
     }, null, 2));
 }
 main().catch(error => { console.error(`E2E FAILED: ${error.message}`); process.exitCode = 1; })

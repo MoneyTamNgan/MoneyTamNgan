@@ -58,3 +58,20 @@ it('defaults discovery to current Thai fiscal year, not historical 2568', async 
     const { currentThaiFiscalYear } = await import('@/lib/procurement-eligibility');
     expect(fetchAllFromEGP.mock.calls[0][0].year).toBe(currentThaiFiscalYear());
 });
+
+it('carries an explicit RSS department hint through default candidate ingestion', async () => {
+    fetchAllFromEGP.mockResolvedValue([{ project_id: 'pending', project_name: 'พัฒนาระบบสารสนเทศ' }]);
+    const { default: Candidate } = await import('@/models/DiscoveryCandidate');
+    const response = await POST(new Request('http://localhost/api/ingestion/trigger', { method: 'POST',
+        body: JSON.stringify({ enqueueProcessing: true, rssDeptId: '0304' }) }));
+    expect(response.status).toBe(202);
+    expect(Candidate.updateOne.mock.calls[0][1].$set.payload.rss_dept_id).toBe('0304');
+    expect(enqueueProject).toHaveBeenCalledWith('pending', { type: 'verify_candidate' });
+});
+
+it('rejects malformed RSS hints without requesting government data', async () => {
+    const response = await POST(new Request('http://localhost/api/ingestion/trigger', { method: 'POST',
+        body: JSON.stringify({ rssDeptId: 'bad' }) }));
+    expect(response.status).toBe(400);
+    expect(fetchAllFromEGP).not.toHaveBeenCalled();
+});
