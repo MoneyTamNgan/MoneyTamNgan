@@ -246,6 +246,29 @@ test('link-only announcements never persist a local PDF path', async () => {
     } });
 });
 
+test('GridFS announcements store the file id instead of a local path', async () => {
+    const project = { _id: new mongoose.Types.ObjectId(), project_id: '69099693138' };
+    const announcement = { url: 'https://e.test/pdf', path: 'storage/tor/69099693138/dant.pdf', size: 50 };
+    const gridfsId = new mongoose.Types.ObjectId();
+    const persisted = { sha256: 'd'.repeat(64), size: 50, backend: 'gridfs', gridfsId };
+
+    const created = await persistAnnouncementRecord(project, announcement, persisted, { DocumentModel: {
+        findOne: () => ({ lean: async () => null }),
+        findOneAndUpdate: async (filter, update) => ({ ...filter, ...update.$setOnInsert }),
+    } });
+    assert.equal(created.storage.backend, 'gridfs');
+    assert.equal(created.storage.gridfs_id, gridfsId);
+    assert.equal(created.storage.local_path, undefined);
+
+    let moved;
+    await persistAnnouncementRecord(project, announcement, persisted, { DocumentModel: {
+        findOne: () => ({ lean: async () => ({ _id: 'old', sha256: persisted.sha256 }) }),
+        findOneAndUpdate: async (filter, update) => { moved = { filter, update }; return {}; },
+    } });
+    assert.deepEqual(moved.filter, { _id: 'old' });
+    assert.equal(moved.update.$set['storage.gridfs_id'], gridfsId);
+});
+
 test('collectOpenTenders does not back off after a feed timeout', async () => {
     const sleeps = [];
     let calls = 0;

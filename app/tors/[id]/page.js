@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import AppShell from "@/components/ui/AppShell";
 import AdditionalInfoCard from "@/components/ui/AdditionalInfoCard";
 import BidderQualificationCard from "@/components/ui/BidderQualificationCard";
 import DocumentObservationsCard from "@/components/ui/DocumentObservationsCard";
 import TechStackComparisonCard from "@/components/ui/TechStackComparisonCard";
 import { getTorDetail } from "@/lib/services/tor-service";
+import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 
 const statusLabels = { Active: "กำลังใช้งาน", Superseded: "มีฉบับใหม่", Invalid: "ไม่ถูกต้อง", Cancelled: "ยกเลิก" };
 
@@ -85,7 +86,12 @@ function getApiOrigin(requestHeaders) {
 
 export default async function TorOverviewPage({ params }) {
   const { id } = await params;
-  const tor = await getTorDetail(id, getApiOrigin(await headers()));
+  const requestHeaders = await headers();
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const session = token ? await verifySession(token) : null;
+
+  const tor = await getTorDetail(id, getApiOrigin(requestHeaders), requestHeaders);
   const project = tor ? detailToProjectRecord(tor) : null;
   if (!project) return <AppShell title="ไม่พบโครงการ"><p className="empty-state">ไม่พบ TOR ที่ต้องการ</p></AppShell>;
   const hasExtractedDocument = Boolean(project.extracted_data.summary || project.extracted_data.qualifications.length || project.extracted_data.scope_of_work.length || project.extracted_data.tech_stack.length);
@@ -95,9 +101,23 @@ export default async function TorOverviewPage({ params }) {
   const qualificationItems = project.extracted_data.qualifications;
 
   return <AppShell title="ภาพรวม TOR" hideTitle><div className="tor-overview-layout"><aside className="tor-overview-side"><p>ภาพรวม TOR</p><div className="tor-overview-utility"><Link className="tor-home-button" href="/dashboard">← กลับสู่หน้าแรก</Link>{project.pdf_url && <a className="tor-header-pdf" href={project.pdf_url} target="_blank" rel="noreferrer">เปิด PDF ต้นฉบับ ↗</a>}</div></aside><div className="tor-overview">
+    {!session && (
+      <aside className="guest-login-banner" aria-label="แจ้งเตือนการเข้าสู่ระบบ">
+        <div className="guest-login-banner-content">
+          <span className="guest-login-banner-icon" aria-hidden="true">🔒</span>
+          <div className="guest-login-banner-text">
+            <h3>เข้าสู่ระบบเพื่อดูรายละเอียดโครงการฉบับเต็ม</h3>
+            <p>Log in to view full project detail · เข้าสู่ระบบเพื่อเข้าถึงเอกสารแนบและการจับคู่โครงการ</p>
+          </div>
+        </div>
+        <Link className="guest-login-banner-button" href={`/?next=/tors/${project.project_id}`}>
+          เข้าสู่ระบบ / Log in <span aria-hidden="true">→</span>
+        </Link>
+      </aside>
+    )}
     <header className="tor-overview-header"><div><p className="tor-overview-id">รหัสโครงการ {project.project_id}</p><h1>{project.project_name}</h1><p className="tor-overview-agency">{project.dept_name}{project.dept_sub_name ? ` · ${project.dept_sub_name}` : ""}</p><div className="tor-overview-actions"><span className={project.is_software ? "tor-classification is-software" : "tor-classification"}>{project.is_software ? "โครงการซอฟต์แวร์ / ไอที" : "นอกขอบเขตซอฟต์แวร์"}</span><span className={hasExtractedDocument ? "tor-ai-badge" : "tor-ai-badge is-pending"}>{hasExtractedDocument ? "มีข้อมูลสกัดจากเอกสาร" : "รอข้อมูลจากเอกสาร"}</span></div></div></header>
     <section className="tor-lifecycle" aria-label="สถานะเอกสารและวงจรโครงการ"><div><span>ประเภทโครงการ</span><strong>{project.is_software ? "ซอฟต์แวร์ / ไอที" : "นอกขอบเขตซอฟต์แวร์"}</strong></div><div><span>การดึงข้อมูล PDF</span><strong>{hasExtractedDocument ? "ประมวลผลแล้ว" : hasDocument ? "รอประมวลผล" : "ยังไม่มีเอกสาร"}</strong></div><div><span>เวอร์ชัน / วงจรโครงการ</span><strong>{versionStatus}</strong>{versionInfo.superseded_by && <Link href={`/tors/${versionInfo.superseded_by}`}>ไปยังฉบับใหม่ →</Link>}</div></section>
-    <section className="tor-metrics" aria-label="ข้อมูลสำคัญโครงการ"><article><span>งบประมาณ</span><strong>{project.budget.toLocaleString("th-TH")} บาท</strong></article><article><span>วันประกาศ</span><strong>{thaiDate(project.timeline.announce_date)}</strong></article><article><span>สถานะโครงการ</span><strong>{statusLabels[project.project_status] ?? valueOrUnknown(project.project_status)}</strong></article></section>
+    <section className="tor-metrics" aria-label="ข้อมูลสำคัญโครงการ"><article><span>งบประมาณ</span><strong>{project.budget != null ? `${project.budget.toLocaleString("th-TH")} บาท` : "ยังไม่ระบุงบประมาณ"}</strong></article><article><span>วันประกาศ</span><strong>{thaiDate(project.timeline.announce_date)}</strong></article><article><span>สถานะโครงการ</span><strong>{statusLabels[project.project_status] ?? valueOrUnknown(project.project_status)}</strong></article></section>
     <section className="tor-project-summary"><article className="tor-summary-card"><p className="tor-section-kicker">สรุปจากเอกสาร</p><h2>ภาพรวมโครงการ</h2><p>{project.extracted_data.summary || "ยังไม่มีข้อมูลสรุปจากเอกสาร"}</p></article></section>
     <section className="tor-project-summary"><article className="tor-summary-card"><h2>ปีงบประมาณ</h2><p>{project.fiscal_budget?.years?.length ? project.fiscal_budget.years.join(", ") : "ไม่พบปีงบประมาณที่ยืนยันได้จากเอกสาร"}</p>{project.fiscal_budget?.status === "ambiguous" && <p>พบหลายปี — ต้องตรวจสอบ</p>}{project.fiscal_budget?.evidence?.map((item, index) => <blockquote key={index}>{item.clause_text}<small> · หน้า {item.page}{item.section ? ` · หัวข้อ ${item.section}` : ""} · {item.method}</small></blockquote>)}{project.fiscal_budget?.warnings?.map((warning, index) => <p key={index}>{warning}</p>)}</article></section>
     <TechStackComparisonCard items={project.extracted_data.tech_stack} />
