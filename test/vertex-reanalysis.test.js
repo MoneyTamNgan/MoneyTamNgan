@@ -31,7 +31,7 @@ test('stored OCR pages can be reanalyzed without scraping or OCR', async () => {
             { page_number: 2, text: 'ต้องใช้ Brand X เท่านั้น' },
         ]) }) },
         extractWithVertex: async ({ pages }) => {
-            assert.deepEqual(pages, [{ page_number: 2, text: 'ต้องใช้ Brand X เท่านั้น' }]);
+            assert.deepEqual(pages, [{ page_number: 1, text: '' }, { page_number: 2, text: 'ต้องใช้ Brand X เท่านั้น' }]);
             return { extraction, model: 'gemini-2.5-flash', modelVersion: 'test',
                 promptVersion: TOR_PROMPT_VERSION, usage: { inputTokens: 10, outputTokens: 5 } };
         },
