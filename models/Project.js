@@ -130,6 +130,20 @@ const ProjectSchema = new mongoose.Schema({
         budget_deviation_multiplier: { type: Number, default: 1.0 },
     },
 
+    // Current risk read cache, atomically linked to the versioned summary below.
+    flagged_clauses: [{ _id: false, clause_text: String, reason: String, explanation: String,
+        highlight_reason: String, page: Number, category: String, severity: String, confidence: Number }],
+    flagged_clauses_meta: {
+        summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary' },
+        document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+        extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun' },
+        prompt_version: String, model: String,
+        analysis_status: { type: String, enum: ['complete', 'partial', 'unreadable'] },
+        skipped_pages: [{ _id: false, page_number: Number, reason: String }],
+        warnings: [{ _id: false, code: String, page: Number, field: String }],
+        total_flags: Number, truncated: Boolean, updated_at: Date,
+    },
+
     workflow: {
         status: { type: String, index: true },
         error_code: String,
