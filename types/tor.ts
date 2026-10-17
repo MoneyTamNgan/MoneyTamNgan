@@ -124,7 +124,7 @@ export type TorApiAnomaly =
       reason: string;
       explanation: string;
       highlightReason?: string;
-      category?: "unrealistic_tenure" | "excessive_hardware" | "vendor_lock_in";
+      category?: "unrealistic_tenure" | "excessive_hardware" | "vendor_lock_in" | "excessive_team_capacity";
       severity?: "low" | "medium" | "high";
       page?: number;
       confidence?: number;

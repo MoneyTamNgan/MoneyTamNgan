@@ -133,7 +133,23 @@ test('empty OCR output is sent to review without a Vertex call', async t => {
         pageCount: 1, textHash: 'empty', fingerprint: 'test', needsReview: true });
     const result = await processProject('68019088742', {}, dependencies);
     assert.equal(result.status, 'review_required');
-    assert.match(updates.at(-1).$set['processing.error'], /No usable text/);
+    assert.equal(result.reason, 'document_unreadable');
+    assert.equal(result.retryable, false);
+    assert.equal(updates.at(-1).$set['processing.error'], null);
+    assert.equal(updates.at(-1).$set.flagged_clauses_meta.analysis_status, 'unreadable');
+});
+
+test('partial readable coverage keeps an otherwise confident analysis in review', async t => {
+    const { dependencies } = await fixture(t);
+    process.env.VERTEX_AI_ENABLED = 'true';
+    dependencies.extractWithVertex = async () => ({ model: 'test', promptVersion: TOR_PROMPT_VERSION,
+        usage: { inputTokens: 1, outputTokens: 1 }, extraction: {
+            summary: 'สรุปเฉพาะส่วนที่อ่านได้', qualifications: [], scope_of_work: [], tech_stack: [],
+            flagged_clauses: [], risk_findings: [], confidence: 0.99,
+            analysis_coverage: { status: 'partial', skipped_pages: [{ page_number: 2, reason: 'unreadable_text' }] },
+        } });
+    const result = await processProject('68019088742', {}, dependencies);
+    assert.equal(result.status, 'review_required');
 });
 
 test('new OCR quality flags override a cached completed summary and persist page warnings', async t => {
