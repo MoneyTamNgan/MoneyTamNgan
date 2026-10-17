@@ -7,7 +7,7 @@ export interface ProjectEvidence {
   page?: number;
 }
 
-export type TorRiskCategory = 'unrealistic_tenure' | 'excessive_hardware' | 'vendor_lock_in';
+export type TorRiskCategory = 'unrealistic_tenure' | 'excessive_hardware' | 'vendor_lock_in' | 'excessive_team_capacity';
 export type TorRiskSeverity = 'low' | 'medium' | 'high';
 
 export interface ProjectFlaggedClause {
@@ -30,6 +30,20 @@ export interface ProjectRecord {
   budget: number;
   project_status: string;
   is_software: boolean | null;
+  flagged_clauses?: ProjectFlaggedClause[];
+  flagged_clauses_meta?: {
+    summary_id?: string;
+    document_id?: string;
+    extraction_run_id?: string;
+    prompt_version?: string;
+    model?: string;
+    analysis_status?: 'complete' | 'partial' | 'unreadable';
+    skipped_pages?: { page_number: number | null; reason: string }[];
+    warnings?: { code: string; page?: number; field?: string }[];
+    total_flags?: number;
+    truncated?: boolean;
+    updated_at?: DatabaseDate;
+  };
   timeline: {
     announce_date?: DatabaseDate;
     contract_start?: DatabaseDate;
