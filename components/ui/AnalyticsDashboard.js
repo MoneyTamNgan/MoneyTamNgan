@@ -8,6 +8,7 @@ import { getAnalyticsOverview } from "@/lib/services/tor-service";
 const BIDDING_LABELS = { open: "เปิดรับ", closed: "ปิดรับ", cancelled: "ยกเลิก", unknown: "ยังไม่ทราบ" };
 
 function formatMoney(value) {
+  if (value == null) return "ยังไม่ระบุมูลค่า";
   return `${(Number(value || 0) / 1_000_000).toLocaleString("th-TH", { maximumFractionDigits: 1 })} ล้านบาท`;
 }
 
@@ -39,7 +40,7 @@ export default function AnalyticsDashboard() {
   const [error, setError] = useState("");
 
   const query = useMemo(() => ({
-    isSoftware: softwareOnly,
+    ...(softwareOnly ? { isSoftware: true } : {}),
     ...(agency !== "ทั้งหมด" ? { agency } : {}),
     ...(biddingStatus !== "ทั้งหมด" ? { biddingStatus } : {}),
     ...(fiscalYearFilter !== "ทั้งหมด" ? { fiscalYear: fiscalYearFilter } : {}),

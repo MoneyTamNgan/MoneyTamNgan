@@ -53,7 +53,9 @@ function budgetForSort(budget: number | null | undefined, direction: "high" | "l
   return direction === "high" ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
 }
 
-function fiscalYearFromBidClose(closesAt: string | null) {
+function fiscalYearFromBidClose(closesAt: string | null, fiscal?: TorApiListItem["fiscalBudget"]) {
+  if (fiscal?.status === "found" && fiscal.year) return `ปีงบประมาณ ${fiscal.year}`;
+  if (fiscal?.status === "ambiguous") return "ปีงบประมาณรอตรวจสอบ";
   if (!closesAt) return "ยังไม่ระบุปีงบประมาณ";
   const closeDate = new Date(closesAt);
   if (Number.isNaN(closeDate.getTime())) return "ยังไม่ระบุปีงบประมาณ";
@@ -119,10 +121,18 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [showStickyTools, setShowStickyTools] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [account, setAccount] = useState<{ id: string } | null | undefined>(undefined);
   const filterBarRef = useRef<HTMLElement>(null);
   const itemsRef = useRef<DashboardTor[]>([]);
   const feedCacheRef = useRef(new Map<string, TorApiListResponse>());
   const liveBiddingFilterTick = biddingStatus === "ทั้งหมด" ? 0 : Math.floor(currentTime / 30_000);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setAccount(data?.user ?? null))
+      .catch(() => setAccount(null));
+  }, []);
 
   useEffect(() => {
     itemsRef.current = items;
@@ -225,6 +235,8 @@ export default function DashboardPage() {
   const updateBiddingStatus = (value: string) => { setBiddingStatus(value); setPage(1); };
   const updateSoftwareOnly = () => { setSoftwareOnly((current) => !current); setAgency("ทั้งหมด"); setPage(1); };
 
+  const isGuest = account === null;
+
   return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:440px!important;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card:hover{z-index:5!important;transform:none!important;border-color:var(--orange-primary)!important;background:var(--cream-soft)!important;box-shadow:0 26px 42px var(--shadow)!important}}`}</style>
     <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}`}</style>
 
@@ -242,6 +254,21 @@ export default function DashboardPage() {
 
     <div className="feed-body">
       <section className="feed-heading"><div><p className="feed-kicker">TOR · ข้อมูลสาธารณะ</p><h1>โครงการที่อาจเหมาะกับคุณ</h1><p>ติดตาม TOR จากหน่วยงานภาครัฐ พร้อมข้อมูลคุณสมบัติ งบประมาณ และสถานะเอกสาร</p></div><div className="feed-total"><strong>{total.toLocaleString("th-TH")}</strong><span>โครงการทั้งหมด</span><small>กำลังแสดง {visibleItems.length} รายการ · หน้า {page} จาก {totalPages}</small></div></section>
+
+      {isGuest && (
+        <aside className="guest-login-banner" role="status" aria-label="แจ้งเตือนการเข้าสู่ระบบ">
+          <div className="guest-login-banner-content">
+            <span className="guest-login-banner-icon" aria-hidden="true">🔒</span>
+            <div className="guest-login-banner-text">
+              <h3>เข้าสู่ระบบเพื่อดูรายละเอียดโครงการฉบับเต็ม</h3>
+              <p>Log in to view full project detail · เข้าถึงข้อมูลเอกสาร TOR, ผลการสกัดข้อมูลเชิงลึก และคะแนนความตรงกับโปรไฟล์ของคุณ</p>
+            </div>
+          </div>
+          <Link className="guest-login-banner-button" href="/?next=/dashboard">
+            เข้าสู่ระบบ / Log in <span aria-hidden="true">→</span>
+          </Link>
+        </aside>
+      )}
 
       <label className="feed-search feed-search-main"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสโครงการ ชื่อ หรือหน่วยงาน" aria-label="ค้นหา TOR" /></label>
 
@@ -261,13 +288,13 @@ export default function DashboardPage() {
           const stage = projectStage(tor.bidding.phase);
           const status = liveBiddingStatus(tor.bidding, currentTime);
           const remainingTime = biddingTimeRemaining(tor.bidding.closesAt, currentTime);
-          return <Link className="feed-card" href={`/tors/${tor.id}`} key={tor.id} onMouseLeave={(event) => event.currentTarget.scrollTo({ top: 0 })}>
+          return <Link className="feed-card" href={isGuest ? `/?next=${encodeURIComponent(`/tors/${tor.id}`)}` : `/tors/${tor.id}`} key={tor.id} onMouseLeave={(event) => event.currentTarget.scrollTo({ top: 0 })}>
           <div className="feed-card-top"><div className="feed-card-meta"><span>รหัสโครงการ {tor.id}</span></div><div className="bidding-signals"><span className={`bidding-badge bidding-countdown is-${remainingTime.tone}`} title="คำนวณจากกำหนดปิดรับข้อเสนอ">{remainingTime.label}</span><span className={`bidding-badge bidding-status is-${status.tone}`}>{status.label}</span></div></div>
           <h2>{tor.title}</h2><p className="feed-agency"><span aria-hidden="true">⌂</span>{tor.agency}</p>
           <div className="feed-card-bottom">
             <div className="anomaly-slot">{tor.anomaly.highBudgetFlag && <p className="budget-warning"><span aria-hidden="true">!</span> งบประมาณสูงผิดปกติเมื่อเทียบกับข้อมูลที่มี</p>}</div>
             <div className="project-stage-row"><span className={`feed-status project-stage stage-${stage.tone}`}><i aria-hidden="true" />{stage.label}</span></div>
-            <div className="feed-card-metrics"><div className="feed-card-metric"><span>{fiscalYearFromBidClose(tor.bidding.closesAt)}</span><strong>{formatBudget(tor.budget)}</strong></div><div className="feed-card-metric"><span>ปิดรับข้อเสนอ</span><strong>{formatDate(tor.bidding.closesAt)}</strong></div></div>
+            <div className="feed-card-metrics"><div className="feed-card-metric"><span title={tor.fiscalBudget?.status === "found" ? "ยืนยันจากเอกสาร TOR" : tor.fiscalBudget?.status === "ambiguous" ? "พบหลายปีในเอกสาร ต้องตรวจสอบ" : "ประมาณจากวันปิดรับข้อเสนอ ไม่ใช่ปีที่ยืนยันจากเอกสาร"}>{fiscalYearFromBidClose(tor.bidding.closesAt, tor.fiscalBudget)}</span><strong>{formatBudget(tor.budget)}</strong></div><div className="feed-card-metric"><span>ปิดรับข้อเสนอ</span><strong>{formatDate(tor.bidding.closesAt)}</strong></div></div>
           </div>
         </Link>;
         })}

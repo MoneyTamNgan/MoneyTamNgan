@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import AppShell from "@/components/ui/AppShell";
 import AdditionalInfoCard from "@/components/ui/AdditionalInfoCard";
 import BidderQualificationCard from "@/components/ui/BidderQualificationCard";
@@ -7,6 +7,7 @@ import DocumentObservationsCard from "@/components/ui/DocumentObservationsCard";
 import ProjectSummaryCard from "@/components/ui/ProjectSummaryCard";
 import TechStackComparisonCard from "@/components/ui/TechStackComparisonCard";
 import { getTorDetail } from "@/lib/services/tor-service";
+import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 
 function valueOrUnknown(value) {
   return value || "ยังไม่มีข้อมูล";
@@ -18,7 +19,9 @@ function thaiDate(value) {
   return Number.isNaN(date.getTime()) ? "ยังไม่มีข้อมูล" : new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bangkok" }).format(date);
 }
 
-function fiscalYearForBidClose(value) {
+function fiscalYearForBidClose(value, fiscal) {
+  if (fiscal?.status === "found" && fiscal.year) return `ปีงบประมาณ ${fiscal.year}`;
+  if (fiscal?.status === "ambiguous") return "รอตรวจสอบปีงบประมาณ";
   if (!value) return "ยังไม่ระบุปีงบประมาณ";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "ยังไม่ระบุปีงบประมาณ";
@@ -129,6 +132,7 @@ function detailToProjectRecord(tor) {
     pdf_url: tor.pdfUrl ?? undefined,
     document: { status: tor.documentStatus ?? undefined },
     processing: { status: tor.processingStatus ?? undefined },
+    fiscal_budget: tor.fiscalBudget,
     extracted_data: {
       summary: tor.summary,
       qualifications: tor.requirements,
@@ -162,7 +166,12 @@ function getApiOrigin(requestHeaders) {
 
 export default async function TorOverviewPage({ params }) {
   const { id } = await params;
-  const tor = await getTorDetail(id, getApiOrigin(await headers()));
+  const requestHeaders = await headers();
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const session = token ? await verifySession(token) : null;
+
+  const tor = await getTorDetail(id, getApiOrigin(requestHeaders), requestHeaders);
   const project = tor ? detailToProjectRecord(tor) : null;
   if (!project) return <AppShell title="ไม่พบโครงการ"><p className="empty-state">ไม่พบ TOR ที่ต้องการ</p></AppShell>;
   const hasExtractedDocument = Boolean(project.extracted_data.summary || project.extracted_data.qualifications.length || project.extracted_data.scope_of_work.length || project.extracted_data.tech_stack.length);
@@ -181,10 +190,25 @@ export default async function TorOverviewPage({ params }) {
   const bidEndTime = submissionEndTime(project.bidding);
 
   return <AppShell title="ภาพรวม TOR" hideTitle><div className="tor-overview-layout"><aside className="tor-overview-side"><p>ภาพรวม TOR</p><div className="tor-overview-utility"><Link className="tor-home-button" href="/dashboard">← กลับสู่หน้าแรก</Link>{torPdfUrl && <a className="tor-header-pdf" href={torPdfUrl} target="_blank" rel="noreferrer">เปิด TOR PDF ↗</a>}</div></aside><div className="tor-overview">
+    {!session && (
+      <aside className="guest-login-banner" aria-label="แจ้งเตือนการเข้าสู่ระบบ">
+        <div className="guest-login-banner-content">
+          <span className="guest-login-banner-icon" aria-hidden="true">🔒</span>
+          <div className="guest-login-banner-text">
+            <h3>เข้าสู่ระบบเพื่อดูรายละเอียดโครงการฉบับเต็ม</h3>
+            <p>Log in to view full project detail · เข้าสู่ระบบเพื่อเข้าถึงเอกสารแนบและการจับคู่โครงการ</p>
+          </div>
+        </div>
+        <Link className="guest-login-banner-button" href={`/?next=/tors/${project.project_id}`}>
+          เข้าสู่ระบบ / Log in <span aria-hidden="true">→</span>
+        </Link>
+      </aside>
+    )}
     <header className="tor-overview-header"><div><p className="tor-overview-id">รหัสโครงการ {project.project_id}</p><h1>{project.project_name}</h1><p className="tor-overview-agency">{project.dept_name}{project.dept_sub_name ? ` · ${project.dept_sub_name}` : ""}</p><div className="tor-overview-actions tor-priority-actions"><span className={`tor-document-version ${versionInfo.is_latest ? "is-latest" : "is-superseded"}`}>{versionStatus}</span>{torPdfUrl && <a className="tor-detail-pdf-button" href={torPdfUrl} target="_blank" rel="noreferrer">เปิด TOR PDF ↗</a>}{announcementDocument?.sourceUrl && <a className="tor-detail-pdf-button" href={announcementDocument.sourceUrl} target="_blank" rel="noreferrer">ประกาศเชิญชวน ↗</a>}</div></div></header>
-    <section className="tor-metrics tor-priority-metrics" aria-label="ข้อมูลสำคัญสำหรับการยื่นข้อเสนอ"><article className="tor-budget-metric"><span>งบประมาณ / ราคากลาง</span><strong>{formatBudget(project.budget)}</strong></article><article><span>ปีงบประมาณ</span><strong>{fiscalYearForBidClose(project.bidding.closesAt)}</strong></article><article><span>วันปิดรับข้อเสนอ</span><strong>{bidDate}</strong></article><article><span>ช่วงเวลารับข้อเสนอ</span><strong>{submissionTimeRange(bidStartTime, bidEndTime)}</strong></article></section>
+    <section className="tor-metrics tor-priority-metrics" aria-label="ข้อมูลสำคัญสำหรับการยื่นข้อเสนอ"><article className="tor-budget-metric"><span>งบประมาณ / ราคากลาง</span><strong>{formatBudget(project.budget)}</strong></article><article><span>ปีงบประมาณ{project.fiscal_budget?.status === "found" ? " · จากเอกสาร" : project.fiscal_budget?.status === "ambiguous" ? " · รอตรวจสอบ" : " · ประมาณจากวันปิดรับ"}</span><strong>{fiscalYearForBidClose(project.bidding.closesAt, project.fiscal_budget)}</strong></article><article><span>วันปิดรับข้อเสนอ</span><strong>{bidDate}</strong></article><article><span>ช่วงเวลารับข้อเสนอ</span><strong>{submissionTimeRange(bidStartTime, bidEndTime)}</strong></article></section>
     <section className="tor-lifecycle tor-priority-lifecycle" aria-label="สถานะการยื่นข้อเสนอและ TOR"><div className={`is-${remainingTime.tone}`}><span>ระยะเวลาคงเหลือ</span><strong>{remainingTime.label}</strong></div><div className={`is-${status.tone}`}><span>สถานะการยื่นข้อเสนอ</span><strong>{status.label}</strong></div><div className={`stage-${stage.tone}`}><span>สถานะ TOR</span><strong>{stage.label}</strong></div></section>
     <ProjectSummaryCard summary={project.extracted_data.summary} />
+    <section className="tor-project-summary"><article className="tor-summary-card"><h2>ปีงบประมาณ</h2><p>{project.fiscal_budget?.years?.length ? project.fiscal_budget.years.join(", ") : "ไม่พบปีงบประมาณที่ยืนยันได้จากเอกสาร"}</p>{project.fiscal_budget?.status === "ambiguous" && <p>พบหลายปี — ต้องตรวจสอบ</p>}{project.fiscal_budget?.evidence?.map((item, index) => <blockquote key={index}>{item.clause_text}<small> · หน้า {item.page}{item.section ? ` · หัวข้อ ${item.section}` : ""} · {item.method}</small></blockquote>)}{project.fiscal_budget?.warnings?.map((warning, index) => <p key={index}>{warning}</p>)}</article></section>
     <section className="tor-detail-grid"><article className="tor-detail-card"><p className="tor-section-kicker">ข้อมูลโครงการ</p><h2>รายละเอียดที่จัดเก็บ</h2><dl><div><dt>หน่วยงาน</dt><dd>{valueOrUnknown(project.dept_name)}</dd></div><div><dt>หน่วยงานย่อย / ฝ่าย</dt><dd>{valueOrUnknown(project.dept_sub_name)}</dd></div><div><dt>สถานะการยื่นข้อเสนอ</dt><dd>{status.label}</dd></div><div><dt>สถานะ TOR</dt><dd>{stage.label}</dd></div><div><dt>วันยื่นข้อเสนอ</dt><dd>{bidDate}</dd></div><div><dt>เวลาเปิดรับข้อเสนอ</dt><dd>{bidStartTime !== "ยังไม่มีข้อมูล" ? `${bidStartTime} น.` : bidStartTime}</dd></div><div><dt>เวลาปิดรับข้อเสนอ</dt><dd>{bidEndTime !== "ยังไม่มีข้อมูล" ? `${bidEndTime} น.` : bidEndTime}</dd></div><div><dt>TOR PDF</dt><dd>{torPdfUrl ? <a className="tor-document-link" title={torDocument?.filename ?? "เปิดเอกสาร TOR"} href={torPdfUrl} target="_blank" rel="noreferrer">{torDocument?.filename ?? "เปิดเอกสาร TOR"} ↗</a> : "ยังไม่มีเอกสาร TOR"}</dd></div><div><dt>ประกาศเชิญชวน PDF</dt><dd>{announcementDocument?.sourceUrl ? <a className="tor-document-link" title={announcementDocument.filename ?? "เปิดประกาศเชิญชวน"} href={announcementDocument.sourceUrl} target="_blank" rel="noreferrer">{announcementDocument.filename ?? "เปิดประกาศเชิญชวน"} ↗</a> : "ยังไม่มีประกาศเชิญชวน"}</dd></div><div><dt>บันทึกข้อมูลเมื่อ</dt><dd>{thaiDate(project.created_at)}</dd></div><div><dt>ปรับปรุงข้อมูลเมื่อ</dt><dd>{thaiDate(project.updated_at)}</dd></div></dl></article><BidderQualificationCard items={qualificationItems} hasDocument={hasDocument} /></section>
     <DocumentObservationsCard anomalies={project.anomalies} />
     <section className="tor-extracted-data"><AdditionalInfoCard scopeItems={project.extracted_data.scope_of_work} /></section>

@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import { useState } from "react";
 
 function exportUrl(format, query) {
@@ -7,7 +9,7 @@ function exportUrl(format, query) {
   Object.entries(query ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
   });
-  return `/api/analytics/export?${params.toString()}`;
+  return `/api/analytics/overview/export?${params.toString()}`;
 }
 
 export default function AnalyticsExportButtons({ query }) {
