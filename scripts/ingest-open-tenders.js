@@ -237,7 +237,7 @@ async function main() {
     // Preserve this branch's link-only policy; file retention is explicitly opt-in.
     const announcementStorage = typeof args['announcement-storage'] === 'string'
         ? args['announcement-storage'] : 'remote';
-    if (!['remote', 'local', 'gcs'].includes(announcementStorage)) throw new Error('announcement-storage must be remote, local or gcs');
+    if (!['remote', 'local', 'gcs', 'gridfs'].includes(announcementStorage)) throw new Error('announcement-storage must be remote, local, gcs or gridfs');
     const ctx = createAcquisitionContext({ allowBrowser: !args['no-browser'] });
     const stats = {
         discovered: tenders.length, candidates: 0, skippedDone: 0, attempted: 0,

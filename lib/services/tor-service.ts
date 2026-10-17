@@ -26,9 +26,18 @@ export async function listTorCards(params: TorListParams = {}): Promise<TorApiLi
   return response.json() as Promise<TorApiListResponse>;
 }
 
-export async function getTorDetail(id: string, apiOrigin: string): Promise<TorApiDetail | null> {
+// Headers a server-side caller forwards so the API rate-limits the visitor,
+// not the Next.js server making the request.
+const FORWARDED_HEADERS = ["x-forwarded-for", "x-real-ip", "cookie"];
+
+export async function getTorDetail(id: string, apiOrigin: string, visitorHeaders?: Headers): Promise<TorApiDetail | null> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  for (const name of FORWARDED_HEADERS) {
+    const value = visitorHeaders?.get(name);
+    if (value) headers[name] = value;
+  }
   const response = await fetch(`${apiOrigin}/api/tors/${encodeURIComponent(id)}`, {
-    headers: { Accept: "application/json" },
+    headers,
     cache: "no-store",
   });
   if (response.status === 404) return null;
