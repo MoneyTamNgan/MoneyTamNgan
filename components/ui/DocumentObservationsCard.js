@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DocumentObservationItem from "@/components/ui/DocumentObservationItem";
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 4;
 
 export default function DocumentObservationsCard({ anomalies }) {
   const [page, setPage] = useState(1);
-  const [largestPageHeight, setLargestPageHeight] = useState(null);
-  const cardRef = useRef(null);
-  const measurementRefs = useRef([]);
   const highBudgetFlag = Boolean(anomalies?.high_budget_flag);
   const flaggedClauses = Array.isArray(anomalies?.flagged_clauses) ? anomalies.flagged_clauses : [];
   const pages = useMemo(() => Array.from(
@@ -24,24 +21,8 @@ export default function DocumentObservationsCard({ anomalies }) {
     setPage((currentPage) => Math.min(currentPage, totalPages));
   }, [totalPages]);
 
-  useLayoutEffect(() => {
-    const measurePages = () => {
-      const largest = Math.max(0, ...measurementRefs.current.map((element) => element?.offsetHeight ?? 0));
-      const nextHeight = largest ? Math.ceil(largest) : null;
-      setLargestPageHeight((currentHeight) => currentHeight === nextHeight ? currentHeight : nextHeight);
-    };
-
-    measurePages();
-    const observer = new ResizeObserver(measurePages);
-    if (cardRef.current) observer.observe(cardRef.current);
-    return () => observer.disconnect();
-  }, [pages]);
-
-  measurementRefs.current = [];
-  const pageStyle = largestPageHeight ? { "--anomaly-page-height": `${largestPageHeight}px` } : undefined;
-
   return (
-    <section className="tor-anomaly-card tor-anomaly-pagination-card" ref={cardRef}>
+    <section className="tor-anomaly-card tor-anomaly-pagination-card">
       <p className="tor-section-kicker">วิเคราะห์โดย Vertex AI Gemini Flash</p>
       <h2>ข้อกำหนดที่ควรตรวจสอบ</h2>
       {hasAnomaly ? (
@@ -56,7 +37,7 @@ export default function DocumentObservationsCard({ anomalies }) {
           )}
           {flaggedClauses.length ? (
             <>
-              <ul className="tor-anomaly-list" style={pageStyle}>
+              <ul className="tor-anomaly-list">
                 {visibleItems.map((clause, index) => (
                   <DocumentObservationItem
                     clauseText={clause.clause_text}
@@ -71,25 +52,6 @@ export default function DocumentObservationsCard({ anomalies }) {
                   />
                 ))}
               </ul>
-
-              <div className="anomaly-page-measurements" aria-hidden="true">
-                {pages.map((observationPage, pageIndex) => (
-                  <ul
-                    className="tor-anomaly-list anomaly-list-measurement"
-                    key={`measurement-page-${pageIndex}`}
-                    ref={(element) => { measurementRefs.current[pageIndex] = element; }}
-                  >
-                    {observationPage.map((clause, index) => (
-                      <li className="tor-observation-item" key={`${clause.clause_text}-${index}`}>
-                        <div className="tor-observation-toggle">
-                          <strong>{clause.clause_text}</strong>
-                          <span>แสดงรายละเอียด ↓</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ))}
-              </div>
 
               {totalPages > 1 && (
                 <nav className="tor-qualification-pagination tor-anomaly-pagination" aria-label="หน้าข้อสังเกตจากเอกสาร">

@@ -1,4 +1,5 @@
 export type TorStatus = "Active" | "Superseded" | "Invalid" | "Cancelled";
+export type TorStage = "draft" | "official" | "review" | "closed";
 
 export interface BudgetAnomaly {
   baselinePrice: number;
@@ -56,6 +57,8 @@ export interface PaginatedList<T> {
 export interface TorListParams {
   isSoftware?: boolean;
   status?: TorStatus;
+  stage?: TorStage;
+  biddingStatus?: "open" | "closed" | "unknown";
   agency?: string;
   page?: number;
   pageSize?: number;
@@ -89,13 +92,45 @@ export interface TorApiClassification {
   confidence: number | null;
 }
 
+export type TorBiddingStatus = "open" | "closed" | "cancelled" | "unknown";
+
+export interface TorApiBidding {
+  status: TorBiddingStatus;
+  /** Ingestion phase from tender.status, kept separate from status above. */
+  phase: string | null;
+  opensAt: string | null;
+  closesAt: string | null;
+  submissionDate: string | null;
+  submissionStartTime: string | null;
+  submissionEndTime: string | null;
+  invitationUrl: string | null;
+  method: string | null;
+}
+
+export interface TorApiDocument {
+  id: string | null;
+  type: string;
+  filename: string | null;
+  /** Public e-GP source link; local and cloud storage paths are never exposed. */
+  sourceUrl: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  status: string | null;
+  version: number | null;
+  isCurrentPrimary: boolean;
+}
+
 export interface TorApiListItem {
+  fiscalBudget?: TorApiFiscalBudget | null;
   id: string;
   title: string;
   agency: string;
-  budget: number;
+  budget: number | null;
   projectStatus: string;
+  bidding: TorApiBidding;
   announceDate: string | null;
+  contractStart: string | null;
+  contractEnd: string | null;
   isSoftware: boolean | null;
   classification: TorApiClassification;
   documentStatus: string | null;
@@ -114,6 +149,12 @@ export interface TorApiListResponse {
   limit: number;
   total: number;
   data: TorApiListItem[];
+}
+
+export interface TorApiFacetsResponse {
+  status: "success";
+  total: number;
+  agencies: Array<{ name: string; count: number }>;
 }
 
 export type TorApiAnomaly =
@@ -149,9 +190,11 @@ export interface TorApiDetail {
   id: string;
   title: string;
   agency: { name: string; subName: string | null };
-  budget: number;
+  budget: number | null;
   projectStatus: string;
+  bidding: TorApiBidding;
   pdfUrl: string | null;
+  documents: { tor: TorApiDocument | null; announcement: TorApiDocument | null };
   createdAt: string | null;
   updatedAt: string | null;
   timeline: {
