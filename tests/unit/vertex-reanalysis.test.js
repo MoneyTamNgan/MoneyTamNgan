@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { reanalyzeStoredProject } from '../lib/vertex/reanalyze-project.js';
-import { TOR_PROMPT_VERSION } from '../lib/vertex/response-schema.js';
+import { reanalyzeStoredProject } from '../../lib/vertex/reanalyze-project.js';
+import { TOR_PROMPT_VERSION } from '../../lib/vertex/response-schema.js';
 
 const lean = value => ({ lean: async () => value });
 

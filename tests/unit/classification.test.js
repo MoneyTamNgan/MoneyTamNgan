@@ -5,7 +5,7 @@ import {
     classifyTor,
     applySoftwareFlag,
     DEFAULT_SOFTWARE_KEYWORDS,
-} from './classification.js';
+} from '../../lib/classification.js';
 
 test('classifies an obvious software TOR as is_software: true', () => {
     const { is_software, classification_confidence } = classifyTor({

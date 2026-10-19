@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveFiscalBudget, validateFiscalYearEvidence } from '../lib/fiscal-budget.js';
-import { extractTorWithVertex } from '../lib/vertex/tor-extractor.js';
+import { resolveFiscalBudget, validateFiscalYearEvidence } from '../../lib/fiscal-budget.js';
+import { extractTorWithVertex } from '../../lib/vertex/tor-extractor.js';
 
 test('extracts explicit fiscal years and Thai/OCR-spaced digits', () => {
     for (const text of ['ปีงบประมาณ 2569', 'ปีงบประมาณ พ.ศ. ๒๕๗๐', 'ปี งบ ประมาณ 2 5 6 9', 'ปีงบประมาณ\n2569']) {

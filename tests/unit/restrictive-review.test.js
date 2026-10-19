@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
-import Project from '../models/Project.js';
-import { prepareReadablePages } from '../lib/vertex/readable-pages.js';
-import { extractTorWithVertex } from '../lib/vertex/tor-extractor.js';
-import { projectFlaggedClauseFields, MAX_PROJECT_FLAGS } from '../lib/flagged-clauses.js';
-import { persistSummaryBundle } from '../lib/mongo-artifacts.js';
-import { reanalyzeStoredProject } from '../lib/vertex/reanalyze-project.js';
+import Project from '../../models/Project.js';
+import { prepareReadablePages } from '../../lib/vertex/readable-pages.js';
+import { extractTorWithVertex } from '../../lib/vertex/tor-extractor.js';
+import { projectFlaggedClauseFields, MAX_PROJECT_FLAGS } from '../../lib/flagged-clauses.js';
+import { persistSummaryBundle } from '../../lib/mongo-artifacts.js';
+import { reanalyzeStoredProject } from '../../lib/vertex/reanalyze-project.js';
 
 const cert = 'ผู้เสนอราคาต้องเป็น AcmeERP Platinum Partner เท่านั้น ไม่รับใบรับรองเทียบเท่า';
 const team = 'ต้องมีวิศวกรอาวุโส 150 คนประจำเต็มเวลา สำหรับเว็บส่งออก CSV ผู้ใช้ 10 คน';
