@@ -24,6 +24,8 @@ async function fixture(t) {
     process.env.VERTEX_AI_ENABLED = 'false';
     t.after(() => { if (old === undefined) delete process.env.VERTEX_AI_ENABLED; else process.env.VERTEX_AI_ENABLED = old; });
     const dependencies = {
+        verifyEligibility: async () => ({ status: 'open', reason: 'Verified test fixture',
+            bid_deadline: new Date('2030-01-01T00:00:00Z'), checked_at: new Date() }),
         persist: async () => ({ sha256: 'pdf-hash', size: 10, gcsUri: null }),
         hashSource: async () => ({ sha256: 'pdf-hash', size: 10 }),
         cleanupSource: async () => {},
@@ -56,6 +58,50 @@ async function fixture(t) {
     return { record, updates, dependencies, normalizedWrites };
 }
 
+for (const eligibilityStatus of ['closed', 'unknown', 'not_yet_open']) {
+    test(`worker skips OCR and Vertex when procurement is ${eligibilityStatus}`, async t => {
+        const { record, dependencies, normalizedWrites, updates } = await fixture(t);
+        dependencies.verifyEligibility = async () => ({ status: eligibilityStatus, reason: 'Fixture' });
+        dependencies.extractText = async () => { throw new Error('Must not run OCR'); };
+        const result = await processProject(record.project_id, {}, dependencies);
+        assert.equal(result.eligibility.status, eligibilityStatus);
+        assert.equal(normalizedWrites.ocr, 0);
+        assert.equal(normalizedWrites.summary, 0);
+        assert.ok(updates.some(update => update.$set?.procurement_eligibility?.status === eligibilityStatus));
+    });
+}
+
+test('Vertex retry uses matching stored OCR without downloading or extracting again', async t => {
+    const { record, dependencies } = await fixture(t);
+    record.primary_document_id = 'document-test';
+    record.latest_extraction_run_id = 'run-test';
+    dependencies.ExtractionRunModel = { findById: () => ({ lean: async () => ({
+        _id: 'run-test', document_id: 'document-test', status: 'completed',
+    }) }) };
+    process.env.VERTEX_AI_ENABLED = 'true';
+    dependencies.verifyEligibility = async () => assert.fail('Stored-text analysis needs no new government request');
+    dependencies.extractText = async () => assert.fail('OCR must not repeat');
+    dependencies.acquireDocument = async () => assert.fail('Download must not repeat');
+    dependencies.resumeAnalysis = async () => ({ status: 'completed', reused: true });
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(result.resumedOcr, true);
+    assert.equal(result.status, 'completed');
+});
+test('disabling Vertex never downgrades a matching completed stored summary', async t => {
+    const { record, dependencies } = await fixture(t);
+    record.primary_document_id = 'document-test';
+    record.latest_extraction_run_id = 'run-test';
+    dependencies.ExtractionRunModel = { findById: () => ({ lean: async () => ({
+        _id: 'run-test', document_id: 'document-test', status: 'completed',
+    }) }) };
+    dependencies.SummaryModel = { findOne: () => ({ lean: async () => ({ _id: 'summary-test' }) }) };
+    dependencies.resumeAnalysis = async () => ({ status: 'completed', reused: true });
+    dependencies.extractText = async () => assert.fail('OCR must not repeat');
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(result.status, 'completed');
+    assert.equal(result.reused, true);
+});
+
 test('stored PDF resumes at OCR and waits for Vertex configuration with durable progress', async t => {
     const { updates, dependencies } = await fixture(t);
     const result = await processProject('68019088742', { allowBrowserFallback: false }, dependencies);
@@ -87,7 +133,23 @@ test('empty OCR output is sent to review without a Vertex call', async t => {
         pageCount: 1, textHash: 'empty', fingerprint: 'test', needsReview: true });
     const result = await processProject('68019088742', {}, dependencies);
     assert.equal(result.status, 'review_required');
-    assert.match(updates.at(-1).$set['processing.error'], /No usable text/);
+    assert.equal(result.reason, 'document_unreadable');
+    assert.equal(result.retryable, false);
+    assert.equal(updates.at(-1).$set['processing.error'], null);
+    assert.equal(updates.at(-1).$set.flagged_clauses_meta.analysis_status, 'unreadable');
+});
+
+test('partial readable coverage keeps an otherwise confident analysis in review', async t => {
+    const { dependencies } = await fixture(t);
+    process.env.VERTEX_AI_ENABLED = 'true';
+    dependencies.extractWithVertex = async () => ({ model: 'test', promptVersion: TOR_PROMPT_VERSION,
+        usage: { inputTokens: 1, outputTokens: 1 }, extraction: {
+            summary: 'สรุปเฉพาะส่วนที่อ่านได้', qualifications: [], scope_of_work: [], tech_stack: [],
+            flagged_clauses: [], risk_findings: [], confidence: 0.99,
+            analysis_coverage: { status: 'partial', skipped_pages: [{ page_number: 2, reason: 'unreadable_text' }] },
+        } });
+    const result = await processProject('68019088742', {}, dependencies);
+    assert.equal(result.status, 'review_required');
 });
 
 test('new OCR quality flags override a cached completed summary and persist page warnings', async t => {
@@ -117,7 +179,7 @@ for (const needsReview of [false, true]) {
         dependencies.extractWithVertex = async ({ pages }) => {
             assert.equal(pages[0].page_number, 1);
             return { extraction: { summary: 'สรุปทดสอบ', qualifications: [{ value: 'ประสบการณ์', page: 1 }],
-                scope_of_work: [], tech_stack: [], flagged_clauses: [], confidence: 1 },
+                scope_of_work: [], tech_stack: [], flagged_clauses: [], risk_findings: [], confidence: 1 },
                 model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
                 usage: { inputTokens: 100, outputTokens: 50 } };
         };
@@ -132,6 +194,23 @@ for (const needsReview of [false, true]) {
         assert.equal(result.documentSummaryId, 'summary-test');
     });
 }
+
+test('a high-severity procurement risk is persisted and requires review', async t => {
+    const { record, dependencies, normalizedWrites } = await fixture(t);
+    process.env.VERTEX_AI_ENABLED = 'true';
+    dependencies.extractWithVertex = async () => ({
+        extraction: { summary: 'สรุป', qualifications: [], scope_of_work: [], tech_stack: [],
+            flagged_clauses: [], risk_findings: [{ category: 'vendor_lock_in', severity: 'high',
+                clause_text: 'ต้องใช้ Brand X เท่านั้น', explanation: 'จำกัดผู้ขายโดยไม่มีทางเลือกเทียบเท่า',
+                highlight_reason: 'ระบุผลิตภัณฑ์รายเดียว', page: 1, confidence: 0.95 }],
+            confidence: 0.95, document_language: 'th' },
+        model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
+        usage: { inputTokens: 20, outputTokens: 10 },
+    });
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(result.status, 'review_required');
+    assert.equal(normalizedWrites.vertex.extraction.risk_findings[0].highlight_reason, 'ระบุผลิตภัณฑ์รายเดียว');
+});
 
 test('Vertex failure records retry state while preserving completed OCR', async t => {
     const { updates, dependencies } = await fixture(t);
@@ -148,7 +227,7 @@ test('normalized dual-write mode uses transactional OCR and summary bundles', as
     process.env.VERTEX_AI_ENABLED = 'true';
     dependencies.extractWithVertex = async () => ({
         extraction: { summary: 'สรุป', qualifications: [], scope_of_work: [],
-            tech_stack: [], flagged_clauses: [], confidence: 0.9 },
+            tech_stack: [], flagged_clauses: [], risk_findings: [], confidence: 0.9 },
         model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
         usage: { inputTokens: 10, outputTokens: 5 },
     });
