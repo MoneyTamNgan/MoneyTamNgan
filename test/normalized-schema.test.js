@@ -171,21 +171,55 @@ test('compatibility mapper preserves legacy reads and can hydrate normalized rec
 
     const models = {
         DocumentModel: { find: () => query([{ _id: project.primary_document_id,
-            source_url: 'normalized-url', filename: 'tor.pdf', sha256: 'pdf',
+            source_url: 'normalized-url', filename: 'tor.pdf', sha256: 'pdf', version: 3,
+            is_current_primary: true,
             storage: { backend: 'remote', mime_type: 'application/pdf', size_bytes: 12 } }]) },
         ExtractionRunModel: { find: () => query([{ _id: project.latest_extraction_run_id,
+            document_id: project.primary_document_id,
             text_sha256: 'text', page_count: 2, ocr_pages: 2, status: 'completed' }]) },
         SummaryModel: { find: () => query([{ _id: project.latest_summary_id,
+            document_id: project.primary_document_id, extraction_run_id: project.latest_extraction_run_id,
             model: 'gemini', model_version: '2.5', prompt_version: 'v1',
-            extraction: { summary: 'normalized', qualifications: [], scope_of_work: [], tech_stack: [] },
+            extraction: { summary: 'normalized', qualifications: [], scope_of_work: [], tech_stack: [],
+                flagged_clauses: [], risk_findings: [{ category: 'excessive_hardware', severity: 'medium',
+                    clause_text: 'ต้องมีเครื่องแม่ข่าย 100 เครื่อง', explanation: 'จำนวนสูงกว่าขอบเขตที่ระบุ',
+                    highlight_reason: 'จำนวนอุปกรณ์ไม่สัมพันธ์กับภาระงาน', page: 4, confidence: 0.87 }] },
             usage: {}, confidence: 0.9 }]) },
     };
     const [normalized] = await hydrateProjectsCompatibility([project], models, { enabled: true });
     assert.equal(normalized.pdf_url, 'normalized-url');
     assert.equal(normalized.extracted_data.summary, 'normalized');
     assert.equal(normalized.document.text_sha256, 'text');
+    assert.deepEqual(normalized.version_info, {
+        version: 3,
+        is_latest: true,
+        superseded_by: null,
+    });
+    assert.deepEqual(normalized.anomalies.flagged_clauses[0], {
+        category: 'excessive_hardware', severity: 'medium',
+        clause_text: 'ต้องมีเครื่องแม่ข่าย 100 เครื่อง',
+        reason: 'จำนวนสูงกว่าขอบเขตที่ระบุ', explanation: 'จำนวนสูงกว่าขอบเขตที่ระบุ',
+        highlight_reason: 'จำนวนอุปกรณ์ไม่สัมพันธ์กับภาระงาน', page: 4, confidence: 0.87,
+    });
     assert.equal(normalized.processing.status, 'completed');
     assert.equal(Object.hasOwn(normalized, 'latest_summary_id'), false);
+});
+
+test('stale OCR and summary pointers cannot leak previous PDF content through the API', async () => {
+    const project = { project_id: '67000000001', primary_document_id: 'new-document',
+        latest_extraction_run_id: 'old-run', latest_summary_id: 'old-summary',
+        extracted_data: { summary: 'stale legacy summary' },
+        workflow: { status: 'completed' }, processing: { status: 'retry_pending' } };
+    const result = await hydrateProjectCompatibility(project, {
+        DocumentModel: { find: () => query([{ _id: 'new-document', sha256: 'new-hash', source_url: 'new-url' }]) },
+        ExtractionRunModel: { find: () => query([{ _id: 'old-run', document_id: 'old-document' }]) },
+        SummaryModel: { find: () => query([{ _id: 'old-summary', document_id: 'old-document',
+            extraction_run_id: 'old-run', extraction: { summary: 'old PDF summary' } }]) },
+    });
+    assert.equal(result.pdf_url, 'new-url');
+    assert.equal(result.extracted_data, undefined);
+    assert.equal(result.ocr, undefined);
+    assert.equal(result.processing.status, 'retry_pending');
 });
 
 test('job enqueue resolves a concurrent duplicate through the active key', async t => {

@@ -23,6 +23,8 @@ import Document from '../models/Document.js';
 import { hashFile } from '../lib/document-storage.js';
 import { persistPdfRecords } from '../lib/mongo-artifacts.js';
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
+import { loadKeywordSets } from '../lib/keywords.js';
+import { verifySoftwareProcurement } from '../lib/procurement-eligibility.js';
 
 // ── Parse CLI arguments ──
 function parseArgs() {
@@ -85,6 +87,12 @@ async function main() {
         // Single project mode
         console.log(`🔍 Scraping single project: ${projectId}`);
         const existingProject = await Project.findOne({ project_id: projectId }).lean();
+        const admission = await verifySoftwareProcurement(existingProject, await loadKeywordSets());
+        if (!admission.allowed) {
+            console.log(`Skipped ${projectId}: ${admission.reason}`);
+            await mongoose.disconnect();
+            return;
+        }
         const existingDocument = existingProject?.primary_document_id
             ? await Document.findById(existingProject.primary_document_id).lean()
             : null;
@@ -112,10 +120,17 @@ async function main() {
         }
     } else {
         // Batch mode
-        const projects = await Project.find({ primary_document_id: { $exists: false } })
-            .select('project_id project_name primary_document_id')
+        const candidates = await Project.find({ primary_document_id: { $exists: false } })
+            .select('project_id project_name is_software classification timeline project_status primary_document_id')
             .limit(limit)
             .lean();
+        const projects = [];
+        const keywordSets = await loadKeywordSets();
+        for (const project of candidates) {
+            const admission = await verifySoftwareProcurement(project, keywordSets);
+            if (admission.allowed) projects.push(project);
+            else console.log(`Skipped ${project.project_id}: ${admission.reason}`);
+        }
 
         if (projects.length === 0) {
             console.log('✅ All projects already have stored TOR files. Nothing to scrape.');

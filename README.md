@@ -103,6 +103,20 @@ If `atlas-allowlist` fails with `401`, the API key or project ID is wrong. If
 it fails with `403`, the key lacks the Project Owner role, or the key has its
 own API access list that doesn't include your IP.
 
+**Do I still need to add IPs in Atlas by hand?** No, not as long as you start
+Docker with `docker-compose.atlas.yml`:
+
+- Every start adds your current IP. If your network changes (home, campus,
+  café), start the stack again and the new IP is allowed.
+- Each entry expires `ATLAS_ALLOWLIST_TTL_HOURS` (default 7 days) after the
+  last start, so old IPs clean themselves up.
+- The IP is only added at startup. If your IP changes while the containers are
+  running, the app loses its connection to Atlas; run the `up` command again.
+- For `npm run dev` without Docker, run `scripts/atlas-allow-ip.sh` first (see
+  above).
+- Plain `docker compose up` (without the Atlas file) uses the local `mongo`
+  container and never touches Atlas, so no IP is needed.
+
 `Dockerfile` builds the Next.js app; `Dockerfile.worker` is shared by
 `scraper` and `worker` and additionally installs Chromium, Poppler, and
 Tesseract (with Thai data) for document acquisition and OCR.
@@ -121,6 +135,10 @@ changes through the automated promotion below.
    `github-actions[bot]`, and enables auto-merge.
 3. **Auto-merge:** when main's required checks pass on that PR, GitHub merges
    it into `main` with a merge commit.
+
+After each promotion lands, `.github/workflows/sync-develop.yml`
+fast-forwards `develop` to `main`, so the promotion merge commit is on both
+branches and `develop` never shows as behind `main`.
 
 Protection on `main`: pull request required with 1 approval, required checks
 `Build`, `Test (mocked data)`, `API contract` and `health-check`, no force
@@ -267,14 +285,37 @@ GOOGLE_CLOUD_PROJECT=your-project
 GOOGLE_CLOUD_LOCATION=global
 VERTEX_AI_ENABLED=true
 VERTEX_MODEL=gemini-2.5-flash
+VERTEX_TIMEOUT_MS=300000
 ```
 
 Vertex now receives text rather than PDF bytes. Long text is split into bounded
 chunks; their Thai summaries are joined and duplicate evidence is removed.
+Each chunk has a bounded five-minute request timeout by default; adjust
+`VERTEX_TIMEOUT_MS` if the deployed model or region has different latency.
 Vertex responses use a fixed JSON schema
 and are validated before database updates. Results below
 `VERTEX_REVIEW_THRESHOLD` enter `review_required` instead of being silently
 accepted.
+
+The versioned risk prompt also returns page-backed procurement risk findings for
+unrealistic tenure or experience requirements, excessive hardware demands, and
+vendor lock-in. Each finding stores the exact clause, severity, explanation,
+short highlight reason, page number, and confidence in the immutable
+`documentsummaries.extraction.risk_findings` array. High-severity findings enter
+`review_required`; they are observations for human review, not legal findings.
+
+Re-run Vertex against OCR pages already stored in MongoDB without scraping,
+downloading, or OCRing the PDF again:
+
+```bash
+npm run vertex:reanalyze -- 66089621504
+```
+
+Add `--full` after the project ID to print the complete structured extraction.
+
+The prompt version is part of the summary identity, so the first run of a new
+prompt creates a historical summary and repeated runs of that version reuse it
+idempotently.
 
 ## Thai OCR setup and operation
 
