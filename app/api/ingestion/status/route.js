@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
+import DiscoveryCandidate from '@/models/DiscoveryCandidate';
 import { NextResponse } from 'next/server';
 
 /**
@@ -14,6 +15,11 @@ export async function GET() {
         await connectDB();
 
         const totalProjects = await Project.countDocuments();
+        const [candidateCounts, pendingCandidates] = await Promise.all([
+            DiscoveryCandidate.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+            DiscoveryCandidate.find({ status: { $in: ['pending', 'review_required', 'not_yet_open'] } })
+                .sort({ updated_at: -1 }).limit(20).select('project_id status eligibility classification error updated_at').lean(),
+        ]);
 
         // Find the most recently updated project
         const lastProject = await Project.findOne()
@@ -24,6 +30,8 @@ export async function GET() {
         return NextResponse.json({
             status: 'ok',
             totalProjects,
+            candidates: Object.fromEntries(candidateCounts.map(item => [item._id, item.count])),
+            pendingCandidates,
             lastIngestedAt: lastProject?.updated_at || null,
             lastProjectId: lastProject?.project_id || null,
         });

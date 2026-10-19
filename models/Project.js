@@ -1,18 +1,75 @@
 import mongoose from 'mongoose';
 
+function requiredUnlessRss() { return this.source?.provider !== 'egp_rss'; }
+
 const ProjectSchema = new mongoose.Schema({
     project_id: { type: String, required: true, unique: true, index: true },
     project_name: { type: String, required: true },
-    dept_name: { type: String, required: true },
+    dept_name: { type: String, required: requiredUnlessRss },
     dept_sub_name: { type: String },
-    budget: { type: Number, required: true },
+    budget: { type: Number, required: requiredUnlessRss },
     project_status: { type: String, default: 'Active' },
     is_software: { type: Boolean, default: null, index: true },
+    procurement_eligibility: {
+        status: { type: String, enum: ['open', 'closed', 'not_yet_open', 'unknown'], index: true },
+        reason: String,
+        bid_deadline: Date,
+        checked_at: Date,
+        source_url: String,
+    },
     // Canonical normalized references. Document, OCR, and summary content live
     // in their own versioned collections.
     primary_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
     latest_extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun', index: true },
     latest_summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary', index: true },
+
+    // Invitation PDF (ประกาศเชิญชวน), paired with the primary TOR document.
+    announcement_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
+    // Date-only values stay strings; timed values are absolute Bangkok instants.
+    bidding_date: {
+        type: new mongoose.Schema({
+            date: String, time: String, at: Date,
+            kind: { type: String, enum: ['bid_submission', 'bid_opening'] },
+            timezone: String,
+        }, { _id: false }), default: null,
+    },
+    submission_schedule: {
+        type: new mongoose.Schema({
+            date: String, start_time: String, end_time: String,
+            starts_at: Date, ends_at: Date, timezone: String,
+        }, { _id: false }), default: null,
+    },
+    announcement_schedule: {
+        parser_version: String,
+        status: { type: String, enum: ['parsed', 'not_found', 'needs_review'] },
+        document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+        source_url: String, extraction_method: String, text_sha256: String,
+        extracted_at: Date, error: String, warnings: [String],
+        evidence: [{ _id: false, kind: String, date: String, time: String,
+            start_time: String, end_time: String, page: Number, text: String }],
+    },
+
+    // Open-tender state from the e-GP announcement feed and invitation PDF.
+    tender: {
+        status: {
+            type: String,
+            enum: ['draft_open', 'bidding_open', 'open', 'closed', 'cancelled', 'unknown'],
+            index: true,
+        },
+        rss_dept_id: String,
+        method: String,
+        draft_url: String,
+        invitation_url: String,
+        published_at: Date,
+        submission_date: String,
+        submission_start_time: String,
+        submission_end_time: String,
+        closes_at: { type: Date, index: true },
+        reference_price: Number,
+        tor_route: { type: String, enum: ['feed', 'browser'] },
+        checked_at: Date,
+        error: String,
+    },
 
     timeline: {
         announce_date: { type: Date },
@@ -21,9 +78,21 @@ const ProjectSchema = new mongoose.Schema({
         duration_days: { type: Number }
     },
     source: {
+        rss_dept_id: String,
         provider: { type: String, default: 'egp_open_data' },
         fetched_at: { type: Date },
         payload_hash: { type: String },
+    },
+
+    // Parsed submission session. These timestamps are the source of truth for
+    // live bidding availability because they preserve the exact Bangkok time.
+    submission_schedule: {
+        date: String,
+        start_time: String,
+        end_time: String,
+        starts_at: Date,
+        ends_at: Date,
+        timezone: { type: String, default: 'Asia/Bangkok' },
     },
 
     classification: {
@@ -56,6 +125,14 @@ const ProjectSchema = new mongoose.Schema({
             index: true,
         },
         attempts: { type: Number, default: 0, min: 0 },
+        error_code: {
+            type: String,
+            enum: [
+                'document_not_published', 'temporary_timeout', 'resolver_failed',
+                'anti_bot_blocked', 'unsupported_layout', 'download_failed',
+                'archive_invalid', 'failed',
+            ],
+        },
         error: { type: String },
     },
 
@@ -64,8 +141,23 @@ const ProjectSchema = new mongoose.Schema({
         budget_deviation_multiplier: { type: Number, default: 1.0 },
     },
 
+    // Current risk read cache, atomically linked to the versioned summary below.
+    flagged_clauses: [{ _id: false, clause_text: String, reason: String, explanation: String,
+        highlight_reason: String, page: Number, category: String, severity: String, confidence: Number }],
+    flagged_clauses_meta: {
+        summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary' },
+        document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document' },
+        extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun' },
+        prompt_version: String, model: String,
+        analysis_status: { type: String, enum: ['complete', 'partial', 'unreadable'] },
+        skipped_pages: [{ _id: false, page_number: Number, reason: String }],
+        warnings: [{ _id: false, code: String, page: Number, field: String }],
+        total_flags: Number, truncated: Boolean, updated_at: Date,
+    },
+
     workflow: {
         status: { type: String, index: true },
+        error_code: String,
         error: String,
         updated_at: Date,
     }

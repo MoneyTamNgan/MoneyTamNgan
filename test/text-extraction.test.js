@@ -30,7 +30,7 @@ test('long pages split without losing text or source page numbers', () => {
 });
 
 test('Vertex evidence cannot reference another chunk or omit a page', () => {
-    const make = page => ({ qualifications: [{ value: 'test', page }], scope_of_work: [], tech_stack: [], flagged_clauses: [] });
+    const make = page => ({ qualifications: [{ value: 'test', page }], scope_of_work: [], tech_stack: [], flagged_clauses: [], risk_findings: [] });
     assert.throws(() => validatePageEvidence(make(4), [{ page_number: 3 }]), /invalid source page/);
     assert.throws(() => validatePageEvidence(make(undefined), [{ page_number: 3 }]), /invalid source page/);
     assert.doesNotThrow(() => validatePageEvidence(make(3), [{ page_number: 3 }]));
@@ -77,7 +77,7 @@ test('Vertex receives text only and rejects truncated responses', async t => {
     process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
     t.after(() => { if (oldProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT; else process.env.GOOGLE_CLOUD_PROJECT = oldProject; });
     const extraction = { summary: 'สรุป', qualifications: [{ value: 'ทดสอบ', page: 1 }],
-        scope_of_work: [], tech_stack: [], flagged_clauses: [], confidence: 0.9, document_language: 'th' };
+        scope_of_work: [], tech_stack: [], flagged_clauses: [], risk_findings: [], confidence: 0.9, document_language: 'th' };
     let finishReason = 'STOP';
     const dependencies = {
         headers: async () => new Headers({ Authorization: 'Bearer test' }),
@@ -101,12 +101,16 @@ test('Vertex merges multiple chunks, preserves evidence, and totals usage', asyn
     process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
     t.after(() => { if (old === undefined) delete process.env.GOOGLE_CLOUD_PROJECT; else process.env.GOOGLE_CLOUD_PROJECT = old; });
     let calls = 0;
-    const result = await extractTorWithVertex({ pages: [{ page_number: 1, text: 'ก'.repeat(25000) }] }, {
+    const clause = 'ต้องใช้ Brand X เท่านั้น';
+    const result = await extractTorWithVertex({ pages: [{ page_number: 1, text: clause.padEnd(24000, 'ก') + clause }] }, {
         headers: async () => ({}),
         fetchImpl: async () => {
             calls++;
             const extraction = { summary: `chunk ${calls}`, qualifications: [{ value: 'shared', page: 1 }],
                 scope_of_work: [{ value: `scope ${calls}`, page: 1 }], tech_stack: [], flagged_clauses: [],
+                risk_findings: [{ category: 'vendor_lock_in', severity: calls === 1 ? 'medium' : 'high',
+                    clause_text: 'ต้องใช้ Brand X เท่านั้น', explanation: `reason ${calls}`,
+                    highlight_reason: `highlight ${calls}`, page: 1, confidence: calls === 1 ? 0.7 : 0.9 }],
                 confidence: calls === 1 ? 0.9 : 0.7, document_language: 'th' };
             return { ok: true, json: async () => ({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(extraction) }] } }],
                 usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 20 } }) };
@@ -116,6 +120,9 @@ test('Vertex merges multiple chunks, preserves evidence, and totals usage', asyn
     assert.equal(result.extraction.summary, 'chunk 1\n\nchunk 2');
     assert.equal(result.extraction.qualifications.length, 1);
     assert.equal(result.extraction.scope_of_work.length, 2);
+    assert.equal(result.extraction.risk_findings.length, 1);
+    assert.equal(result.extraction.risk_findings[0].severity, 'high');
+    assert.equal(result.extraction.risk_findings[0].confidence, 0.9);
     assert.equal(result.extraction.confidence, 0.7);
     assert.deepEqual(result.usage, { inputTokens: 20, outputTokens: 40 });
 });

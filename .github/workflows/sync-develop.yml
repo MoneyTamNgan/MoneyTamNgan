@@ -1,0 +1,34 @@
+name: Sync develop with main
+
+# Each develop -> main promotion leaves a merge commit that only exists on
+# main. Fast-forward develop to it so the two branches stay identical. Pushed
+# with GITHUB_TOKEN, which doesn't trigger CI on develop again, so this
+# can't loop back into another promotion.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-develop
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward develop to main
+        run: |
+          git fetch origin main develop
+          if git merge-base --is-ancestor origin/develop origin/main; then
+            git push origin origin/main:refs/heads/develop
+          else
+            echo "develop has commits that main doesn't; skipping (the next promotion will bring main up to date)"
+          fi

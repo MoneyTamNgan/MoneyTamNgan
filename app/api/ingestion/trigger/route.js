@@ -2,6 +2,11 @@ import connectDB from '@/lib/db';
 import { buildProjectUpsert, fetchAllFromEGP } from '@/lib/egp-api';
 import { enqueueProject } from '@/lib/job-queue';
 import Project from '@/models/Project';
+import DiscoveryCandidate from '@/models/DiscoveryCandidate';
+import { classifyProjectMetadata } from '@/lib/classifier';
+import { loadKeywordSets } from '@/lib/keywords';
+import { assessProcurementEligibility, currentThaiFiscalYear, verifyProcurementEligibility } from '@/lib/procurement-eligibility';
+import { verifyProcurementWithAnnouncement } from '@/lib/project-announcement';
 import { NextResponse } from 'next/server';
 
 /**
@@ -26,11 +31,14 @@ export async function POST(request) {
             // No body provided — use defaults
         }
 
-        const { year = '2568', keyword, limit, deptCode, enqueueProcessing = false } = body;
-        if (typeof enqueueProcessing !== 'boolean') {
+        const { year = currentThaiFiscalYear(), keyword, limit, deptCode, rssDeptId, enqueueProcessing = false, verifyInline = false } = body;
+        if (typeof enqueueProcessing !== 'boolean' || typeof verifyInline !== 'boolean'
+            || !/^\d{4}$/.test(String(year))
+            || (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 1000))
+            || (rssDeptId !== undefined && !/^\d{4}$/.test(String(rssDeptId)))) {
             return NextResponse.json({
                 status: 'failed',
-                error: { code: 'INVALID_INGESTION_REQUEST', message: 'enqueueProcessing must be a boolean' },
+                error: { code: 'INVALID_INGESTION_REQUEST', message: 'Invalid year, limit, enqueueProcessing or verifyInline' },
             }, { status: 400 });
         }
 
@@ -45,12 +53,66 @@ export async function POST(request) {
         let itemsUpdated = 0;
         let itemsFailed = 0;
         let jobsQueued = 0;
+        let candidatesSaved = 0;
         const errors = [];
+        const skipped = { notSoftware: 0, uncertainSoftware: 0, closed: 0, notYetOpen: 0, unverified: 0 };
+        const skipExamples = [];
+        const keywordSets = await loadKeywordSets();
 
         // Upsert each record into MongoDB
-        for (const raw of rawRecords) {
+        for (const record of rawRecords) {
+            const raw = rssDeptId ? { ...record, rss_dept_id: String(rssDeptId) } : record;
             try {
+                const classification = classifyProjectMetadata({ project_name: raw.project_name }, keywordSets);
+                let skipReason = classification.isSoftware === false ? 'notSoftware'
+                    : classification.isSoftware !== true ? 'uncertainSoftware' : null;
+                if (!skipReason && !verifyInline) {
+                    const metadataEligibility = assessProcurementEligibility(raw);
+                    if (metadataEligibility.status === 'closed') {
+                        skipped.closed++;
+                        continue;
+                    }
+                    await DiscoveryCandidate.updateOne({ project_id: String(raw.project_id) }, { $set: {
+                        payload: raw, classification, eligibility: metadataEligibility, status: 'pending',
+                    } }, { upsert: true, runValidators: true });
+                    candidatesSaved++;
+                    if (enqueueProcessing) {
+                        const { reused } = await enqueueProject(raw.project_id, { type: 'verify_candidate' });
+                        if (!reused) jobsQueued++;
+                    }
+                    continue;
+                }
+                const eligibility = skipReason ? null : await verifyProcurementWithAnnouncement(raw, { verifyOfficial: verifyProcurementEligibility });
+                if (!skipReason && eligibility.status !== 'open') {
+                    skipReason = eligibility.status === 'closed' ? 'closed'
+                        : eligibility.status === 'not_yet_open' ? 'notYetOpen' : 'unverified';
+                }
+                if (skipReason) {
+                    if (['uncertainSoftware', 'unverified', 'notYetOpen'].includes(skipReason)) {
+                        await DiscoveryCandidate.updateOne({ project_id: String(raw.project_id) }, { $set: {
+                            payload: raw, classification, eligibility,
+                            status: skipReason === 'uncertainSoftware' ? 'review_required' : 'pending',
+                        } }, { upsert: true, runValidators: true });
+                        candidatesSaved++;
+                        if (enqueueProcessing && skipReason === 'unverified') {
+                            const { reused } = await enqueueProject(raw.project_id, { type: 'verify_candidate' });
+                            if (!reused) jobsQueued++;
+                        }
+                    }
+                    skipped[skipReason]++;
+                    if (skipExamples.length < 20) skipExamples.push({ project_id: raw.project_id,
+                        reason: skipReason, detail: eligibility?.reason || classification.reason });
+                    continue;
+                }
                 const { filter, update } = buildProjectUpsert(raw);
+                update.$set.procurement_eligibility = eligibility;
+                if (eligibility.announcement_url) update.$set['tender.invitation_url'] = eligibility.announcement_url;
+                if (eligibility.rss_dept_id) update.$set['tender.rss_dept_id'] = eligibility.rss_dept_id;
+                const current = await Project.findOne(filter).lean();
+                if (current?.classification?.status !== 'manual_override') {
+                    update.$set.is_software = true;
+                    delete update.$setOnInsert.is_software;
+                }
                 const existed = await Project.exists(filter);
                 await Project.findOneAndUpdate(filter, update, {
                     upsert: true,
@@ -64,7 +126,7 @@ export async function POST(request) {
                 } else {
                     itemsUpdated++;
                 }
-                if (enqueueProcessing) {
+                if (enqueueProcessing && !(current?.classification?.status === 'manual_override' && current.is_software !== true)) {
                     const { reused } = await enqueueProject(raw.project_id);
                     if (!reused) jobsQueued++;
                 }
@@ -86,6 +148,9 @@ export async function POST(request) {
             itemsUpdated,
             itemsFailed,
             jobsQueued,
+            candidatesSaved,
+            skipped,
+            skipExamples,
             errors: errors.slice(0, 10), // Only show first 10 errors
             completedAt: new Date().toISOString(),
         };
