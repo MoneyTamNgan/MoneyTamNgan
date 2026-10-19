@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { currentThaiFiscalYear, parseBidDeadline, assessProcurementEligibility, parseOfficialEligibilityHtml,
-    verifyProcurementEligibility, verifySoftwareProcurement } from '../lib/procurement-eligibility.js';
+    verifyProcurementEligibility, verifySoftwareProcurement } from '../../lib/procurement-eligibility.js';
 
 const now = new Date('2026-10-07T03:00:00Z');
 test('legacy scraper admission requires software metadata and current open evidence', async () => {

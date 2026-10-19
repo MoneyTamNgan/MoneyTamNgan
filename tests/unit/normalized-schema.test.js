@@ -6,17 +6,17 @@ import {
     linkExistingSummaryBundle,
     persistOcrBundle,
     persistSummaryBundle,
-} from '../lib/mongo-artifacts.js';
+} from '../../lib/mongo-artifacts.js';
 import {
     hydrateProjectCompatibility,
     hydrateProjectsCompatibility,
-} from '../lib/project-compat.js';
-import Document from '../models/Document.js';
-import DocumentPage from '../models/DocumentPage.js';
-import DocumentSummary from '../models/DocumentSummary.js';
-import ExtractionRun from '../models/ExtractionRun.js';
-import ProcessingJob from '../models/ProcessingJob.js';
-import { completeJob, enqueueProject } from '../lib/job-queue.js';
+} from '../../lib/project-compat.js';
+import Document from '../../models/Document.js';
+import DocumentPage from '../../models/DocumentPage.js';
+import DocumentSummary from '../../models/DocumentSummary.js';
+import ExtractionRun from '../../models/ExtractionRun.js';
+import ProcessingJob from '../../models/ProcessingJob.js';
+import { completeJob, enqueueProject } from '../../lib/job-queue.js';
 
 const query = value => ({ lean: async () => value });
 
