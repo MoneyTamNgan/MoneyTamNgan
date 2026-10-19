@@ -6,27 +6,27 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import test from 'node:test';
 import yazl from 'yazl';
-import { extractPdfsFromZip } from '../lib/archive-extractor.js';
-import { classifyProjectMetadata } from '../lib/classifier.js';
-import { hashFile, persistDocument, removeTransientDocuments } from '../lib/document-storage.js';
-import { validateRemoteDocumentUrl } from '../lib/document-resolver.js';
-import { buildProjectUpsert, fetchFromEGP, mapToProjectSchema, parseThaiDate } from '../lib/egp-api.js';
-import { parseAggregatorHtml } from '../lib/egp-aggregator.js';
-import { validateTorExtraction } from '../lib/vertex/response-schema.js';
+import { extractPdfsFromZip } from '../../lib/archive-extractor.js';
+import { classifyProjectMetadata } from '../../lib/classifier.js';
+import { hashFile, persistDocument, removeTransientDocuments } from '../../lib/document-storage.js';
+import { validateRemoteDocumentUrl } from '../../lib/document-resolver.js';
+import { buildProjectUpsert, fetchFromEGP, mapToProjectSchema, parseThaiDate } from '../../lib/egp-api.js';
+import { parseAggregatorHtml } from '../../lib/egp-aggregator.js';
+import { validateTorExtraction } from '../../lib/vertex/response-schema.js';
 import {
     EGP_DOCUMENT_LAYOUT,
     classifyScrapeFailure,
     detectEgpDocumentLayout,
     invitationAttachmentFromPayload,
     unresolvedDocumentLookupError,
-} from '../lib/scraper.js';
-import ProcessingJob from '../models/ProcessingJob.js';
-import Project from '../models/Project.js';
+} from '../../lib/scraper.js';
+import ProcessingJob from '../../models/ProcessingJob.js';
+import Project from '../../models/Project.js';
 import {
     configuredMongoDnsServers,
     isMongoSrvDnsError,
     mongoConnectionOptions,
-} from '../lib/mongo-network.js';
+} from '../../lib/mongo-network.js';
 
 const baseRecord = {
     project_id: '69069021440',

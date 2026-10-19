@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import mongoose from 'mongoose';
-import Project from '../models/Project.js';
-import { acquireTenderDocuments, createAcquisitionContext } from '../lib/tender-acquisition.js';
-import { collectOpenTenders, tenderStatus } from '../lib/egp-rss.js';
-import { parseAnnouncingAgency, parseInvitation, parseReferencePrice } from '../lib/egp-announcement.js';
-import { persistAnnouncementRecord } from '../lib/mongo-artifacts.js';
+import Project from '../../models/Project.js';
+import { acquireTenderDocuments, createAcquisitionContext } from '../../lib/tender-acquisition.js';
+import { collectOpenTenders, tenderStatus } from '../../lib/egp-rss.js';
+import { parseAnnouncingAgency, parseInvitation, parseReferencePrice } from '../../lib/egp-announcement.js';
+import { persistAnnouncementRecord } from '../../lib/mongo-artifacts.js';
 
 // pdftotext output from a real e-GP invitation (project 69099693138).
 const INVITATION_TEXT = [

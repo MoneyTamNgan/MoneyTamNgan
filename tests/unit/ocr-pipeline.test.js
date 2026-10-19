@@ -4,9 +4,9 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import mongoose from 'mongoose';
-import Project from '../models/Project.js';
-import { processProject } from '../lib/processing-pipeline.js';
-import { TOR_PROMPT_VERSION } from '../lib/vertex/response-schema.js';
+import Project from '../../models/Project.js';
+import { processProject } from '../../lib/processing-pipeline.js';
+import { TOR_PROMPT_VERSION } from '../../lib/vertex/response-schema.js';
 
 async function fixture(t) {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'tor-pipeline-test-'));

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeThaiDigits, thaiBahtWords, financialAmounts, moneyWarnings, financialDisagreement } from '../lib/ocr-quality.js';
-import { chooseOcrCandidate } from '../lib/text-extraction.js';
+import { normalizeThaiDigits, thaiBahtWords, financialAmounts, moneyWarnings, financialDisagreement } from '../../lib/ocr-quality.js';
+import { chooseOcrCandidate } from '../../lib/text-extraction.js';
 
 test('Thai currency words and digits agree for representative amounts', () => {
     assert.equal(normalizeThaiDigits('๘๐,๐๐๐,๐๐๐.๐๐'), '80,000,000.00');
