@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { findProjectInvitation, officialInvitationUrl, syncProjectAnnouncement, verifyProcurementWithAnnouncement } from '../lib/project-announcement.js';
-import { parseAnnouncementSchedule } from '../lib/announcement-schedule.js';
+import { findProjectInvitation, officialInvitationUrl, syncProjectAnnouncement, verifyProcurementWithAnnouncement } from '../../lib/project-announcement.js';
+import { parseAnnouncementSchedule } from '../../lib/announcement-schedule.js';
 const url = 'https://process5.gprocurement.go.th/egp-template-service/dwnt/view-pdf-file?templateId=test';
 const project = { _id: 'p', project_id: '67000000001', source: { rss_dept_id: '0304' }, primary_document_id: 'tor', latest_summary_id: 'summary' };
 const now = new Date('2026-10-07T00:00:00+07:00');

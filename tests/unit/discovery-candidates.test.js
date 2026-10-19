@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { verifyDiscoveryCandidate } from '../lib/discovery-candidates.js';
+import { verifyDiscoveryCandidate } from '../../lib/discovery-candidates.js';
 const lean = value => ({ lean: async () => value });
 
 for (const status of ['unknown', 'closed', 'open']) {
