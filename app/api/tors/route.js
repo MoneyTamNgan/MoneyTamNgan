@@ -2,42 +2,64 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { toTorListItem } from '@/lib/api/tor-response';
+
 import { hydrateProjectsCompatibility } from '@/lib/project-compat';
+import { parseDate, parseNonNegativeNumber, parsePositiveInteger, parseStage, parseBiddingStatus, stageFilter } from '@/lib/api/query-params';
 
 const MAX_LIMIT = 100;
+const CURRENT_TENDER_FILTER = { tender: { $exists: true, $ne: null } };
 
 function errorResponse(code, message, status = 400) {
     return NextResponse.json({ error: { code, message } }, { status });
 }
 
-export function parsePositiveInteger(value, fallback, name, max = Number.MAX_SAFE_INTEGER) {
-    if (value === null || value === '') return { value: fallback };
-    const parsed = Number(value);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > max) {
-        return { error: `${name} must be an integer between 1 and ${max}` };
-    }
-    return { value: parsed };
+function biddingDeadlineExpression() {
+    const submissionDate = { $ifNull: ['$tender.submission_date', '$submission_schedule.date'] };
+    const submissionEndTime = { $ifNull: ['$tender.submission_end_time', '$submission_schedule.end_time'] };
+    return {
+        $ifNull: [
+            '$submission_schedule.ends_at',
+            {
+                $ifNull: [
+                    {
+                        $dateFromString: {
+                            dateString: { $concat: [submissionDate, 'T', submissionEndTime, ':00'] },
+                            format: '%Y-%m-%dT%H:%M:%S',
+                            timezone: 'Asia/Bangkok',
+                            onError: null,
+                            onNull: null,
+                        },
+                    },
+                    '$tender.closes_at',
+                ],
+            },
+        ],
+    };
 }
 
-export function parseNonNegativeNumber(value, name) {
-    if (value === null || value === '') return { value: null };
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-        return { error: `${name} must be a non-negative number` };
-    }
-    return { value: parsed };
-}
+function biddingStatusPipeline(status, now = new Date()) {
+    if (!status) return [];
+    const notCancelled = {
+        $ne: [{ $toLower: { $ifNull: ['$tender.status', ''] } }, 'cancelled'],
+    };
+    // MongoDB comparison operators order null/missing values before Dates.
+    // Check the BSON type explicitly so missing or unparseable deadlines can
+    // never be treated as already closed.
+    const hasDeadline = { $eq: [{ $type: '$_biddingCloseAt' }, 'date'] };
+    const deadlineMatches = status === 'open'
+        ? { $gt: ['$_biddingCloseAt', now] }
+        : status === 'closed'
+            ? { $lte: ['$_biddingCloseAt', now] }
+            : { $eq: ['$_biddingCloseAt', null] };
 
-export function parseDate(value, name, endOfDay = false) {
-    if (!value) return { value: null };
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-        return { error: `${name} must be a valid ISO 8601 date` };
-    }
-    if (endOfDay && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        parsed.setUTCHours(23, 59, 59, 999);
-    }
-    return { value: parsed };
+    const conditions = status === 'unknown'
+        ? [{ $ne: [{ $type: '$_biddingCloseAt' }, 'date'] }]
+        : [notCancelled, hasDeadline, deadlineMatches];
+
+    return [
+        { $addFields: { _biddingCloseAt: biddingDeadlineExpression() } },
+        { $match: { $expr: { $and: conditions } } },
+    ];
 }
 
 /**
@@ -49,6 +71,8 @@ export function parseDate(value, name, endOfDay = false) {
  * - isSoftware (true or false)
  * - agency (exact department name)
  * - status (exact project status)
+ * - stage (temporary contract-start-derived TOR stage)
+ * - biddingStatus (live open/closed/unknown value calculated from submission deadline)
  * - dateFrom / dateTo (inclusive announce-date range)
  * - q (full-text search across project title, agency, and extracted tech stack)
  * - budgetMin / budgetMax (inclusive budget range)
@@ -65,6 +89,12 @@ export async function GET(request) {
     if (isSoftware !== null && isSoftware !== '' && isSoftware !== 'true' && isSoftware !== 'false') {
         return errorResponse('INVALID_IS_SOFTWARE', 'isSoftware must be true or false');
     }
+
+    const stageResult = parseStage(searchParams.get('stage'));
+    if (stageResult.error) return errorResponse('INVALID_STAGE', stageResult.error);
+
+    const biddingStatusResult = parseBiddingStatus(searchParams.get('biddingStatus'));
+    if (biddingStatusResult.error) return errorResponse('INVALID_BIDDING_STATUS', biddingStatusResult.error);
 
     const dateFromResult = parseDate(searchParams.get('dateFrom'), 'dateFrom');
     const dateToResult = parseDate(searchParams.get('dateTo'), 'dateTo', true);
@@ -97,6 +127,9 @@ export async function GET(request) {
         const status = searchParams.get('status');
         if (status) filter.project_status = status;
 
+        const temporaryStageFilter = stageFilter(stageResult.value);
+        if (temporaryStageFilter) Object.assign(filter, temporaryStageFilter);
+
         if (dateFromResult.value || dateToResult.value) {
             filter['timeline.announce_date'] = {};
             if (dateFromResult.value) filter['timeline.announce_date'].$gte = dateFromResult.value;
@@ -125,8 +158,16 @@ export async function GET(request) {
         pipeline.push(
             { $sort: { updated_at: -1, created_at: -1, _id: -1 } },
             { $group: { _id: '$project_id', project: { $first: '$$ROOT' } } },
-            { $replaceRoot: { newRoot: '$project' } }
+            { $replaceRoot: { newRoot: '$project' } },
+            // The dashboard is temporarily scoped to the current tender
+            // schema. Apply this after de-duplication so an obsolete version
+            // of a project cannot make its latest record appear eligible.
+            { $match: CURRENT_TENDER_FILTER }
         );
+
+        // Evaluate the live deadline after deduplication so an old snapshot
+        // cannot make a newer project appear open or closed incorrectly.
+        pipeline.push(...biddingStatusPipeline(biddingStatusResult.value));
 
         const sort = q ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1, _id: -1 };
 
@@ -148,9 +189,9 @@ export async function GET(request) {
         try {
             const { cookies } = await import('next/headers');
             const { verifySession, SESSION_COOKIE } = await import('@/lib/auth');
-            const { User } = await import('@/models/user');
+            const { User } = await import('@/models/User');
             
-            const cookieStore = cookies();
+            const cookieStore = await cookies();
             const token = cookieStore.get(SESSION_COOKIE)?.value;
             if (token) {
                 const session = await verifySession(token);
@@ -162,13 +203,13 @@ export async function GET(request) {
             console.error('Error fetching user for match score:', err);
         }
 
-        const compatibleProjects = await hydrateProjectsCompatibility(projects);
+        const hydratedProjects = await hydrateProjectsCompatibility(projects);
         return NextResponse.json({
             status: 'success',
             page: pageResult.value,
             limit: limitResult.value,
             total,
-            data: compatibleProjects.map(project => toTorListItem(project, userDoc)),
+            data: hydratedProjects.map(project => toTorListItem(project, userDoc)),
         });
     } catch (error) {
         return errorResponse('LIST_TORS_FAILED', error.message, 500);

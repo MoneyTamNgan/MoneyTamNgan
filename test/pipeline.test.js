@@ -10,10 +10,16 @@ import { extractPdfsFromZip } from '../lib/archive-extractor.js';
 import { classifyProjectMetadata } from '../lib/classifier.js';
 import { hashFile, persistDocument, removeTransientDocuments } from '../lib/document-storage.js';
 import { validateRemoteDocumentUrl } from '../lib/document-resolver.js';
-import { buildProjectUpsert, mapToProjectSchema, parseThaiDate } from '../lib/egp-api.js';
+import { buildProjectUpsert, fetchFromEGP, mapToProjectSchema, parseThaiDate } from '../lib/egp-api.js';
 import { parseAggregatorHtml } from '../lib/egp-aggregator.js';
 import { validateTorExtraction } from '../lib/vertex/response-schema.js';
-import { unresolvedDocumentLookupError } from '../lib/scraper.js';
+import {
+    EGP_DOCUMENT_LAYOUT,
+    classifyScrapeFailure,
+    detectEgpDocumentLayout,
+    invitationAttachmentFromPayload,
+    unresolvedDocumentLookupError,
+} from '../lib/scraper.js';
 import ProcessingJob from '../models/ProcessingJob.js';
 import Project from '../models/Project.js';
 import {
@@ -29,6 +35,18 @@ const baseRecord = {
     project_money: '1500000',
     announce_date: '21 มิ.ย. 69',
 };
+
+test('upstream API HTTP errors redact reflected credentials', async t => {
+    const old = process.env.EGP_API_KEY;
+    process.env.EGP_API_KEY = 'test-secret-key';
+    t.after(() => { if (old === undefined) delete process.env.EGP_API_KEY; else process.env.EGP_API_KEY = old; });
+    t.mock.method(globalThis, 'fetch', async () => new Response('request api-key test-secret-key', { status: 500 }));
+    await assert.rejects(fetchFromEGP({ year: '2570', limit: 1 }), error => {
+        assert.match(error.message, /REDACTED/);
+        assert.ok(!error.message.includes('test-secret-key'));
+        return true;
+    });
+});
 
 async function createZip(filePath, entries) {
     const zip = new yazl.ZipFile();
@@ -87,7 +105,25 @@ test('project and processing-job state machines accept their initial records', a
     await assert.doesNotReject(() => project.validate());
     await assert.doesNotReject(() => job.validate());
     assert.equal(project.processing.status, 'metadata_ingested');
+    assert.equal(project.processing.error_code, undefined);
     assert.equal(job.status, 'queued');
+});
+
+test('project processing accepts scraper failure codes', async () => {
+    const project = new Project({
+        project_id: baseRecord.project_id,
+        project_name: baseRecord.project_name,
+        dept_name: baseRecord.dept_name,
+        budget: 1_500_000,
+        processing: {
+            status: 'retry_pending',
+            error_code: 'temporary_timeout',
+            error: 'Waiting failed: 60000ms exceeded',
+        },
+    });
+    await assert.doesNotReject(() => project.validate());
+    project.processing.error_code = 'unknown_failure_code';
+    await assert.rejects(() => project.validate(), /error_code/);
 });
 
 test('metadata classifier recognizes software and preserves uncertainty', () => {
@@ -120,6 +156,48 @@ test('transient e-GP ZIP-list failures are not mistaken for missing documents', 
         null
     );
     assert.equal(unresolvedDocumentLookupError(null, []), null);
+});
+
+test('e-GP document layout detector supports draft and invitation pages', () => {
+    assert.equal(
+        detectEgpDocumentLayout(['1 ร่างเอกสารประกวดราคา (e-Bidding) description']),
+        EGP_DOCUMENT_LAYOUT.DRAFT_EBIDDING
+    );
+    assert.equal(
+        detectEgpDocumentLayout(['2 ประกาศเชิญชวน 30/09/2569 description']),
+        EGP_DOCUMENT_LAYOUT.INVITATION_DOCUMENT
+    );
+    assert.equal(detectEgpDocumentLayout(['ประกาศราคากลาง']), null);
+});
+
+test('new e-GP invitation payload resolves the official ZIP URL', () => {
+    const attachment = invitationAttachmentFromPayload({
+        data: {
+            buildName1: '69099748056_30092569.zip',
+            zipId: '4d91ea574d91411fbba9887a91415b88',
+        },
+    }, 'https://process5.gprocurement.go.th/egp-approval-service/example');
+    assert.deepEqual(attachment, {
+        name: '69099748056_30092569.zip',
+        url: 'https://process5.gprocurement.go.th/egp-upload-service/v1/downloadFileTest?fileId=4d91ea574d91411fbba9887a91415b88',
+        type: 'zip',
+    });
+    assert.equal(invitationAttachmentFromPayload({ data: {} }, 'https://example.go.th'), null);
+});
+
+test('scraper failures expose stable retry decisions', () => {
+    assert.deepEqual(
+        classifyScrapeFailure(new Error('Waiting failed: 60000ms exceeded')),
+        { outcome: 'temporary_timeout', retryable: true }
+    );
+    assert.deepEqual(
+        classifyScrapeFailure(new Error('Aggregator returned no official e-GP detail link')),
+        { outcome: 'resolver_failed', retryable: false }
+    );
+    assert.deepEqual(
+        classifyScrapeFailure(new Error('Unsupported e-GP document layout')),
+        { outcome: 'unsupported_layout', retryable: false }
+    );
 });
 
 test('aggregator parser resolves only the encrypted official e-GP detail link', () => {
@@ -226,12 +304,27 @@ test('Vertex extraction validation normalizes evidence and rejects invalid confi
         scope_of_work: [],
         tech_stack: [{ value: 'PostgreSQL' }],
         flagged_clauses: [],
+        risk_findings: [{
+            category: 'vendor_lock_in', severity: 'high',
+            clause_text: 'ต้องใช้ระบบ Brand X เท่านั้น',
+            explanation: 'ระบุผู้ขายรายเดียวโดยไม่มีทางเลือกเทียบเท่า',
+            highlight_reason: 'ไม่อนุญาตผลิตภัณฑ์เทียบเท่า',
+            page: 2, confidence: 0.91,
+        }],
         confidence: 0.9,
         document_language: 'th',
     });
     assert.equal(value.qualifications[0].value, 'มีประสบการณ์');
+    assert.equal(value.risk_findings[0].highlight_reason, 'ไม่อนุญาตผลิตภัณฑ์เทียบเท่า');
     assert.throws(() => validateTorExtraction({
         summary: '', qualifications: [], scope_of_work: [], tech_stack: [],
-        flagged_clauses: [], confidence: 2, document_language: 'th',
+        flagged_clauses: [], risk_findings: [], confidence: 2, document_language: 'th',
     }));
+    assert.throws(() => validateTorExtraction({
+        summary: '', qualifications: [], scope_of_work: [], tech_stack: [],
+        flagged_clauses: [], risk_findings: [{
+            category: 'invented_category', severity: 'high', clause_text: 'x',
+            explanation: 'x', highlight_reason: 'x', page: 1, confidence: 0.8,
+        }], confidence: 0.8, document_language: 'th',
+    }), /category is invalid/);
 });

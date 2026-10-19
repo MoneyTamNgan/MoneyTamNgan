@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const ProcessingJobSchema = new mongoose.Schema({
-    type: { type: String, enum: ['process_project'], default: 'process_project', index: true },
+    type: { type: String, enum: ['process_project', 'verify_candidate'], default: 'process_project', index: true },
     project_id: { type: String, required: true, index: true },
     active_key: { type: String },
     status: {
