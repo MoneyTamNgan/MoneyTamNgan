@@ -3,8 +3,8 @@ import test from 'node:test';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { usableText, parseTsv, extractPdfText } from '../lib/text-extraction.js';
-import { chunkPages, validatePageEvidence, extractTorWithVertex } from '../lib/vertex/tor-extractor.js';
+import { usableText, parseTsv, extractPdfText } from '../../lib/text-extraction.js';
+import { chunkPages, validatePageEvidence, extractTorWithVertex } from '../../lib/vertex/tor-extractor.js';
 
 test('Thai text passes quality checks while empty and broken font mappings require OCR', () => {
     assert.equal(usableText('ขอบเขตงานพัฒนาระบบสารสนเทศสำหรับหน่วยงานราชการ '.repeat(4)), true);

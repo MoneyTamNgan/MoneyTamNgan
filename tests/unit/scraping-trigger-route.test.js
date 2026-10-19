@@ -7,7 +7,7 @@ vi.mock('@/models/Project', () => ({ default: {
     findOne: vi.fn(() => ({ lean: async () => ({ project_id: '123456' }) })),
     find: vi.fn(() => ({ select: () => ({ limit: () => ({ lean: async () => [{ project_id: '123456' }] }) }) })),
 } }));
-const { POST } = await import('./route');
+const { POST } = await import('@/app/api/scraping/trigger/route');
 const { scrapeProjectTOR, scrapeBatch } = await import('@/lib/scraper');
 beforeEach(() => vi.clearAllMocks());
 for (const body of [{ projectId: '123456' }, { batchSize: 1 }]) {

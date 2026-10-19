@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import mongoose from 'mongoose';
-import Project from '../models/Project.js';
-import { parseAnnouncementSchedule, announcementScheduleFields, announcementProcurementEligibility } from '../lib/announcement-schedule.js';
-import { acquireTenderDocuments, createAcquisitionContext, extractAnnouncementSchedule } from '../lib/tender-acquisition.js';
+import Project from '../../models/Project.js';
+import { parseAnnouncementSchedule, announcementScheduleFields, announcementProcurementEligibility } from '../../lib/announcement-schedule.js';
+import { acquireTenderDocuments, createAcquisitionContext, extractAnnouncementSchedule } from '../../lib/tender-acquisition.js';
 
 const invitation = 'ผู้ยื่นข้อเสนอต้องเสนอราคาทางระบบในวันที่ ๘ ตุลาคม ๒๕๖๙\nระหว่างเวลา ๐๙.๐๐ น. ถึง ๑๒.๐๐ น. ซึ่งสามารถจัดเตรียมเอกสารได้ตั้งแต่วันที่ 1 ตุลาคม 2569';
 

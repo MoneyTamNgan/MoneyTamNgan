@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractTorWithVertex, fetchVertexWithRetry } from '../lib/vertex/tor-extractor.js';
+import { extractTorWithVertex, fetchVertexWithRetry } from '../../lib/vertex/tor-extractor.js';
 
 test('Vertex retries capacity errors with bounded backoff, not authorization errors', async () => {
     const delays = [];
