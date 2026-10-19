@@ -55,3 +55,20 @@ export async function POST(req) {
 
     return NextResponse.json({ status: 'success', ...result });
 }
+
+export async function GET(req) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+        const auth = req.headers.get('authorization') ?? '';
+        const url = new URL(req.url);
+        const querySecret = url.searchParams.get('secret');
+        if (auth !== `Bearer ${cronSecret}` && querySecret !== cronSecret) {
+            return unauthorized();
+        }
+    }
+
+    await connectDB();
+    const result = await sendDailyDigest();
+    return NextResponse.json({ status: 'success', ...result });
+}
+
