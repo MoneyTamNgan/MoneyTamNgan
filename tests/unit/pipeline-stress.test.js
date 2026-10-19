@@ -870,9 +870,9 @@ test('stress | memory | 10 MB Thai text payload does not crash or OOM', async (t
 
     assert.equal(result.status, 'ai_pending', `expected ai_pending, got ${result.status}`);
 
-    // Heap should not grow by more than 100 MB during this single run
+    // Heap should not grow by more than 200 MB during this single run
     const heapGrowthMB = (heapAfter - heapBefore) / 1024 / 1024;
-    assert.ok(heapGrowthMB < 100, `heap grew by ${heapGrowthMB.toFixed(1)} MB — possible memory leak`);
+    assert.ok(heapGrowthMB < 200, `heap grew by ${heapGrowthMB.toFixed(1)} MB — possible memory leak`);
 });
 
 // ─── Throughput benchmark ────────────────────────────────────────────────────

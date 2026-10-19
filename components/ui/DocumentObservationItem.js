@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 
 const categoryLabels = {
   unrealistic_tenure: "ระยะเวลาหรือประสบการณ์สูงผิดปกติ",
+  excessive_team_capacity: "กำลังคนหรือขีดความสามารถทีมสูงเกินขอบเขตงาน",
   excessive_hardware: "ความต้องการ Hardware สูงผิดปกติ",
   vendor_lock_in: "ความเสี่ยง Vendor Lock-in",
 };
