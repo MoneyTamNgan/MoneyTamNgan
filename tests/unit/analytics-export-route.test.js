@@ -10,7 +10,7 @@ vi.mock('@/models/Project', () => ({
     },
 }));
 
-const { GET } = await import('./route');
+const { GET } = await import('@/app/api/analytics/export/route');
 const request = query => new Request(`http://localhost/api/analytics/export${query}`);
 
 describe('GET /api/analytics/export', () => {

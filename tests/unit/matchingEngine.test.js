@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSkillMatchScore } from './matchingEngine.js';
+import { calculateSkillMatchScore } from '@/lib/matchingEngine.js';
 
 describe('calculateSkillMatchScore', () => {
     it('returns 100% when TOR has no required tech_stack', () => {

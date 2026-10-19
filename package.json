@@ -18,7 +18,8 @@
     "db:migrate-normalized": "node scripts/migrate-normalized-schema.js",
     "db:reconcile-normalized": "node scripts/reconcile-normalized-schema.js",
     "db:cleanup-legacy": "node scripts/cleanup-legacy-schema.js",
-    "test": "node --test test/*.test.js lib/classification.test.js",
+    "test": "node --test tests/unit/discovery-candidates.test.js tests/unit/egp-rss.test.js tests/unit/fiscal-budget.test.js tests/unit/mongo-artifacts.test.js tests/unit/normalized-schema.test.js tests/unit/ocr-pipeline.test.js tests/unit/ocr-quality.test.js tests/unit/pipeline.test.js tests/unit/procurement-eligibility.test.js tests/unit/tender-acquisition.test.js tests/unit/text-extraction.test.js tests/unit/vertex-reanalysis.test.js tests/unit/vertex-resume.test.js tests/unit/classification.test.js tests/unit/pipeline-stress.test.js tests/unit/announcement-schedule.test.js tests/unit/project-announcement.test.js tests/unit/restrictive-review.test.js",
+    "test:stress": "node --test tests/unit/pipeline-stress.test.js",
     "test:vitest": "vitest run",
     "test:vitest:watch": "vitest"
   },

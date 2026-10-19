@@ -4,16 +4,16 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import mongoose from 'mongoose';
-import Document from '../models/Document.js';
-import DocumentPage from '../models/DocumentPage.js';
-import DocumentSummary from '../models/DocumentSummary.js';
-import Project from '../models/Project.js';
+import Document from '../../models/Document.js';
+import DocumentPage from '../../models/DocumentPage.js';
+import DocumentSummary from '../../models/DocumentSummary.js';
+import Project from '../../models/Project.js';
 import {
     inferDocumentType,
     persistOcrPages,
     persistPdfRecords,
     persistVertexSummary,
-} from '../lib/mongo-artifacts.js';
+} from '../../lib/mongo-artifacts.js';
 
 test('artifact schemas validate linked PDF, OCR page and Vertex summary records', async () => {
     const documentId = new mongoose.Types.ObjectId();
