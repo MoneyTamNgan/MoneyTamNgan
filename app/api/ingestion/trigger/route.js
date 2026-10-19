@@ -6,6 +6,7 @@ import DiscoveryCandidate from '@/models/DiscoveryCandidate';
 import { classifyProjectMetadata } from '@/lib/classifier';
 import { loadKeywordSets } from '@/lib/keywords';
 import { assessProcurementEligibility, currentThaiFiscalYear, verifyProcurementEligibility } from '@/lib/procurement-eligibility';
+import { verifyProcurementWithAnnouncement } from '@/lib/project-announcement';
 import { NextResponse } from 'next/server';
 
 /**
@@ -30,10 +31,11 @@ export async function POST(request) {
             // No body provided — use defaults
         }
 
-        const { year = currentThaiFiscalYear(), keyword, limit, deptCode, enqueueProcessing = false, verifyInline = false } = body;
+        const { year = currentThaiFiscalYear(), keyword, limit, deptCode, rssDeptId, enqueueProcessing = false, verifyInline = false } = body;
         if (typeof enqueueProcessing !== 'boolean' || typeof verifyInline !== 'boolean'
             || !/^\d{4}$/.test(String(year))
-            || (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 1000))) {
+            || (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 1000))
+            || (rssDeptId !== undefined && !/^\d{4}$/.test(String(rssDeptId)))) {
             return NextResponse.json({
                 status: 'failed',
                 error: { code: 'INVALID_INGESTION_REQUEST', message: 'Invalid year, limit, enqueueProcessing or verifyInline' },
@@ -58,7 +60,8 @@ export async function POST(request) {
         const keywordSets = await loadKeywordSets();
 
         // Upsert each record into MongoDB
-        for (const raw of rawRecords) {
+        for (const record of rawRecords) {
+            const raw = rssDeptId ? { ...record, rss_dept_id: String(rssDeptId) } : record;
             try {
                 const classification = classifyProjectMetadata({ project_name: raw.project_name }, keywordSets);
                 let skipReason = classification.isSoftware === false ? 'notSoftware'
@@ -79,7 +82,7 @@ export async function POST(request) {
                     }
                     continue;
                 }
-                const eligibility = skipReason ? null : await verifyProcurementEligibility(raw);
+                const eligibility = skipReason ? null : await verifyProcurementWithAnnouncement(raw, { verifyOfficial: verifyProcurementEligibility });
                 if (!skipReason && eligibility.status !== 'open') {
                     skipReason = eligibility.status === 'closed' ? 'closed'
                         : eligibility.status === 'not_yet_open' ? 'notYetOpen' : 'unverified';
@@ -103,6 +106,8 @@ export async function POST(request) {
                 }
                 const { filter, update } = buildProjectUpsert(raw);
                 update.$set.procurement_eligibility = eligibility;
+                if (eligibility.announcement_url) update.$set['tender.invitation_url'] = eligibility.announcement_url;
+                if (eligibility.rss_dept_id) update.$set['tender.rss_dept_id'] = eligibility.rss_dept_id;
                 const current = await Project.findOne(filter).lean();
                 if (current?.classification?.status !== 'manual_override') {
                     update.$set.is_software = true;

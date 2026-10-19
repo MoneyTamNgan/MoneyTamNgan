@@ -4,7 +4,7 @@ import test from 'node:test';
 import { decodeFeed, fetchAnnouncementFeed, parseFeed } from '../../lib/egp-rss.js';
 import { normalizeThaiDigits, parseSubmissionWindow } from '../../lib/egp-announcement.js';
 
-const fixture = () => readFile(new URL('./fixtures/egp-rss-d0.xml', import.meta.url));
+const fixture = async () => Buffer.from(await readFile(new URL('./fixtures/egp-rss-d0.xml.b64', import.meta.url), 'utf8'), 'base64');
 
 test('parseFeed decodes windows-874 items into project announcements', async () => {
     const items = parseFeed(decodeFeed(await fixture()));

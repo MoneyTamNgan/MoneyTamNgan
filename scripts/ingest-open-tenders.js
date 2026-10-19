@@ -16,7 +16,7 @@
  *   node scripts/ingest-open-tenders.js --enqueue             # queue OCR/AI processing afterwards
  *   node scripts/ingest-open-tenders.js --no-browser          # feed documents only (e-GP site down)
  *   node scripts/ingest-open-tenders.js --dry-run             # discover and classify only
- *   node scripts/ingest-open-tenders.js --announcement-storage=local  # default gridfs (MongoDB)
+ *   node scripts/ingest-open-tenders.js --announcement-storage=local  # default remote (links only)
  *   node scripts/ingest-open-tenders.js --discover-only      # save a feed snapshot, no database
  *   node scripts/ingest-open-tenders.js --tenders=storage/tenders/latest.json
  *       Reuse a saved feed snapshot instead of re-reading the RSS feed
@@ -25,12 +25,14 @@
 import 'dotenv/config';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import mongoose from 'mongoose';
+import { pathToFileURL } from 'node:url';
 import Project from '../models/Project.js';
 import { collectOpenTenders, tenderStatus } from '../lib/egp-rss.js';
 import { classifyProjectMetadata } from '../lib/classifier.js';
 import { loadKeywordSets } from '../lib/keywords.js';
-import { persistDocument } from '../lib/document-storage.js';
-import { persistAnnouncementRecord, persistPdfRecords } from '../lib/mongo-artifacts.js';
+import { persistDocument, hashFile, removeTransientDocuments } from '../lib/document-storage.js';
+import { persistAnnouncementRecord, persistPdfBundle } from '../lib/mongo-artifacts.js';
+import { announcementScheduleFields, announcementProcurementEligibility, SCHEDULE_VERSION } from '../lib/announcement-schedule.js';
 import {
     acquireTenderDocuments,
     closeAcquisitionContext,
@@ -111,27 +113,33 @@ async function classify(project, keywordSets) {
     return classification;
 }
 
-async function persistDocuments(project, tender, outcome, announcementStorage) {
+export async function persistDocuments(project, tender, outcome, announcementStorage = 'remote') {
     const fiscalYear = inferFiscalYear(project.project_id);
     const set = {};
     let announcementDocument = null;
     let torDocument = null;
 
     if (outcome.announcement) {
-        const persisted = await persistDocument({
+        const persisted = announcementStorage === 'remote'
+            ? { ...await hashFile(outcome.announcement.path), backend: 'remote' }
+            : await persistDocument({
             projectId: project.project_id, fiscalYear,
             localPath: outcome.announcement.path, mimeType: 'application/pdf',
             backend: announcementStorage,
         });
         announcementDocument = await persistAnnouncementRecord(project, outcome.announcement, persisted);
         set.announcement_document_id = announcementDocument._id;
+        Object.assign(set, announcementScheduleFields(outcome.announcement.schedule, {
+            documentId: announcementDocument._id, sourceUrl: outcome.announcement.url,
+            method: outcome.announcement.extractionMethod, error: outcome.announcement.extractionError,
+        }));
 
         const { agency, referencePrice, submission } = outcome.announcement.invitation;
         if (submission) {
             set['tender.submission_date'] = submission.date;
             set['tender.submission_start_time'] = submission.startTime;
             set['tender.submission_end_time'] = submission.endTime;
-            set['tender.closes_at'] = submission.closesAt ? new Date(submission.closesAt) : undefined;
+            set['tender.closes_at'] = submission.closesAt ? new Date(submission.closesAt) : null;
         }
         if (referencePrice) set['tender.reference_price'] = referencePrice;
         // Open Data metadata stays authoritative; only RSS-created records are filled in.
@@ -142,11 +150,13 @@ async function persistDocuments(project, tender, outcome, announcementStorage) {
     }
 
     if (outcome.tor) {
-        const persisted = await persistDocument({
+        const persisted = process.env.TOR_RETAIN_SOURCE_FILES !== 'true'
+            ? { ...await hashFile(outcome.tor.pdf_path), backend: 'remote' }
+            : await persistDocument({
             projectId: project.project_id, fiscalYear,
             localPath: outcome.tor.pdf_path, mimeType: outcome.tor.pdf_content_type,
         });
-        torDocument = await persistPdfRecords(
+        torDocument = await persistPdfBundle(
             project, outcome.tor, persisted, outcome.tor.resolver_source || 'egp_browser'
         );
         Object.assign(set, {
@@ -161,7 +171,8 @@ async function persistDocuments(project, tender, outcome, announcementStorage) {
         });
     }
 
-    const closesAt = outcome.announcement?.invitation.submission?.closesAt || project.tender?.closes_at;
+    const closesAt = outcome.announcement
+        ? outcome.announcement.invitation.submission?.closesAt : project.tender?.closes_at;
     Object.assign(set, {
         'tender.status': tenderStatus({
             hasDraft: Boolean(tender.draftLink),
@@ -174,9 +185,12 @@ async function persistDocuments(project, tender, outcome, announcementStorage) {
             .filter(Boolean).join('; ').slice(0, 1000) || null,
     });
     if (!outcome.tor && !project.primary_document_id) {
-        set['processing.status'] = 'retry_pending';
+        set['processing.status'] = outcome.torDeferred
+            ? (outcome.eligibility.status === 'closed' ? 'metadata_only' : 'review_required') : 'retry_pending';
+        if (outcome.torDeferred) set['workflow.status'] = `procurement_${outcome.eligibility.status}`;
         set['processing.error'] = outcome.torError;
     }
+    if (outcome.eligibility) set.procurement_eligibility = outcome.eligibility;
     const update = { $set: Object.fromEntries(Object.entries(set).filter(([, value]) => value !== undefined)) };
     if (!outcome.tor) update.$inc = { 'processing.download_attempts': 1 };
     await Project.updateOne({ _id: project._id }, update);
@@ -220,9 +234,10 @@ async function main() {
 
     await connectMongoWithDnsFallback(mongoose, process.env.MONGODB_URI);
     const keywordSets = await loadKeywordSets();
-    // Invitations are ~100KB, so they live in MongoDB; TORs follow TOR_STORAGE_BACKEND.
+    // Preserve this branch's link-only policy; file retention is explicitly opt-in.
     const announcementStorage = typeof args['announcement-storage'] === 'string'
-        ? args['announcement-storage'] : 'gridfs';
+        ? args['announcement-storage'] : 'remote';
+    if (!['remote', 'local', 'gcs', 'gridfs'].includes(announcementStorage)) throw new Error('announcement-storage must be remote, local, gcs or gridfs');
     const ctx = createAcquisitionContext({ allowBrowser: !args['no-browser'] });
     const stats = {
         discovered: tenders.length, candidates: 0, skippedDone: 0, attempted: 0,
@@ -234,23 +249,34 @@ async function main() {
             if (stats.attempted >= limit) break;
             if (args['dry-run']) {
                 const preview = classifyProjectMetadata({ project_name: tender.title }, keywordSets);
-                if (preview.isSoftware === false && !args.all) continue;
+                if (preview.isSoftware !== true && !args.all) continue;
                 stats.candidates += 1;
                 console.log(`   · ${tender.projectId} ${preview.status} ${tender.title.slice(0, 70)}`);
                 continue;
             }
             const project = await upsertTenderProject(tender);
             const classification = await classify(project, keywordSets);
-            if (classification.isSoftware === false && !args.all) continue;
+            if (classification.isSoftware !== true && !args.all) continue;
             stats.candidates += 1;
-            if (!args.force && project.primary_document_id && project.announcement_document_id) {
+            if (!args.force && project.primary_document_id && project.announcement_document_id
+                && project.announcement_schedule?.parser_version === SCHEDULE_VERSION
+                && project.announcement_schedule?.status === 'parsed') {
                 stats.skippedDone += 1;
                 continue;
             }
             stats.attempted += 1;
             const started = Date.now();
-            const outcome = await acquireTenderDocuments(tender, ctx);
+            // Updating an existing project's schedule does not require fetching its TOR again.
+            const scheduleOnly = !args.force && Boolean(project.primary_document_id);
+            const outcome = await acquireTenderDocuments(
+                scheduleOnly ? { ...tender, draftLink: null } : tender,
+                scheduleOnly ? { ...ctx, allowBrowser: false } : ctx,
+                { checkEligibility: announcement => announcementProcurementEligibility(project, announcement) }
+            );
             await persistDocuments(project, tender, outcome, announcementStorage);
+            if (announcementStorage === 'remote' && outcome.announcement) {
+                await removeTransientDocuments({ pdf_path: outcome.announcement.path });
+            }
 
             if (outcome.tor) stats.tor += 1;
             if (outcome.torRoute === 'feed') stats.torFeed += 1;
@@ -281,7 +307,7 @@ async function main() {
     await mongoose.disconnect();
 }
 
-main().catch(error => {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch(error => {
     console.error('❌ Fatal error:', error);
     process.exitCode = 1;
 });

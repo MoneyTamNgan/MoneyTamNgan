@@ -101,7 +101,8 @@ test('Vertex merges multiple chunks, preserves evidence, and totals usage', asyn
     process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
     t.after(() => { if (old === undefined) delete process.env.GOOGLE_CLOUD_PROJECT; else process.env.GOOGLE_CLOUD_PROJECT = old; });
     let calls = 0;
-    const result = await extractTorWithVertex({ pages: [{ page_number: 1, text: 'ก'.repeat(25000) }] }, {
+    const clause = 'ต้องใช้ Brand X เท่านั้น';
+    const result = await extractTorWithVertex({ pages: [{ page_number: 1, text: clause.padEnd(24000, 'ก') + clause }] }, {
         headers: async () => ({}),
         fetchImpl: async () => {
             calls++;

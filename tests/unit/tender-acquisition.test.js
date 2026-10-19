@@ -164,11 +164,11 @@ test('announcement records link by feed URL and reuse identical ZIP entries', as
         findOne: () => ({ lean: async () => null }),
         findOneAndUpdate: async (filter, update, options) => {
             upsert = { filter, update, options };
-            return { _id: 'new', ...filter, ...update.$set };
+            return { _id: 'new', ...filter, ...update.$setOnInsert };
         },
     } });
     assert.deepEqual(upsert.filter, {
-        project_id: '69099693138', source_url: 'https://e.test/pdf', entry_name: 'dant.pdf',
+        project_id: '69099693138', sha256: persisted.sha256,
     });
     assert.equal(created.document_type, 'announcement');
     assert.equal(created.is_current_primary, false);
@@ -227,6 +227,25 @@ test('disabling the browser keeps feed documents and skips the scraper', async (
     assert.ok(outcome.announcement);
 });
 
+test('link-only announcements never persist a local PDF path', async () => {
+    const project = { _id: new mongoose.Types.ObjectId(), project_id: '69099693138' };
+    const announcement = { url: 'https://e.test/pdf', path: 'storage/tor/69099693138/dant.pdf', size: 50 };
+    const persisted = { sha256: 'd'.repeat(64), size: 50, backend: 'remote' };
+
+    const created = await persistAnnouncementRecord(project, announcement, persisted, { DocumentModel: {
+        findOne: () => ({ lean: async () => null }),
+        findOneAndUpdate: async (filter, update) => ({ ...filter, ...update.$setOnInsert }),
+    } });
+    assert.equal(created.storage.backend, 'remote');
+    assert.equal(created.storage.local_path, undefined);
+
+    const existing = { _id: 'old', sha256: persisted.sha256 };
+    await persistAnnouncementRecord(project, announcement, persisted, { DocumentModel: {
+        findOne: () => ({ lean: async () => existing }),
+        findOneAndUpdate: () => assert.fail('must reuse existing record'),
+    } });
+});
+
 test('GridFS announcements store the file id instead of a local path', async () => {
     const project = { _id: new mongoose.Types.ObjectId(), project_id: '69099693138' };
     const announcement = { url: 'https://e.test/pdf', path: 'storage/tor/69099693138/dant.pdf', size: 50 };
@@ -235,7 +254,7 @@ test('GridFS announcements store the file id instead of a local path', async () 
 
     const created = await persistAnnouncementRecord(project, announcement, persisted, { DocumentModel: {
         findOne: () => ({ lean: async () => null }),
-        findOneAndUpdate: async (filter, update) => ({ ...filter, ...update.$set }),
+        findOneAndUpdate: async (filter, update) => ({ ...filter, ...update.$setOnInsert }),
     } });
     assert.equal(created.storage.backend, 'gridfs');
     assert.equal(created.storage.gridfs_id, gridfsId);
