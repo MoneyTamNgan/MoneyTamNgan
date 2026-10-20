@@ -7,6 +7,7 @@ import {
     OAUTH_STATE_COOKIE,
     signSession,
     sessionCookieOptions,
+    isConfiguredAdmin,
 } from '@/lib/auth';
 
 /**
@@ -65,16 +66,20 @@ export async function GET(request) {
 
         // 3. Upsert the user.
         await connectToDatabase();
+        const updateFields = {
+            name: googleUser.name,
+            googleId: googleUser.id,
+            picture: googleUser.picture,
+            updatedAt: new Date(),
+        };
+
+        if (isConfiguredAdmin(googleUser.email)) {
+            updateFields.role = 'admin';
+        }
+
         const user = await User.findOneAndUpdate(
             { email: googleUser.email },
-            {
-                $set: {
-                    name: googleUser.name,
-                    googleId: googleUser.id,
-                    picture: googleUser.picture,
-                    updatedAt: new Date(),
-                },
-            },
+            { $set: updateFields },
             { upsert: true, new: true }
         );
 
