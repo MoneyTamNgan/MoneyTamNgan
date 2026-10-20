@@ -41,7 +41,7 @@ AGENTS.md
 CLAUDE.md
 tsconfig.tsbuildinfo
 *.tsbuildinfo
-
+.AGENTS
 # Pipeline benchmark artifacts
 bench/results/
 bench/work/

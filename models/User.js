@@ -22,5 +22,5 @@ const UserSchema = new Schema({
     },
     updatedAt: { type: Date, default: Date.now },
 });
-
 export const User = models.User || model('User', UserSchema);
+export default User;
