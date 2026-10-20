@@ -13,6 +13,8 @@
     "bench": "node scripts/bench-pipelines.js",
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",
+    "processing:recover": "node scripts/recover-processing.js",
+    "announcement:analyze": "node scripts/analyze-announcement.js",
     "vertex:reanalyze": "node scripts/reanalyze-vertex.js",
     "db:ensure-indexes": "node scripts/ensure-indexes.js",
     "db:migrate-normalized": "node scripts/migrate-normalized-schema.js",
