@@ -2,6 +2,7 @@ import connectDB from '@/lib/db';
 import { enqueueProject } from '@/lib/job-queue';
 import Project from '@/models/Project';
 import DiscoveryCandidate from '@/models/DiscoveryCandidate';
+import { recoverPendingProjects } from '@/lib/processing-recovery';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -15,11 +16,17 @@ function badRequest(message) {
     }, { status: 400 });
 }
 
-/** POST { projectId?: string, batchSize?: number } */
+/** POST { projectId?: string, batchSize?: number, scanLimit?: number,
+ * afterId?: string, dryRun?: boolean, retryFailed?: boolean }
+ * Recovery options apply to bulk requests without projectId/candidateId. */
 export async function POST(request) {
     try {
         await connectDB();
         const body = await request.json().catch(() => ({}));
+        if ((body.projectId !== undefined || body.candidateId !== undefined)
+            && ['dryRun', 'scanLimit', 'afterId', 'retryFailed'].some(key => body[key] !== undefined)) {
+            return badRequest('Bulk recovery options require a request without projectId or candidateId');
+        }
         const projectId = body.projectId === undefined ? null : String(body.projectId).trim();
         const batchSize = body.batchSize ?? 10;
         if (body.candidateId !== undefined) {
@@ -47,21 +54,15 @@ export async function POST(request) {
             if (!exists) return badRequest(`Project ${projectId} does not exist`);
             projectIds = [projectId];
         } else {
-            const projects = await Project.find({
-                'classification.status': { $ne: 'not_software' },
-                $or: [
-                    { 'processing.status': { $exists: false } },
-                    {
-                        'processing.status': {
-                            $in: [
-                                'metadata_ingested', 'classification_pending', 'document_pending',
-                                'metadata_only', 'retry_pending', 'failed', 'ai_pending', 'text_extracted',
-                            ],
-                        },
-                    },
-                ],
-            }).select('project_id').limit(batchSize).lean();
-            projectIds = projects.map(project => project.project_id);
+            try {
+                const recovery = await recoverPendingProjects({ batchSize,
+                    scanLimit: body.scanLimit ?? 100, afterId: body.afterId ?? null,
+                    dryRun: body.dryRun ?? false, retryFailed: body.retryFailed ?? false });
+                return NextResponse.json({ status: 'accepted', ...recovery }, { status: 202 });
+            } catch (error) {
+                if (error instanceof TypeError) return badRequest(error.message);
+                throw error;
+            }
         }
 
         const jobs = [];
