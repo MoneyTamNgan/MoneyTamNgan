@@ -61,6 +61,7 @@ export async function GET(req) {
             certifications: user.certifications || [],
             email_notifications_enabled: user.email_notifications_enabled ?? false,
             match_score_threshold: user.match_score_threshold ?? 70,
+            notification_frequency: user.notification_frequency ?? 'IMMEDIATE',
             updatedAt: user.updatedAt || new Date(),
         };
 
@@ -115,7 +116,15 @@ export async function PATCH(req) {
             updates.email_notifications_enabled = body.email_notifications_enabled;
         }
         if (body.match_score_threshold !== undefined) {
-            updates.match_score_threshold = Number(body.match_score_threshold);
+            const t = Number(body.match_score_threshold);
+            if (!Number.isNaN(t) && t >= 0 && t <= 100) {
+                updates.match_score_threshold = t;
+            }
+        }
+        if (body.notification_frequency !== undefined) {
+            if (['IMMEDIATE', 'DAILY_DIGEST'].includes(body.notification_frequency)) {
+                updates.notification_frequency = body.notification_frequency;
+            }
         }
 
         const updatedUser = await User.findByIdAndUpdate(
@@ -141,6 +150,7 @@ export async function PATCH(req) {
             certifications: updatedUser.certifications || [],
             email_notifications_enabled: updatedUser.email_notifications_enabled ?? false,
             match_score_threshold: updatedUser.match_score_threshold ?? 70,
+            notification_frequency: updatedUser.notification_frequency ?? 'IMMEDIATE',
             updatedAt: updatedUser.updatedAt || new Date(),
         };
 
