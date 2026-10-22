@@ -293,8 +293,41 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   /admin/tors/{id}/classification:
+    get:
+      summary: List a TOR's classification override history
+      description: Audit log of admin overrides with the reviewer who made each one, newest first.
+      tags: [Admin - Classification]
+      operationId: listTorClassificationOverrides
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      responses:
+        "200":
+          description: Override history (up to 100 entries)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ClassificationOverride"
+        "400":
+          description: Missing TOR id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     patch:
-      summary: Manually confirm or override a TOR's classification
+      summary: Manually override a TOR's classification and document status
+      description: |
+        FR-1.2.2 / FR-1.2.3. Sets `classification.status` to `manual_override` (which keyword
+        re-runs and ingestion never overwrite), force-assigns tags, and optionally overrides the
+        processing or primary document status. The reviewer is recorded on the TOR and in the
+        override history. When the id is still an unpublished discovery candidate (e.g. a
+        low-confidence notice), `isSoftware: true` sends it back through open-bid verification
+        and `isSoftware: false` rejects it; the response then has `target: candidate`.
       tags: [Admin - Classification]
       operationId: updateTorClassification
       parameters:
@@ -305,19 +338,57 @@ paths:
           application/json:
             schema:
               type: object
-              required: [isSoftware]
+              minProperties: 1
               properties:
                 isSoftware:
                   type: boolean
+                tags:
+                  type: array
+                  maxItems: 20
+                  items: { type: string, minLength: 1, maxLength: 50 }
+                processingStatus:
+                  type: string
+                  description: Project processing status, e.g. review_required or document_pending.
+                documentStatus:
+                  type: string
+                  description: Primary document's processing status, returned as `documents.tor.status`.
+                  enum: [downloaded, stored, text_ready, summarized, skipped, review_required, retry_pending, failed]
+                reason:
+                  type: string
+                  maxLength: 500
+                enqueueProcessing:
+                  type: boolean
+                  default: false
+                  description: Queue OCR/AI processing when the TOR ends up classified as software.
       responses:
         "200":
-          description: Updated TOR
+          description: Updated TOR, or the updated discovery candidate
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Tor"
+                oneOf:
+                  - $ref: "#/components/schemas/TorDetail"
+                  - type: object
+                    required: [id, target, status, classification]
+                    properties:
+                      id: { type: string }
+                      target: { type: string, enum: [candidate] }
+                      status: { type: string }
+                      classification: { type: object }
+        "400":
+          description: Invalid override body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Document status requested but the TOR has no stored document, or the id is an unpublished candidate
           content:
             application/json:
               schema:
@@ -1057,6 +1128,24 @@ components:
           type: string
           format: date-time
 
+    ClassificationOverride:
+      type: object
+      required: [id, target, reviewer, reason, before, after, createdAt]
+      properties:
+        id: { type: string }
+        target: { type: string, enum: [project, candidate] }
+        reviewer:
+          type: object
+          required: [userId, email, via]
+          properties:
+            userId: { type: string, nullable: true }
+            email: { type: string, nullable: true }
+            via: { type: string, enum: [admin_session, pipeline_token] }
+        reason: { type: string, nullable: true }
+        before: { type: object }
+        after: { type: object }
+        createdAt: { type: string, format: date-time }
+
     TorApiClassification:
       type: object
       required: [status, confidence]
@@ -1230,6 +1319,20 @@ components:
               properties:
                 isSoftware: { type: boolean, nullable: true }
                 reason: { type: string, nullable: true }
+                tags:
+                  type: array
+                  items: { type: string }
+                  description: Admin-assigned tags (FR-1.2.2).
+                reviewedBy:
+                  type: object
+                  nullable: true
+                  description: Admin who last overrode the classification or document status. Only returned by the admin override endpoint.
+                  required: [userId, email, via]
+                  properties:
+                    userId: { type: string, nullable: true }
+                    email: { type: string, nullable: true }
+                    via: { type: string, enum: [admin_session, pipeline_token] }
+                reviewedAt: { type: string, format: date-time, nullable: true }
         documentStatus: { type: string, nullable: true }
         processingStatus: { type: string, nullable: true }
         requirements: { type: array, items: { type: string } }
