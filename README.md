@@ -172,6 +172,18 @@ curl -X POST http://localhost:3000/api/processing/trigger \
   -d '{"batchSize":20}'
 ```
 
+### Automated ingestion schedule
+
+`npm run scheduler` keeps a background runner that calls
+`/api/ingestion/trigger` and then `/api/scraping/trigger` with the
+`PIPELINE_ADMIN_TOKEN` bearer token. By default it runs at 06:00, 12:00 and
+18:00 Asia/Bangkok (`INGESTION_SCHEDULE`, `INGESTION_TIMEZONE`). Network
+errors, timeouts and e-GP 5xx/429 are retried up to 3 times (~5, 15, 45 min,
+with jitter) unless a retry would overlap the next scheduled run; config and
+auth errors fail immediately. Each run is stored in the `ingestionruns`
+collection and shown under `lastRun` / `recentRuns` in
+`GET /api/ingestion/status`. `npm run scheduler:once` runs one ingestion now.
+
 Run one queued job during development, or keep a worker polling:
 
 ```bash
