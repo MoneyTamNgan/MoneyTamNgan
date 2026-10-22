@@ -17,6 +17,7 @@ export default defineConfig({
             'tests/unit/analytics-export-route.test.js',
             'tests/unit/ingestion-trigger-route.test.js',
             'tests/unit/scraping-trigger-route.test.js',
+            'tests/unit/classification-override-route.test.js',
             'tests/unit/matchingEngine.test.js',
             'tests/unit/project-mapper.test.ts',
             'tests/unit/query-params.test.js',
