@@ -8,11 +8,12 @@ import DocumentPage from '../models/DocumentPage.js';
 import DocumentSummary from '../models/DocumentSummary.js';
 import ExtractionRun from '../models/ExtractionRun.js';
 import ProcessingJob from '../models/ProcessingJob.js';
+import ClassificationOverride from '../models/ClassificationOverride.js';
 import Project from '../models/Project.js';
 import VertexChunk from '../models/VertexChunk.js';
 import DiscoveryCandidate from '../models/DiscoveryCandidate.js';
 
-const MODELS = [Project, Document, ExtractionRun, DocumentPage, DocumentSummary, ProcessingJob, VertexChunk, DiscoveryCandidate];
+const MODELS = [Project, Document, ExtractionRun, DocumentPage, DocumentSummary, ProcessingJob, VertexChunk, DiscoveryCandidate, ClassificationOverride];
 
 async function main() {
     if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is required');
