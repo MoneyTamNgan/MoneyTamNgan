@@ -30,3 +30,34 @@ test('manually rejected candidate cannot be promoted by keyword matching', async
     });
     assert.equal(result.status, 'review_required');
 });
+test('admin override on an unpublished candidate is honoured on promotion', async () => {
+    const reviewer = { user_id: 'admin-1', email: 'a@example.com', via: 'admin_session' };
+    const promotions = [];
+    const result = await verifyDiscoveryCandidate('67000000001', {
+        CandidateModel: { findOne: () => lean({ _id: 'candidate', payload: {
+            project_id: '67000000001', project_name: 'รายการทดสอบ', dept_name: 'fixture',
+        }, classification: { isSoftware: true, status: 'manual_override', method: 'admin_override',
+            reason: 'Admin', tags: ['ERP'], reviewed_by: reviewer, reviewed_at: new Date(0) } }), updateOne: async () => {} },
+        ProjectModel: { findOne: () => lean(null), findOneAndUpdate: async (...args) => promotions.push(args) },
+        loadKeywords: async () => assert.fail('Must not re-run keywords over an admin override'),
+        verifyEligibility: async () => ({ status: 'open' }),
+        enqueue: async () => {},
+    });
+    assert.equal(result.status, 'promoted');
+    const update = promotions[0][1];
+    assert.equal(update.$set.is_software, true);
+    assert.equal(update.$set['classification.status'], 'manual_override');
+    assert.deepEqual(update.$set['classification.reviewed_by'], reviewer);
+    assert.equal(update.$setOnInsert['classification.status'], undefined);
+});
+test('admin-rejected candidate is marked rejected', async () => {
+    const writes = [];
+    const result = await verifyDiscoveryCandidate('67000000001', {
+        CandidateModel: { findOne: () => lean({ _id: 'candidate', payload: { project_name: 'พัฒนาระบบสารสนเทศ' },
+            classification: { isSoftware: false, status: 'manual_override' } }), updateOne: async (...args) => writes.push(args) },
+        ProjectModel: { findOne: () => lean(null) },
+        verifyEligibility: async () => assert.fail('Must not verify a rejected candidate'),
+    });
+    assert.equal(result.status, 'rejected');
+    assert.equal(writes[0][1].$set.status, 'rejected');
+});
