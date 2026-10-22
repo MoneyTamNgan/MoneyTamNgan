@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { timingSafeEqual } from 'node:crypto';
 import { SESSION_COOKIE, verifySession } from '@/lib/auth';
+import { isPipelineAuthorized } from '@/lib/pipeline-auth';
 import {
     clientAddress,
     createRateLimiter,
@@ -37,19 +37,6 @@ function rateLimit(request, session) {
         response.headers.set(name, value);
     }
     return response;
-}
-
-function isPipelineAuthorized(request) {
-    const configured = process.env.PIPELINE_ADMIN_TOKEN || '';
-    const supplied = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1] || '';
-    const expectedBytes = Buffer.from(configured);
-    const suppliedBytes = Buffer.from(supplied);
-
-    return (
-        configured.length >= 32 &&
-        expectedBytes.length === suppliedBytes.length &&
-        timingSafeEqual(expectedBytes, suppliedBytes)
-    );
 }
 
 /**

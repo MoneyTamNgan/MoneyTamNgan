@@ -107,6 +107,14 @@ const ProjectSchema = new mongoose.Schema({
         model: { type: String },
         classified_at: { type: Date },
         reason: { type: String },
+        // Admin-assigned labels and reviewer for manual overrides (FR-1.2.2/FR-1.2.3).
+        tags: [{ type: String }],
+        reviewed_by: {
+            user_id: { type: String },
+            email: { type: String },
+            via: { type: String, enum: ['admin_session', 'pipeline_token'] },
+        },
+        reviewed_at: { type: Date },
     },
 
     processing: {
