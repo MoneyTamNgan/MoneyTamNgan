@@ -1,0 +1,78 @@
+name: Scheduled ingestion
+
+# FR-1.1.1: pull e-GP metadata into Atlas three times a day. The job starts the
+# app, then runs the ingestion scheduler once (retries and the single-run lock
+# are handled by scripts/ingestion-scheduler.js).
+on:
+  schedule:
+    # 06:00 / 12:00 / 18:00 Asia/Bangkok (UTC+7). GitHub may start these late.
+    - cron: '0 23,5,11 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: scheduled-ingestion
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  MONGODB_URI: ${{ secrets.MONGODB_URI }}
+  MONGODB_DB_NAME: moneytamngan
+  EGP_API_KEY: ${{ secrets.EGP_API_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  PIPELINE_ADMIN_TOKEN: ${{ secrets.PIPELINE_ADMIN_TOKEN }}
+  NEXT_PUBLIC_REDIRECT_URI: http://localhost:3000/api/auth/google/callback
+  INGESTION_APP_URL: http://localhost:3000
+  INGESTION_SCHEDULE: 06:00,12:00,18:00
+  INGESTION_TIMEZONE: Asia/Bangkok
+  # Scraped PDFs would be lost with the runner's disk, so only metadata is
+  # ingested here; TOR downloads stay with a worker that has persistent storage.
+  INGESTION_SCRAPE_BATCH_SIZE: '0'
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+jobs:
+  ingest:
+    name: Ingest e-GP metadata
+    runs-on: ubuntu-latest
+    # Covers the build plus the longest retry chain (~5 + 15 + 45 min).
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Allow this runner's IP on Atlas
+        env:
+          ATLAS_PUBLIC_KEY: ${{ secrets.ATLAS_PUBLIC_KEY }}
+          ATLAS_PRIVATE_KEY: ${{ secrets.ATLAS_PRIVATE_KEY }}
+          ATLAS_PROJECT_ID: ${{ secrets.ATLAS_PROJECT_ID }}
+          ATLAS_ALLOWLIST_TTL_HOURS: '2'
+          ATLAS_ALLOWLIST_COMMENT: 'auto: github actions ingestion'
+        run: sh scripts/atlas-allow-ip.sh
+
+      - run: npm run build
+
+      - name: Start app
+        run: |
+          nohup npm run start > app.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health; then exit 0; fi
+            sleep 2
+          done
+          cat app.log
+          exit 1
+
+      - name: Run ingestion
+        run: npm run scheduler:once
+
+      - name: Show run status
+        if: always()
+        run: curl -fsS http://localhost:3000/api/ingestion/status | jq '.lastRun' || true
+
+      - name: App log
+        if: failure()
+        run: tail -n 200 app.log
