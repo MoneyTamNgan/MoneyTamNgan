@@ -7,6 +7,7 @@ import { classifyProjectMetadata } from '@/lib/classifier';
 import { loadKeywordSets } from '@/lib/keywords';
 import { assessProcurementEligibility, currentThaiFiscalYear, verifyProcurementEligibility } from '@/lib/procurement-eligibility';
 import { verifyProcurementWithAnnouncement } from '@/lib/project-announcement';
+import { isTransientError } from '@/lib/ingestion-schedule';
 import { NextResponse } from 'next/server';
 
 /**
@@ -160,12 +161,16 @@ export async function POST(request) {
         return NextResponse.json(summary, { status: 202 });
     } catch (error) {
         console.error('❌ Ingestion failed:', error);
+        // Tell the scheduler whether retrying can help (e-GP 5xx/429, network)
+        // or not (missing API key, bad config).
+        const retryable = isTransientError(error);
         return NextResponse.json({
             status: 'failed',
             error: {
-                code: 'INGESTION_FAILED',
+                code: retryable ? 'INGESTION_UPSTREAM_UNAVAILABLE' : 'INGESTION_FAILED',
                 message: error.message,
+                retryable,
             },
-        }, { status: 500 });
+        }, { status: retryable ? 503 : 500 });
     }
 }
