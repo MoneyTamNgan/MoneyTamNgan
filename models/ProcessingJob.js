@@ -11,6 +11,7 @@ const ProcessingJobSchema = new mongoose.Schema({
         index: true,
     },
     attempts: { type: Number, default: 0 },
+    priority: { type: Number, default: 0, min: 0, max: 100 },
     max_attempts: { type: Number, default: 3 },
     available_at: { type: Date, default: Date.now, index: true },
     lease_until: { type: Date, index: true },
