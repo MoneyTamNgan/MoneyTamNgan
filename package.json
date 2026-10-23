@@ -15,6 +15,8 @@
     "worker:once": "node scripts/worker.js",
     "processing:recover": "node scripts/recover-processing.js",
     "announcement:analyze": "node scripts/analyze-announcement.js",
+    "fiscal:backfill": "node scripts/backfill-fiscal-budget.js",
+    "fiscal:evaluate": "node scripts/evaluate-fiscal-budget.js",
     "vertex:reanalyze": "node scripts/reanalyze-vertex.js",
     "db:ensure-indexes": "node scripts/ensure-indexes.js",
     "db:migrate-normalized": "node scripts/migrate-normalized-schema.js",

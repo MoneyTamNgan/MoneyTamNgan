@@ -22,6 +22,9 @@ const ProjectSchema = new mongoose.Schema({
     primary_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
     latest_extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun', index: true },
     latest_summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary', index: true },
+    latest_fiscal_analysis_id: { type: mongoose.Schema.Types.ObjectId, ref: 'FiscalBudgetAnalysis' },
+    fiscal_budget: mongoose.Schema.Types.Mixed,
+    fiscal_budget_meta: mongoose.Schema.Types.Mixed,
 
     // Invitation PDF (ประกาศเชิญชวน), paired with the primary TOR document.
     announcement_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
