@@ -56,6 +56,17 @@ describe('proxy middleware', () => {
     });
 
     describe('API Security & Pipeline Operator Access', () => {
+        it('protects both the admin low-confidence queue and the existing processing review GET', async () => {
+            for (const path of ['/api/admin/classification/queue', '/api/processing/review']) {
+                expect((await proxy(request(path))).status).toBe(401);
+                const user = await signSession({ sub: 'user', role: 'user' });
+                expect((await proxy(request(path, { headers: { cookie: `${SESSION_COOKIE}=${user}` } }))).status).toBe(403);
+                const admin = await signSession({ sub: 'admin', role: 'admin' });
+                expect((await proxy(request(path, { headers: { cookie: `${SESSION_COOKIE}=${admin}` } }))).status).toBe(200);
+                process.env.PIPELINE_ADMIN_TOKEN = 'r'.repeat(40);
+                expect((await proxy(request(path, { headers: { Authorization: `Bearer ${'r'.repeat(40)}` } }))).status).toBe(200);
+            }
+        });
         const triggerUrl = '/api/processing/trigger';
 
         it('denies anonymous mutation but preserves read-only status', async () => {
