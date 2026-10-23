@@ -44,12 +44,19 @@ it('only publishes verified open software, retaining unverified candidates outsi
 });
 it('default ingestion queues slow verification outside the HTTP request', async () => {
     fetchAllFromEGP.mockResolvedValue([{ project_id: 'pending', project_name: 'พัฒนาระบบสารสนเทศ' }]);
-    const response = await POST(new Request('http://localhost/api/ingestion/trigger', { method: 'POST', body: JSON.stringify({ enqueueProcessing: true }) }));
+    const response = await POST(new Request('http://localhost/api/ingestion/trigger', { method: 'POST', body: JSON.stringify({}) }));
     const body = await response.json();
     expect(body.candidatesSaved).toBe(1);
     expect(body.itemsNew).toBe(0);
     expect(verifyProcurementEligibility).not.toHaveBeenCalled();
     expect(enqueueProject).toHaveBeenCalledWith('pending', { type: 'verify_candidate' });
+});
+it('explicit enqueueProcessing false keeps ingestion-only mode', async () => {
+    fetchAllFromEGP.mockResolvedValue([{ project_id: 'pending', project_name: 'พัฒนาระบบสารสนเทศ' }]);
+    const response = await POST(new Request('http://localhost/api/ingestion/trigger', { method: 'POST', body: JSON.stringify({ enqueueProcessing: false }) }));
+    expect(response.status).toBe(202);
+    expect((await response.json()).candidatesSaved).toBe(1);
+    expect(enqueueProject).not.toHaveBeenCalled();
 });
 it('defaults discovery to current Thai fiscal year, not historical 2568', async () => {
     fetchAllFromEGP.mockResolvedValue([]);

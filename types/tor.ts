@@ -175,7 +175,9 @@ export interface TorApiFiscalBudget {
   warnings?: string[];
   year: number | null;
   years: number[];
-  status: "found" | "not_found" | "ambiguous";
+  status: "found" | "not_found" | "ambiguous" | "document_unavailable";
+  source?: "announcement" | "tor" | "combined";
+  needs_review?: boolean;
   method: "none" | "regex" | "llm" | "regex+llm";
   evidence: {
     year: number;
@@ -183,7 +185,39 @@ export interface TorApiFiscalBudget {
     clause_text: string;
     section: string | null;
     method: "regex" | "llm";
+    source?: "announcement" | "tor";
+    document_id?: string;
+    extraction_run_id?: string;
   }[];
+}
+
+export interface LowConfidenceReviewItem {
+  projectId: string;
+  projectTitle: string | null;
+  issuingAgency: string | null;
+  titleSource: "extracted" | "government_metadata";
+  agencySource: "extracted" | "government_metadata";
+  classificationTags: string[];
+  isSoftware: boolean | null;
+  classificationStatus: string;
+  confidenceScore: number;
+  confidenceScores: { classification: number | null; extraction: number | null };
+  reviewReasons: ("low_classification_confidence" | "low_extraction_confidence")[];
+  primaryPdfUrl: string | null;
+  primaryDocumentUrl: string | null;
+  primaryDocumentType: "pdf" | "archive" | null;
+  primaryPdfEntryName: string | null;
+  processingStatus: string | null;
+}
+
+export interface LowConfidenceReviewPage {
+  items: LowConfidenceReviewItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  threshold: 0.7;
+  confidenceType: "either" | "classification" | "extraction";
 }
 
 export interface TorApiDetail {

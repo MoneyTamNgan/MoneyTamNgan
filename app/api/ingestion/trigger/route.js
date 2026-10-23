@@ -18,7 +18,7 @@ import { NextResponse } from 'next/server';
  *
  * Body (optional):
  *   { year?: string, keyword?: string, limit?: number, deptCode?: string,
- *     enqueueProcessing?: boolean }
+ *     enqueueProcessing?: boolean } // defaults true; false is ingestion-only
  */
 export async function POST(request) {
     try {
@@ -32,7 +32,7 @@ export async function POST(request) {
             // No body provided — use defaults
         }
 
-        const { year = currentThaiFiscalYear(), keyword, limit, deptCode, rssDeptId, enqueueProcessing = false, verifyInline = false } = body;
+        const { year = currentThaiFiscalYear(), keyword, limit, deptCode, rssDeptId, enqueueProcessing = true, verifyInline = false } = body;
         if (typeof enqueueProcessing !== 'boolean' || typeof verifyInline !== 'boolean'
             || !/^\d{4}$/.test(String(year))
             || (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 1000))
