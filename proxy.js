@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { SESSION_COOKIE, verifySession } from '@/lib/auth';
-import { isPipelineAuthorized } from '@/lib/admin-auth';
+import { isPipelineAuthorized } from '@/lib/pipeline-auth';
 import {
     clientAddress,
     createRateLimiter,

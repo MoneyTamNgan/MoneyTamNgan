@@ -12,6 +12,7 @@ import { processProject } from '../lib/processing-pipeline.js';
 import Project from '../models/Project.js';
 import DiscoveryCandidate from '../models/DiscoveryCandidate.js';
 import { verifyDiscoveryCandidate } from '../lib/discovery-candidates.js';
+import { notifyUsersOfMatchingTors } from '../lib/services/notification-service.js';
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
 import { createRecoverySweep } from '../lib/processing-recovery.js';
 import { refreshProjectFiscalBudget } from '../lib/fiscal-backfill.js';
@@ -46,6 +47,21 @@ async function runOne() {
         }
         await completeJob(job._id, result);
         console.log(`✅ ${job.project_id}: ${result.status}`);
+
+        // Immediate email notifications for users whose skills match this newly completed project
+        if (job.type !== 'verify_candidate' && result.status === 'completed') {
+            try {
+                const freshProject = await Project.findOne({ project_id: job.project_id }).lean();
+                if (freshProject) {
+                    const notifyRes = await notifyUsersOfMatchingTors([freshProject]);
+                    if (notifyRes.notified > 0) {
+                        console.log(`📧 Notified ${notifyRes.notified} users with matching score for ${job.project_id}`);
+                    }
+                }
+            } catch (notifyErr) {
+                console.error(`⚠️ Notification warning for ${job.project_id}: ${notifyErr.message}`);
+            }
+        }
     } catch (error) {
         const { finalFailure } = await failJob(job, error);
         if (job.type === 'verify_candidate') {

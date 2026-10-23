@@ -1,4 +1,6 @@
-import mongoose, { Schema, model, models } from 'mongoose';
+import mongoose from 'mongoose';
+
+const { Schema, model, models } = mongoose;
 
 const UserSchema = new Schema({
     email: { type: String, required: true, unique: true },
@@ -14,8 +16,13 @@ const UserSchema = new Schema({
     concurrent_project_capacity: { type: Number, default: null },
     certifications: { type: [String], default: [] },
     email_notifications_enabled: { type: Boolean, default: false },
-    match_score_threshold: { type: Number, default: 70 },
+    match_score_threshold: { type: Number, default: 70, min: 0, max: 100 },
+    notification_frequency: {
+        type: String,
+        enum: ['IMMEDIATE', 'DAILY_DIGEST'],
+        default: 'IMMEDIATE',
+    },
     updatedAt: { type: Date, default: Date.now },
 });
-
 export const User = models.User || model('User', UserSchema);
+export default User;

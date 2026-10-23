@@ -61,7 +61,7 @@ const ProjectSchema = new mongoose.Schema({
     tender: {
         status: {
             type: String,
-            enum: ['draft_open', 'bidding_open', 'closed', 'unknown'],
+            enum: ['draft_open', 'bidding_open', 'open', 'closed', 'cancelled', 'unknown'],
             index: true,
         },
         rss_dept_id: String,
@@ -92,6 +92,17 @@ const ProjectSchema = new mongoose.Schema({
         payload_hash: { type: String },
     },
 
+    // Parsed submission session. These timestamps are the source of truth for
+    // live bidding availability because they preserve the exact Bangkok time.
+    submission_schedule: {
+        date: String,
+        start_time: String,
+        end_time: String,
+        starts_at: Date,
+        ends_at: Date,
+        timezone: { type: String, default: 'Asia/Bangkok' },
+    },
+
     classification: {
         status: {
             type: String,
@@ -104,6 +115,14 @@ const ProjectSchema = new mongoose.Schema({
         model: { type: String },
         classified_at: { type: Date },
         reason: { type: String },
+        // Admin-assigned labels and reviewer for manual overrides (FR-1.2.2/FR-1.2.3).
+        tags: [{ type: String }],
+        reviewed_by: {
+            user_id: { type: String },
+            email: { type: String },
+            via: { type: String, enum: ['admin_session', 'pipeline_token'] },
+        },
+        reviewed_at: { type: Date },
     },
 
     processing: {

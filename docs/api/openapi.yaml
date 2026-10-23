@@ -38,7 +38,7 @@ tags:
   - name: Anomaly Detection
     description: "[Planned] Budget and qualification anomaly flags on a TOR (FR-3.1, FR-3.2)."
   - name: Public Analytics
-    description: "[Planned] Unauthenticated historical search and aggregate metrics (FR-4.1, FR-4.2)."
+    description: "[Current] Public historical search, dashboard aggregates, and export for the Analytics page."
 
 paths:
   # ---------------------------------------------------------------------------
@@ -82,6 +82,18 @@ paths:
           in: query
           schema:
             type: string
+        - name: stage
+          in: query
+          description: Temporary TOR stage derived from contractStart.
+          schema:
+            type: string
+            enum: [draft, official, review, closed]
+        - name: biddingStatus
+          in: query
+          description: Live bidding status calculated from the exact submission deadline. Use unknown for every project without a usable deadline, including cancelled projects.
+          schema:
+            type: string
+            enum: [open, closed, unknown]
         - name: dateFrom
           in: query
           description: Inclusive lower bound on releaseDate (ISO 8601 date).
@@ -114,7 +126,18 @@ paths:
                     agency: "สำนักการจราจรและขนส่ง"
                     budget: 15000000
                     projectStatus: "ระหว่างดำเนินการ"
+                    bidding:
+                      status: open
+                      opensAt: "2026-10-12T02:00:00.000Z"
+                      closesAt: "2026-10-12T05:00:00.000Z"
+                      submissionDate: "2026-10-12"
+                      submissionStartTime: "09:00"
+                      submissionEndTime: "12:00"
+                      invitationUrl: "https://process5.gprocurement.go.th/invitation.pdf"
+                      method: "ประกวดราคาอิเล็กทรอนิกส์ (e-bidding)"
                     announceDate: "2026-08-09T00:00:00.000Z"
+                    contractStart: null
+                    contractEnd: null
                     isSoftware: true
                     classification: { status: software, confidence: 0.92 }
                     documentStatus: pending
@@ -127,6 +150,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /tors/facets:
+    get:
+      summary: List dashboard TOR filter facets
+      tags: [TORs]
+      operationId: listTorFacets
+      parameters:
+        - name: isSoftware
+          in: query
+          description: Restrict facet values and total to software or non-software TORs.
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Complete deduplicated agency list, independent of list pagination.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, total, agencies]
+                properties:
+                  status: { type: string, enum: [success] }
+                  total: { type: integer, minimum: 0 }
+                  agencies:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, count]
+                      properties:
+                        name: { type: string }
+                        count: { type: integer, minimum: 1 }
 
   /tors/{id}:
     get:
@@ -248,8 +301,41 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   /admin/tors/{id}/classification:
+    get:
+      summary: List a TOR's classification override history
+      description: Audit log of admin overrides with the reviewer who made each one, newest first.
+      tags: [Admin - Classification]
+      operationId: listTorClassificationOverrides
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      responses:
+        "200":
+          description: Override history (up to 100 entries)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ClassificationOverride"
+        "400":
+          description: Missing TOR id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     patch:
-      summary: Manually confirm or override a TOR's classification
+      summary: Manually override a TOR's classification and document status
+      description: |
+        FR-1.2.2 / FR-1.2.3. Sets `classification.status` to `manual_override` (which keyword
+        re-runs and ingestion never overwrite), force-assigns tags, and optionally overrides the
+        processing or primary document status. The reviewer is recorded on the TOR and in the
+        override history. When the id is still an unpublished discovery candidate (e.g. a
+        low-confidence notice), `isSoftware: true` sends it back through open-bid verification
+        and `isSoftware: false` rejects it; the response then has `target: candidate`.
       tags: [Admin - Classification]
       operationId: updateTorClassification
       parameters:
@@ -260,19 +346,57 @@ paths:
           application/json:
             schema:
               type: object
-              required: [isSoftware]
+              minProperties: 1
               properties:
                 isSoftware:
                   type: boolean
+                tags:
+                  type: array
+                  maxItems: 20
+                  items: { type: string, minLength: 1, maxLength: 50 }
+                processingStatus:
+                  type: string
+                  description: Project processing status, e.g. review_required or document_pending.
+                documentStatus:
+                  type: string
+                  description: Primary document's processing status, returned as `documents.tor.status`.
+                  enum: [downloaded, stored, text_ready, summarized, skipped, review_required, retry_pending, failed]
+                reason:
+                  type: string
+                  maxLength: 500
+                enqueueProcessing:
+                  type: boolean
+                  default: false
+                  description: Queue OCR/AI processing when the TOR ends up classified as software.
       responses:
         "200":
-          description: Updated TOR
+          description: Updated TOR, or the updated discovery candidate
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Tor"
+                oneOf:
+                  - $ref: "#/components/schemas/TorDetail"
+                  - type: object
+                    required: [id, target, status, classification]
+                    properties:
+                      id: { type: string }
+                      target: { type: string, enum: [candidate] }
+                      status: { type: string }
+                      classification: { type: object }
+        "400":
+          description: Invalid override body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "404":
           description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Document status requested but the TOR has no stored document, or the id is an unpublished candidate
           content:
             application/json:
               schema:
@@ -639,6 +763,122 @@ paths:
   # ---------------------------------------------------------------------------
   # Public Analytics (FR-4.1, FR-4.2)
   # ---------------------------------------------------------------------------
+  /analytics/overview:
+    get:
+      summary: Search and aggregate the live TOR analytics catalog
+      tags: [Public Analytics]
+      operationId: analyticsOverview
+      description: >
+        Returns de-duplicated projects, dashboard metrics, chart series, and
+        complete filter facets for projects with tender metadata. Bidding availability
+        uses the exact submission deadline; fiscal years prefer confirmed document extraction.
+        Ambiguous document years are excluded from year grouping, and missing years
+        use a labeled estimate from the deadline in Asia/Bangkok.
+      parameters:
+        - name: isSoftware
+          in: query
+          schema: { type: boolean }
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: agency
+          in: query
+          schema:
+            type: string
+        - name: budgetMin
+          in: query
+          schema:
+            type: number
+        - name: budgetMax
+          in: query
+          schema:
+            type: number
+        - name: biddingStatus
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, cancelled, unknown]
+        - name: fiscalYear
+          in: query
+          description: Thai Buddhist Era fiscal year, confirmed extraction first, otherwise estimated from the bidding deadline.
+          schema: { type: integer, minimum: 2400, maximum: 3000 }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Search results with aggregate metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSearchResponse"
+        "400":
+          description: Invalid filter parameters
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /analytics/overview/export:
+    get:
+      summary: Export historical search results as CSV or JSON
+      tags: [Public Analytics]
+      operationId: exportAnalyticsOverview
+      description: Applies the same filters as GET /analytics/overview. Exports at most 10,000 records; X-Export-Truncated indicates additional matches.
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [csv, json]
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: agency
+          in: query
+          schema:
+            type: string
+        - name: isSoftware
+          in: query
+          schema: { type: boolean }
+        - name: biddingStatus
+          in: query
+          schema: { type: string, enum: [open, closed, cancelled, unknown] }
+        - name: fiscalYear
+          in: query
+          schema: { type: integer, minimum: 2400, maximum: 3000 }
+      responses:
+        "200":
+          description: File contents
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalyticsTorItem"
+        "400":
+          description: Invalid export format or filter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /analytics/search:
     get:
       summary: Search historical TOR records with aggregate spend metrics
@@ -648,6 +888,9 @@ paths:
         Unauthenticated and rate-limited (FR-4.2.2, see 429). Aggregates cover
         every matching project, not just the returned page.
       parameters:
+        - name: isSoftware
+          in: query
+          schema: { type: boolean }
         - name: dateFrom
           in: query
           description: Inclusive lower bound on announce date.
@@ -671,7 +914,7 @@ paths:
           schema:
             $ref: "#/components/schemas/KeywordCategory"
         - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
+        - $ref: "#/components/parameters/LimitParam"
       responses:
         "200":
           description: One page of matching TORs with aggregate metrics
@@ -699,8 +942,7 @@ paths:
           description: Rate limit exceeded
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: "#/components/schemas/Error" }
 
   /analytics/export:
     get:
@@ -942,6 +1184,24 @@ components:
           type: string
           format: date-time
 
+    ClassificationOverride:
+      type: object
+      required: [id, target, reviewer, reason, before, after, createdAt]
+      properties:
+        id: { type: string }
+        target: { type: string, enum: [project, candidate] }
+        reviewer:
+          type: object
+          required: [userId, email, via]
+          properties:
+            userId: { type: string, nullable: true }
+            email: { type: string, nullable: true }
+            via: { type: string, enum: [admin_session, pipeline_token] }
+        reason: { type: string, nullable: true }
+        before: { type: object }
+        after: { type: object }
+        createdAt: { type: string, format: date-time }
+
     TorApiClassification:
       type: object
       required: [status, confidence]
@@ -958,14 +1218,19 @@ components:
 
     TorListItem:
       type: object
-      required: [id, title, agency, budget, projectStatus, announceDate, isSoftware, classification, documentStatus, processingStatus, techStack, anomaly]
+      required: [id, title, agency, budget, projectStatus, bidding, announceDate, contractStart, contractEnd, isSoftware, classification, documentStatus, processingStatus, techStack, anomaly]
       properties:
+        fiscalBudget: { $ref: "#/components/schemas/TorFiscalBudget" }
         id: { type: string }
         title: { type: string }
         agency: { type: string }
-        budget: { type: number, description: Announced budget in THB. }
+        budget: { type: number, nullable: true, description: "Announced budget in THB. Falls back to tender reference price when available." }
         projectStatus: { type: string }
+        bidding:
+          $ref: "#/components/schemas/TorApiBidding"
         announceDate: { type: string, format: date-time, nullable: true }
+        contractStart: { type: string, format: date-time, nullable: true, description: "Contract start; currently used only by the temporary TOR-stage display." }
+        contractEnd: { type: string, format: date-time, nullable: true, description: "Contract end, not a bidding deadline." }
         isSoftware: { type: boolean, nullable: true }
         classification:
           $ref: "#/components/schemas/TorApiClassification"
@@ -976,6 +1241,20 @@ components:
           items: { type: string }
         anomaly:
           $ref: "#/components/schemas/TorListAnomaly"
+
+    TorApiBidding:
+      type: object
+      required: [status, opensAt, closesAt, submissionDate, submissionStartTime, submissionEndTime, invitationUrl, method]
+      properties:
+        phase: { type: string, nullable: true, description: "Raw tender phase, separate from live bidding availability." }
+        status: { type: string, enum: [open, closed, cancelled, unknown], description: "Calculated at response time from the bid-submission deadline; cancelled is retained from the source." }
+        opensAt: { type: string, format: date-time, nullable: true, description: "Exact bid-submission session start in Asia/Bangkok." }
+        closesAt: { type: string, format: date-time, nullable: true, description: "Exact bid-submission session end in Asia/Bangkok. The dashboard uses this as the live deadline." }
+        submissionDate: { type: string, format: date, nullable: true }
+        submissionStartTime: { type: string, nullable: true, example: "09:00" }
+        submissionEndTime: { type: string, nullable: true, example: "12:00" }
+        invitationUrl: { type: string, format: uri, nullable: true }
+        method: { type: string, nullable: true }
 
     TorListAnomaly:
       type: object
@@ -1045,10 +1324,30 @@ components:
               section: { type: string, nullable: true }
               method: { type: string, enum: [regex, llm] }
 
+    TorDocument:
+      type: object
+      nullable: true
+      properties:
+        id: { type: string, nullable: true }
+        type: { type: string }
+        filename: { type: string, nullable: true }
+        sourceUrl: { type: string, nullable: true }
+        mimeType: { type: string, nullable: true }
+        sizeBytes: { type: number, nullable: true }
+        status: { type: string, nullable: true }
+        version: { type: number, nullable: true }
+        isCurrentPrimary: { type: boolean }
+
     TorDetail:
       type: object
       required: [id, title, agency, budget, projectStatus, pdfUrl, createdAt, updatedAt, timeline, classification, documentStatus, processingStatus, requirements, scopeOfWork, techStack, summary, anomalies, version]
       properties:
+        bidding: { $ref: "#/components/schemas/TorApiBidding" }
+        documents:
+          type: object
+          properties:
+            tor: { $ref: "#/components/schemas/TorDocument" }
+            announcement: { $ref: "#/components/schemas/TorDocument" }
         id: { type: string }
         title: { type: string }
         agency:
@@ -1057,7 +1356,7 @@ components:
           properties:
             name: { type: string }
             subName: { type: string, nullable: true }
-        budget: { type: number }
+        budget: { type: number, nullable: true }
         projectStatus: { type: string }
         pdfUrl: { type: string, format: uri, nullable: true }
         createdAt: { type: string, format: date-time, nullable: true }
@@ -1078,6 +1377,20 @@ components:
               properties:
                 isSoftware: { type: boolean, nullable: true }
                 reason: { type: string, nullable: true }
+                tags:
+                  type: array
+                  items: { type: string }
+                  description: Admin-assigned tags (FR-1.2.2).
+                reviewedBy:
+                  type: object
+                  nullable: true
+                  description: Admin who last overrode the classification or document status. Only returned by the admin override endpoint.
+                  required: [userId, email, via]
+                  properties:
+                    userId: { type: string, nullable: true }
+                    email: { type: string, nullable: true }
+                    via: { type: string, enum: [admin_session, pipeline_token] }
+                reviewedAt: { type: string, format: date-time, nullable: true }
         documentStatus: { type: string, nullable: true }
         processingStatus: { type: string, nullable: true }
         requirements: { type: array, items: { type: string } }
@@ -1395,6 +1708,126 @@ components:
         highBudgetFlag: { type: boolean }
         budgetDeviationMultiplier: { type: number }
         updatedAt: { type: string, format: date-time, nullable: true }
+
+    AnalyticsSearchResponse:
+      type: object
+      required: [status, generatedAt, filters, dataQuality, metrics, charts, facets, page, limit, total, data]
+      properties:
+        status: { type: string, enum: [success] }
+        generatedAt: { type: string, format: date-time }
+        filters: { type: object, description: The validated filter values applied to this response. }
+        dataQuality:
+          type: object
+          description: Identifies temporary field derivations until canonical bidding data exists.
+          additionalProperties: { type: string }
+        metrics:
+          type: object
+          required: [totalTors, totalBudget, openForBidding, openBudget, closingSoon]
+          properties:
+            totalTors: { type: integer, minimum: 0 }
+            totalBudget: { type: number, minimum: 0 }
+            openForBidding: { type: integer, minimum: 0 }
+            openBudget: { type: number, minimum: 0 }
+            closingSoon: { type: integer, minimum: 0 }
+        charts:
+          type: object
+          required: [fiscalYearTrend, projectLength, biddingStatus, closingWindow, documentReadiness, topAgencies]
+          properties:
+            fiscalYearTrend:
+              type: array
+              items:
+                type: object
+                required: [fiscalYear, count, totalBudget]
+                properties:
+                  fiscalYear: { type: integer }
+                  count: { type: integer, minimum: 0 }
+                  totalBudget: { type: number, minimum: 0 }
+            projectLength:
+              type: array
+              items:
+                type: object
+                required: [key, label, count, totalBudget]
+                properties:
+                  key: { type: string, enum: [one, two, threePlus, unknown] }
+                  label: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  totalBudget: { type: number, minimum: 0 }
+            biddingStatus:
+              type: array
+              items: { $ref: "#/components/schemas/AnalyticsBreakdown" }
+            closingWindow:
+              type: array
+              items: { $ref: "#/components/schemas/AnalyticsBreakdown" }
+            documentReadiness:
+              type: array
+              items: { $ref: "#/components/schemas/AnalyticsBreakdown" }
+            topAgencies:
+              type: array
+              items:
+                type: object
+                required: [name, count, totalBudget]
+                properties:
+                  name: { type: string }
+                  count: { type: integer, minimum: 0 }
+                  totalBudget: { type: number, minimum: 0 }
+        facets:
+          type: object
+          required: [agencies, fiscalYears]
+          properties:
+            agencies:
+              type: array
+              items:
+                type: object
+                required: [name, count]
+                properties:
+                  name: { type: string }
+                  count: { type: integer, minimum: 0 }
+            fiscalYears:
+              type: array
+              items:
+                type: object
+                required: [year, count]
+                properties:
+                  year: { type: integer }
+                  count: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0 }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AnalyticsTorItem" }
+
+    AnalyticsBreakdown:
+      type: object
+      required: [key, count, totalBudget]
+      properties:
+        key: { type: string }
+        count: { type: integer, minimum: 0 }
+        totalBudget: { type: number, minimum: 0 }
+
+    AnalyticsTorItem:
+      type: object
+      required: [id, title, budget, projectStatus, isSoftware, announceDate, bidClosesAt, bidStartsAt, bidSubmissionDate, bidStartTime, bidEndTime, fiscalYear, fiscalYearSource, biddingStatus, documentReadiness, projectLength]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        agency: { type: string }
+        budget: { type: number, minimum: 0, nullable: true }
+        projectStatus: { type: string }
+        isSoftware: { type: boolean, nullable: true }
+        announceDate: { type: string, format: date-time, nullable: true }
+        contractStart: { type: string, format: date-time, nullable: true }
+        contractEnd: { type: string, format: date-time, nullable: true }
+        fiscalYear: { type: integer, nullable: true }
+        biddingStatus: { type: string, enum: [open, closed, cancelled, unknown] }
+        fiscalYearSource: { type: string, enum: [document, ambiguous, bid_close_estimate, unknown] }
+        bidClosesAt: { type: string, format: date-time, nullable: true }
+        bidStartsAt: { type: string, format: date-time, nullable: true }
+        bidSubmissionDate: { type: string, format: date, nullable: true }
+        bidStartTime: { type: string, nullable: true }
+        bidEndTime: { type: string, nullable: true }
+        documentReadiness: { type: string, enum: [analysis_ready, tor_ready, announcement_only, no_documents] }
+        projectLength: { type: integer, nullable: true, minimum: 1 }
 
     PaginatedList:
       type: object
