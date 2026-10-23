@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { timingSafeEqual } from 'node:crypto';
 import { SESSION_COOKIE, verifySession } from '@/lib/auth';
+import { isPipelineAuthorized } from '@/lib/admin-auth';
 import {
     clientAddress,
     createRateLimiter,
@@ -39,19 +39,6 @@ function rateLimit(request, session) {
     return response;
 }
 
-function isPipelineAuthorized(request) {
-    const configured = process.env.PIPELINE_ADMIN_TOKEN || '';
-    const supplied = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1] || '';
-    const expectedBytes = Buffer.from(configured);
-    const suppliedBytes = Buffer.from(supplied);
-
-    return (
-        configured.length >= 32 &&
-        expectedBytes.length === suppliedBytes.length &&
-        timingSafeEqual(expectedBytes, suppliedBytes)
-    );
-}
-
 /**
  * Gate account pages behind a valid session, authorize admin/pipeline endpoints,
  * and rate-limit public read API endpoints for guest access (FR-4.2.1, FR-4.2.2).
@@ -66,7 +53,8 @@ export async function proxy(request) {
 
     // 1. Public API Read Requests (FR-4.2.1, FR-4.2.2):
     // Allows guest read access to all non-admin API routes while enforcing rate limits
-    if (isApi && isReadRequest && !pathname.startsWith('/api/admin/')) {
+    const isPrivateReview = pathname === '/api/processing/review' || pathname.startsWith('/api/processing/review/');
+    if (isApi && isReadRequest && !pathname.startsWith('/api/admin/') && !isPrivateReview) {
         return rateLimit(request, session);
     }
 
