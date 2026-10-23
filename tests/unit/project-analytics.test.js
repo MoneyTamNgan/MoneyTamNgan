@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAnalyticsPipeline, parseAnalyticsQuery } from './project-analytics';
+import { buildAnalyticsPipeline, parseAnalyticsQuery } from '@/lib/analytics/project-analytics';
 
 function params(query = '') {
     return new URLSearchParams(query);

@@ -7,6 +7,9 @@ import mongoose from 'mongoose';
 import Project from '../../models/Project.js';
 import { processProject } from '../../lib/processing-pipeline.js';
 import { TOR_PROMPT_VERSION } from '../../lib/vertex/response-schema.js';
+import ProcessingJob from '../../models/ProcessingJob.js';
+import { recoverPendingProjects } from '../../lib/processing-recovery.js';
+import { claimNextJob, completeJob } from '../../lib/job-queue.js';
 
 async function fixture(t) {
     const dir = await mkdtemp(path.join(os.tmpdir(), 'tor-pipeline-test-'));
@@ -237,4 +240,70 @@ test('normalized dual-write mode uses transactional OCR and summary bundles', as
     assert.equal(result.status, 'completed');
     assert.equal(normalizedWrites.ocr, 1);
     assert.equal(normalizedWrites.summary, 1);
+});
+
+test('catch-up hands a stranded document through the real queue to the existing OCR/Vertex pipeline', async t => {
+    const { record, dependencies, normalizedWrites } = await fixture(t);
+    record.processing.status = 'document_downloaded';
+    process.env.VERTEX_AI_ENABLED = 'true';
+    let job = null;
+    t.mock.method(ProcessingJob, 'findOne', filter => ({
+        sort() { return this; }, lean: async () => job && (!filter.status || filter.status.$in.includes(job.status)) ? job : null,
+    }));
+    t.mock.method(ProcessingJob, 'create', async fields => {
+        job = { _id: 'recovered-job', ...fields, status: 'queued' };
+        return { toObject: () => ({ ...job }) };
+    });
+    t.mock.method(ProcessingJob, 'findOneAndUpdate', async () => { job.status = 'running'; return job; });
+    t.mock.method(ProcessingJob, 'updateOne', async (_filter, update) => {
+        Object.assign(job, update.$set);
+        for (const key of Object.keys(update.$unset || {})) delete job[key];
+    });
+    record._id = new mongoose.Types.ObjectId();
+    const recovered = await recoverPendingProjects({ dryRun: false }, {
+        ProjectModel: { find: () => ({ sort() { return this; }, limit() { return this; }, lean: async () => [record] }) },
+        loadKeywords: async () => ({}),
+    });
+    assert.equal(recovered.queued, 1);
+    const claimed = await claimNextJob();
+    dependencies.extractWithVertex = async () => ({ extraction: {
+        summary: 'สรุปทดสอบจากโครงการที่ตกค้าง', qualifications: [], scope_of_work: [], tech_stack: [],
+        flagged_clauses: [], risk_findings: [], confidence: 0.95,
+        fiscal_budget: { year: 2570, years: [2570], status: 'found', method: 'regex' },
+    }, model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
+    usage: { inputTokens: 10, outputTokens: 5 } });
+    const result = await processProject(claimed.project_id, {}, dependencies);
+    await completeJob(claimed._id, result);
+    assert.equal(job.status, 'completed');
+    assert.equal(job.active_key, undefined);
+    assert.equal(job.result.documentSummaryId, 'summary-test');
+    assert.equal(normalizedWrites.ocr, 1);
+    assert.equal(normalizedWrites.summary, 1);
+    assert.equal(normalizedWrites.vertex.extraction.fiscal_budget.year, 2570);
+});
+
+test('main worker invokes announcement fiscal analysis before continuing the TOR path', async t => {
+    const { record, dependencies, normalizedWrites } = await fixture(t);
+    record.announcement_document_id = 'announcement-test';
+    dependencies.syncAnnouncement = async p => ({ project: p });
+    let calls = 0;
+    dependencies.analyzeInvitation = async p => {
+        assert.equal(p.announcement_document_id, 'announcement-test');
+        calls++;
+        return { status: 'completed', fiscalBudget: { year: 2570 }, eligibility: { status: 'open' } };
+    };
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(calls, 1);
+    assert.equal(normalizedWrites.ocr, 1);
+    assert.equal(result.status, 'ai_pending');
+});
+
+test('unverified announcement prevents a worker from bypassing official open-bid admission', async t => {
+    const { record, dependencies, normalizedWrites } = await fixture(t);
+    record.announcement_document_id = 'announcement-test';
+    dependencies.syncAnnouncement = async p => ({ project: p });
+    dependencies.analyzeInvitation = async () => ({ status: 'skipped', eligibility: { status: 'unknown' } });
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(result.retryable, true);
+    assert.equal(normalizedWrites.ocr, 0);
 });

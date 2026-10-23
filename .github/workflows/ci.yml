@@ -38,6 +38,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:vitest
+      - run: npm test
 
   contract:
     name: API contract

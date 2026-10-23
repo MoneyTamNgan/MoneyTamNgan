@@ -2,8 +2,12 @@ import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { hydrateProjectsCompatibility } from '@/lib/project-compat';
 import { NextResponse } from 'next/server';
+import { authorizeAdminRequest } from '@/lib/admin-auth';
 
 export async function GET(request) {
+    const auth = await authorizeAdminRequest(request);
+    if (!auth.authorized) return NextResponse.json({ error: { code: auth.code, message: auth.message } }, { status: auth.status,
+        headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie, Authorization' } });
     try {
         await connectDB();
         const params = new URL(request.url).searchParams;
@@ -29,7 +33,7 @@ export async function GET(request) {
             total,
             page,
             pageSize,
-        });
+        }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie, Authorization' } });
     } catch (error) {
         return NextResponse.json({
             error: { code: 'REVIEW_QUEUE_FAILED', message: error.message },

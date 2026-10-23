@@ -3,11 +3,11 @@ import {
     calculateMatchScore,
     notifyUsersOfMatchingTors,
     sendDailyDigest,
-} from './notification-service.js';
+} from '../../lib/services/notification-service.js';
 import { User } from '../../models/User.js';
-import * as emailModule from '../email.js';
+import * as emailModule from '../../lib/email.js';
 
-vi.mock('../db.js', () => ({
+vi.mock('../../lib/db.js', () => ({
     default: vi.fn().mockResolvedValue(true),
 }));
 
@@ -17,7 +17,7 @@ vi.mock('../../models/User.js', () => ({
     },
 }));
 
-vi.mock('../email.js', () => ({
+vi.mock('../../lib/email.js', () => ({
     sendMatchNotificationEmail: vi.fn(),
 }));
 

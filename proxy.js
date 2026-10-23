@@ -53,7 +53,8 @@ export async function proxy(request) {
 
     // 1. Public API Read Requests (FR-4.2.1, FR-4.2.2):
     // Allows guest read access to all non-admin API routes while enforcing rate limits
-    if (isApi && isReadRequest && !pathname.startsWith('/api/admin/')) {
+    const isPrivateReview = pathname === '/api/processing/review' || pathname.startsWith('/api/processing/review/');
+    if (isApi && isReadRequest && !pathname.startsWith('/api/admin/') && !isPrivateReview) {
         return rateLimit(request, session);
     }
 
