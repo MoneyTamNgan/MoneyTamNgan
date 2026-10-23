@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
+import { enqueueProject } from '@/lib/job-queue';
 import { NextResponse } from 'next/server';
 
 export async function PATCH(request, { params }) {
@@ -23,6 +24,9 @@ export async function PATCH(request, { params }) {
                 'classification.reason': String(body.reason || 'Manual review').slice(0, 1000),
                 'processing.status': body.isSoftware ? 'document_pending' : 'irrelevant',
                 'processing.error': null,
+                'workflow.status': body.isSoftware ? 'document_pending' : 'irrelevant',
+                'workflow.error': null,
+                'workflow.updated_at': new Date(),
             },
         }, { returnDocument: 'after', runValidators: true }).lean();
 
@@ -30,6 +34,18 @@ export async function PATCH(request, { params }) {
             return NextResponse.json({
                 error: { code: 'PROJECT_NOT_FOUND', message: `No project exists with id: ${id}` },
             }, { status: 404 });
+        }
+        // Software approval schedules work; the worker still verifies current
+        // open bidding before any new acquisition. Repeated approval reuses an
+        // active job rather than downloading/OCRing inside this HTTP request.
+        if (body.isSoftware) {
+            try { await enqueueProject(id); }
+            catch (error) {
+                return NextResponse.json({ classificationSaved: true, projectId: id,
+                    error: { code: 'CLASSIFICATION_ENQUEUE_FAILED',
+                        message: 'Software approval was saved, but processing could not be queued. Retry this request; active jobs are deduplicated.' },
+                }, { status: 503 });
+            }
         }
         return NextResponse.json(project);
     } catch (error) {
