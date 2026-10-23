@@ -263,28 +263,36 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   /admin/classification/queue:
+    servers:
+      - url: http://localhost:3000/api
     get:
-      summary: List TORs pending or uncertain classification review
-      description: Backs the "ตรวจสอบประเภท TOR" (review TOR category) panel.
+      summary: List TORs with confidence strictly below 70 percent
+      description: >
+        Admin-only read. Scores use the 0..1 scale; 0.70 is excluded and missing
+        scores are not treated as zero. By default either classification or the
+        current primary TOR summary may qualify a record. Does not invoke OCR or AI.
       tags: [Admin - Classification]
       operationId: listClassificationQueue
+      security:
+        - sessionAuth: []
+        - pipelineBearer: []
       parameters:
         - $ref: "#/components/parameters/PageParam"
         - $ref: "#/components/parameters/PageSizeParam"
+        - name: confidenceType
+          in: query
+          schema: { type: string, enum: [either, classification, extraction], default: either }
       responses:
         "200":
-          description: Paginated list of TORs needing manual classification review
+          description: Stable paginated low-confidence records with explicit score/source provenance
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/PaginatedList"
-                  - type: object
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Tor"
+                $ref: "#/components/schemas/LowConfidenceReviewPage"
+        "401":
+          description: Missing, invalid or expired admin authentication
+        "403":
+          description: Authenticated session is not an admin
         "400":
           description: Invalid pagination parameters
           content:
@@ -1009,10 +1017,11 @@ components:
       in: cookie
       name: mtn_session
       description: >
-        Planned. Session cookie set after successful login via /auth/google
-        or /auth/login. Admin-only endpoints (all /admin/* paths) will also
-        require this once auth lands; they're unauthenticated for now since
-        no login flow exists yet.
+        Signed session cookie; admin endpoints additionally require role=admin.
+    pipelineBearer:
+      type: http
+      scheme: bearer
+      description: Operator token configured as PIPELINE_ADMIN_TOKEN (at least 32 characters).
 
   parameters:
     TorIdParam:
@@ -1050,6 +1059,53 @@ components:
         default: 10
 
   schemas:
+    LowConfidenceReviewPage:
+      type: object
+      required: [items, total, page, pageSize, totalPages, threshold, confidenceType]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LowConfidenceReviewItem" }
+        total: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1, maximum: 1000000 }
+        pageSize: { type: integer, minimum: 1, maximum: 100 }
+        totalPages: { type: integer, minimum: 0 }
+        threshold: { type: number, enum: [0.7] }
+        confidenceType: { type: string, enum: [either, classification, extraction] }
+
+    LowConfidenceReviewItem:
+      type: object
+      required: [projectId, projectTitle, issuingAgency, titleSource, agencySource,
+        classificationTags, isSoftware, classificationStatus, confidenceScore,
+        confidenceScores, reviewReasons, primaryPdfUrl, primaryDocumentUrl,
+        primaryDocumentType, primaryPdfEntryName, processingStatus]
+      properties:
+        projectId: { type: string }
+        projectTitle: { type: string, nullable: true }
+        issuingAgency: { type: string, nullable: true }
+        titleSource: { type: string, enum: [extracted, government_metadata] }
+        agencySource: { type: string, enum: [extracted, government_metadata] }
+        classificationTags: { type: array, items: { type: string } }
+        isSoftware: { type: boolean, nullable: true }
+        classificationStatus: { type: string }
+        confidenceScore:
+          type: number
+          minimum: 0
+          maximum: 0.7
+          description: Selected confidence on the 0..1 scale, strictly less than 0.70.
+        confidenceScores:
+          type: object
+          required: [classification, extraction]
+          properties:
+            classification: { type: number, nullable: true, minimum: 0, maximum: 1 }
+            extraction: { type: number, nullable: true, minimum: 0, maximum: 1 }
+        reviewReasons: { type: array, items: { type: string, enum: [low_classification_confidence, low_extraction_confidence] } }
+        primaryPdfUrl: { type: string, nullable: true, format: uri }
+        primaryDocumentUrl: { type: string, nullable: true, format: uri }
+        primaryDocumentType: { type: string, nullable: true, enum: [pdf, archive] }
+        primaryPdfEntryName: { type: string, nullable: true }
+        processingStatus: { type: string, nullable: true }
+
     TorStatus:
       type: string
       enum: [Active, Superseded, Invalid, Cancelled]
@@ -1252,7 +1308,9 @@ components:
         warnings: { type: array, items: { type: string } }
         year: { type: integer, nullable: true, minimum: 2500, maximum: 2699 }
         years: { type: array, items: { type: integer, minimum: 2500, maximum: 2699 } }
-        status: { type: string, enum: [found, not_found, ambiguous] }
+        status: { type: string, enum: [found, not_found, ambiguous, document_unavailable] }
+        source: { type: string, enum: [announcement, tor, combined] }
+        needs_review: { type: boolean }
         method: { type: string, enum: [none, regex, llm, regex+llm] }
         evidence:
           type: array

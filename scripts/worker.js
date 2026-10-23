@@ -14,6 +14,8 @@ import DiscoveryCandidate from '../models/DiscoveryCandidate.js';
 import { verifyDiscoveryCandidate } from '../lib/discovery-candidates.js';
 import { notifyUsersOfMatchingTors } from '../lib/services/notification-service.js';
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
+import { createRecoverySweep } from '../lib/processing-recovery.js';
+import { refreshProjectFiscalBudget } from '../lib/fiscal-backfill.js';
 
 const watch = process.argv.includes('--watch');
 const pollMs = Math.max(1000, Number(process.env.WORKER_POLL_MS || 5000));
@@ -39,6 +41,10 @@ async function runOne() {
             console.log(`Vertex ${progress.stage}: ${progress.chunk || progress.attempt}/${progress.total || 'retry'}`);
         } });
         if (result.retryable) throw new Error(result.eligibility?.reason || 'Verification unavailable');
+        if (job.type !== 'verify_candidate') {
+            const fiscal = await refreshProjectFiscalBudget(job.project_id);
+            result.fiscalBudgetStatus = fiscal.status;
+        }
         await completeJob(job._id, result);
         console.log(`✅ ${job.project_id}: ${result.status}`);
 
@@ -79,10 +85,28 @@ async function main() {
     if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is required');
     await connectMongoWithDnsFallback(mongoose, process.env.MONGODB_URI);
     console.log(`Worker started (${watch ? 'watch' : 'once'} mode)`);
+    const recover = watch && process.env.WORKER_RECOVERY_ENABLED !== 'false'
+        ? createRecoverySweep({
+            intervalMs: Math.max(1000, Number(process.env.WORKER_RECOVERY_INTERVAL_MS || 60000)),
+            batchSize: Number(process.env.WORKER_RECOVERY_BATCH_SIZE || 10),
+            scanLimit: Number(process.env.WORKER_RECOVERY_SCAN_LIMIT || 100),
+        }) : null;
 
     do {
         const processed = await runOne();
-        if (watch && !processed) await sleep(pollMs);
+        if (watch && !processed) {
+            let queued = 0;
+            if (recover) {
+                try {
+                    const report = await recover();
+                    if (report) {
+                        queued = report.queued;
+                        console.log(`Recovery: ${report.scanned} scanned, ${report.queued} queued, ${report.failed} errors; skipped ${JSON.stringify(report.skipped)}`);
+                    }
+                } catch (error) { console.error(`Recovery deferred: ${error.message}`); }
+            }
+            if (!queued) await sleep(pollMs);
+        }
     } while (watch);
 
     await mongoose.disconnect();

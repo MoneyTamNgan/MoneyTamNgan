@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/lib/db', () => ({ default: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/models/Project', () => ({ default: { aggregate: vi.fn() } }));
 
-const { GET } = await import('./route');
+const { GET } = await import('@/app/api/analytics/overview/route');
 const { default: Project } = await import('@/models/Project');
 
 function requestFor(query = '') {

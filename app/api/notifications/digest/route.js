@@ -55,7 +55,6 @@ export async function POST(req) {
 
     return NextResponse.json({ status: 'success', ...result });
 }
-
 export async function GET(req) {
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret) {
@@ -71,4 +70,3 @@ export async function GET(req) {
     const result = await sendDailyDigest();
     return NextResponse.json({ status: 'success', ...result });
 }
-

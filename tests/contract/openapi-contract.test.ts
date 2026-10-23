@@ -12,6 +12,7 @@ import {
     toTorSummary,
 } from "@/lib/api/tor-response";
 import { toExportRow, toSpendAggregates } from "@/lib/analytics";
+import { toLowConfidenceReviewItem } from "@/lib/low-confidence-review";
 
 /**
  * OpenAPI 3.0's `nullable: true` is not a JSON Schema keyword Ajv understands.
@@ -67,6 +68,20 @@ const fullProject = mockProjectRecords.find((p) => p.project_id === "DGA-2563-07
 const sparseProject = mockProjectRecords.find((p) => p.project_id === "TOR-2569-003");
 
 describe("TOR API responses match docs/api/openapi.yaml", () => {
+    it("low-confidence review returns its documented compact admin contract", () => {
+        const item = toLowConfidenceReviewItem({ project_id: "fixture", project_name: "ชื่อโครงการ",
+            dept_name: "หน่วยงาน", is_software: true, classification: { status: "software" },
+            __classificationConfidence: 0.65, __extractionConfidence: null, __confidenceScore: 0.65 });
+        expectValid(validatorFor("LowConfidenceReviewPage"), { items: [item], total: 1,
+            page: 1, pageSize: 20, totalPages: 1, threshold: 0.7, confidenceType: "either" });
+    });
+    it("preserves the fiscal response shape for unavailable document coverage", () => {
+        const validate = validatorFor("TorDetail");
+        const payload = toTorDetail(fullProject);
+        payload.fiscalBudget = { year: null, years: [], status: "document_unavailable",
+            method: "none", source: "combined", evidence: [], warnings: ["incomplete_document_coverage"] };
+        expectValid(validate, payload);
+    });
     it("toTorListItem satisfies TorListItem for a full and a sparse project", () => {
         const validate = validatorFor("TorListItem");
         expectValid(validate, toTorListItem(fullProject));

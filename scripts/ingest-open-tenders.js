@@ -13,7 +13,7 @@
  *   node scripts/ingest-open-tenders.js --limit=20            # stop after 20 fetched projects
  *   node scripts/ingest-open-tenders.js --all                 # include non-software projects
  *   node scripts/ingest-open-tenders.js --force               # re-fetch projects already paired
- *   node scripts/ingest-open-tenders.js --enqueue             # queue OCR/AI processing afterwards
+ *   node scripts/ingest-open-tenders.js --no-enqueue          # opt out of automatic OCR/AI queuing
  *   node scripts/ingest-open-tenders.js --no-browser          # feed documents only (e-GP site down)
  *   node scripts/ingest-open-tenders.js --dry-run             # discover and classify only
  *   node scripts/ingest-open-tenders.js --announcement-storage=local  # default remote (links only)
@@ -262,6 +262,7 @@ async function main() {
                 && project.announcement_schedule?.parser_version === SCHEDULE_VERSION
                 && project.announcement_schedule?.status === 'parsed') {
                 stats.skippedDone += 1;
+                if (!project.latest_summary_id && !args['no-enqueue']) await enqueueProject(tender.projectId);
                 continue;
             }
             stats.attempted += 1;
@@ -283,7 +284,7 @@ async function main() {
             if (outcome.announcement) stats.announcement += 1;
             if (outcome.announcement?.invitation.submission) stats.closingDate += 1;
             if (outcome.tor && outcome.announcement) stats.paired += 1;
-            if (outcome.tor && args.enqueue) await enqueueProject(tender.projectId);
+            if ((outcome.tor || project.primary_document_id) && !args['no-enqueue']) await enqueueProject(tender.projectId);
 
             const marks = `${outcome.tor ? '✅' : '❌'} TOR${outcome.torRoute ? `(${outcome.torRoute})` : ''} `
                 + `${outcome.announcement ? '✅' : tender.invitationLink ? '❌' : '–'} ประกาศ`;

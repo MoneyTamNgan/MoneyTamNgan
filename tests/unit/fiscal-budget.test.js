@@ -67,7 +67,7 @@ test('Vertex pipeline combines regex and LLM fiscal evidence in its stored extra
     });
     assert.equal(result.extraction.fiscal_budget.year, 2570);
     assert.equal(result.extraction.fiscal_budget.method, 'regex+llm');
-    assert.match(result.promptVersion, /v7/);
+    assert.match(result.promptVersion, /v8/);
 });
 
 test('procurement budget annual-year wording and decomposed Thai sara-am retain source evidence', () => {
