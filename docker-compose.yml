@@ -7,7 +7,9 @@
 #
 # The app is then at http://localhost:3000. `scraper` runs once and exits;
 # re-run it on demand with `docker compose run --rm scraper`. `worker` polls
-# continuously for queued processing jobs.
+# continuously for queued processing jobs. `scheduler` triggers ingestion +
+# scraping through the app at 06:00/12:00/18:00 Asia/Bangkok (needs
+# PIPELINE_ADMIN_TOKEN in .env).
 
 services:
   mongo:
@@ -76,6 +78,23 @@ services:
     command: ["node", "scripts/worker.js", "--watch"]
     volumes:
       - tor-storage:/app/storage
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+      app:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/moneytamngan?replicaSet=rs0
+      INGESTION_APP_URL: http://app:3000
+    command: ["node", "scripts/ingestion-scheduler.js"]
 
 volumes:
   mongo-data:

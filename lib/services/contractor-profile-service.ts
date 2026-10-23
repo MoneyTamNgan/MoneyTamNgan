@@ -39,6 +39,7 @@ export async function getContractorProfile(): Promise<{ profile: ContractorProfi
         certifications: data.certifications ?? [],
         email_notifications_enabled: data.email_notifications_enabled ?? false,
         match_score_threshold: data.match_score_threshold ?? 70,
+        notification_frequency: data.notification_frequency ?? 'IMMEDIATE',
         updated_at: data.updatedAt ? new Date(data.updatedAt).toISOString() : undefined,
       };
       saveLocalContractorProfile(remoteProfile);
@@ -59,6 +60,7 @@ export async function getContractorProfile(): Promise<{ profile: ContractorProfi
       certifications: [],
       email_notifications_enabled: false,
       match_score_threshold: 70,
+      notification_frequency: 'IMMEDIATE',
     },
     isRemote: false,
   };
@@ -89,6 +91,7 @@ export async function saveContractorProfile(
         certifications: data.certifications ?? profile.certifications,
         email_notifications_enabled: data.email_notifications_enabled ?? profile.email_notifications_enabled,
         match_score_threshold: data.match_score_threshold ?? profile.match_score_threshold,
+        notification_frequency: data.notification_frequency ?? profile.notification_frequency ?? 'IMMEDIATE',
         updated_at: data.updatedAt ? new Date(data.updatedAt).toISOString() : undefined,
       };
       saveLocalContractorProfile(savedRemote);

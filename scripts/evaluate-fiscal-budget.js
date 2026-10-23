@@ -51,7 +51,7 @@ export function evaluateFiscalDataset(cases) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
     try {
         const { values } = parseArgs({ options: { dataset: { type: 'string' } } });
-        const path = values.dataset || new URL('../test/fixtures/fiscal-context-cases.json', import.meta.url);
+        const path = values.dataset || new URL('../tests/unit/fixtures/fiscal-context-cases.json', import.meta.url);
         const report = evaluateFiscalDataset(JSON.parse(await readFile(path, 'utf8')));
         console.log(JSON.stringify(report, null, 2));
         if (report.contextAware.failures.length) process.exitCode = 1;
