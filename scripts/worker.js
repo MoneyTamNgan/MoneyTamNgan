@@ -14,6 +14,7 @@ import DiscoveryCandidate from '../models/DiscoveryCandidate.js';
 import { verifyDiscoveryCandidate } from '../lib/discovery-candidates.js';
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
 import { createRecoverySweep } from '../lib/processing-recovery.js';
+import { refreshProjectFiscalBudget } from '../lib/fiscal-backfill.js';
 
 const watch = process.argv.includes('--watch');
 const pollMs = Math.max(1000, Number(process.env.WORKER_POLL_MS || 5000));
@@ -39,6 +40,10 @@ async function runOne() {
             console.log(`Vertex ${progress.stage}: ${progress.chunk || progress.attempt}/${progress.total || 'retry'}`);
         } });
         if (result.retryable) throw new Error(result.eligibility?.reason || 'Verification unavailable');
+        if (job.type !== 'verify_candidate') {
+            const fiscal = await refreshProjectFiscalBudget(job.project_id);
+            result.fiscalBudgetStatus = fiscal.status;
+        }
         await completeJob(job._id, result);
         console.log(`✅ ${job.project_id}: ${result.status}`);
     } catch (error) {
