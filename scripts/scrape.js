@@ -45,6 +45,10 @@ function parseArgs() {
     return args;
 }
 
+const TRANSIENT_ERROR = /Waiting failed|empty page|timed? ?out|net::ERR|ECONNRESET|socket hang up/i;
+const THROTTLE_STREAK = 3;
+const THROTTLE_PAUSE_MS = 5 * 60 * 1000;
+
 /** Closed procurements still publish their TOR, so historical mode only checks the software rule. */
 function admitProject(project, keywordSets, includeClosed) {
     if (!includeClosed) return verifySoftwareProcurement(project, keywordSets);
@@ -186,7 +190,8 @@ async function main() {
                         await persistScrapeResult(project, result);
                         return true;
                     }
-                    if (includeClosed) {
+                    // Timeouts mean e-GP is throttling us, not that the TOR is missing; leave them queued.
+                    if (includeClosed && !TRANSIENT_ERROR.test(result.error || '')) {
                         // Record the miss so the next historical run moves on to other projects.
                         await Project.updateOne({ _id: project._id }, {
                             $inc: { 'processing.download_attempts': 1 },
@@ -198,16 +203,22 @@ async function main() {
                 }
                 return false;
             };
-            const writes = [];
+            let updated = 0;
+            let transientStreak = 0;
             const { summary } = await scrapeBatch(scrapeTargets, {
                 delayMs,
-                onProgress: (i, total, result) => {
+                onProgress: async (i, total, result) => {
                     const status = result.pdf_path ? '✅' : result.error ? '❌' : '⚠️';
                     console.log(`   ${status} [${i}/${total}] ${result.projectId}`);
-                    writes.push(recordResult(result));
+                    if (await recordResult(result)) updated++;
+                    transientStreak = TRANSIENT_ERROR.test(result.error || '') ? transientStreak + 1 : 0;
+                    if (transientStreak >= THROTTLE_STREAK) {
+                        console.log(`   ⏸️  ${transientStreak} timeouts in a row; pausing ${THROTTLE_PAUSE_MS / 60000} minutes`);
+                        await new Promise(resolve => setTimeout(resolve, THROTTLE_PAUSE_MS));
+                        transientStreak = 0;
+                    }
                 },
             });
-            const updated = (await Promise.all(writes)).filter(Boolean).length;
 
             console.log('\n' + '='.repeat(50));
             console.log(`📊 Summary:`);
