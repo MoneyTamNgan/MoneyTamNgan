@@ -12,6 +12,9 @@
  *       Historical backfill: also download TORs of closed procurements whose
  *       project ID starts with one of the given fiscal years. Each project is
  *       attempted once, so repeated runs work through the remaining backlog.
+ *   node scripts/scrape.js --include-closed --years=2568,2569 --shard=0/5
+ *       Run several processes in parallel (shards 0/5 ... 4/5); each takes the
+ *       projects whose ID ends in a digit d with d % n === k.
  */
 
 import 'dotenv/config';
@@ -53,9 +56,19 @@ function batchFilter(args) {
     if (!args['include-closed']) return filter;
     filter.is_software = true;
     filter['processing.download_attempts'] = { $not: { $gte: 1 } };
-    if (typeof args.years === 'string') {
-        const prefixes = args.years.split(',').map(year => year.trim().slice(-2)).filter(year => /^\d{2}$/.test(year));
-        filter.project_id = { $regex: `^(?:${prefixes.join('|')})` };
+    const prefixes = typeof args.years === 'string'
+        ? args.years.split(',').map(year => year.trim().slice(-2)).filter(year => /^\d{2}$/.test(year))
+        : [];
+    let lastDigits = '';
+    if (typeof args.shard === 'string') {
+        const [index, count] = args.shard.split('/').map(Number);
+        if (![1, 2, 5, 10].includes(count) || !Number.isInteger(index) || index < 0 || index >= count) {
+            throw new RangeError('shard must be k/n with n in 1, 2, 5 or 10 and 0 <= k < n');
+        }
+        lastDigits = `[${[...Array(10).keys()].filter(digit => digit % count === index).join('')}]`;
+    }
+    if (prefixes.length || lastDigits) {
+        filter.project_id = { $regex: `^${prefixes.length ? `(?:${prefixes.join('|')})` : ''}${lastDigits ? `\\d*${lastDigits}$` : ''}` };
     }
     return filter;
 }
