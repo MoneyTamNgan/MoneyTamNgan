@@ -164,29 +164,37 @@ async function main() {
             const scrapeTargets = projects.map(project => ({
                 projectId: project.project_id,
             }));
-            const { results, summary } = await scrapeBatch(scrapeTargets, {
+            // Persist each project as soon as it finishes so a long run that dies
+            // part-way keeps everything downloaded so far.
+            const recordResult = async (result) => {
+                const project = projects.find(item => item.project_id === result.projectId);
+                try {
+                    if (result.pdf_path) {
+                        await persistScrapeResult(project, result);
+                        return true;
+                    }
+                    if (includeClosed) {
+                        // Record the miss so the next historical run moves on to other projects.
+                        await Project.updateOne({ _id: project._id }, {
+                            $inc: { 'processing.download_attempts': 1 },
+                            $set: { 'processing.error': String(result.error || 'No documents on page').slice(0, 1000) },
+                        });
+                    }
+                } catch (err) {
+                    console.error(`   ⚠️  Could not save ${result.projectId}: ${err.message}`);
+                }
+                return false;
+            };
+            const writes = [];
+            const { summary } = await scrapeBatch(scrapeTargets, {
                 delayMs,
                 onProgress: (i, total, result) => {
                     const status = result.pdf_path ? '✅' : result.error ? '❌' : '⚠️';
                     console.log(`   ${status} [${i}/${total}] ${result.projectId}`);
+                    writes.push(recordResult(result));
                 },
             });
-
-            // Update DB
-            let updated = 0;
-            for (const result of results) {
-                const project = projects.find(item => item.project_id === result.projectId);
-                if (result.pdf_path) {
-                    await persistScrapeResult(project, result);
-                    updated++;
-                } else if (includeClosed) {
-                    // Record the miss so the next historical run moves on to other projects.
-                    await Project.updateOne({ _id: project._id }, {
-                        $inc: { 'processing.download_attempts': 1 },
-                        $set: { 'processing.error': String(result.error || 'No documents on page').slice(0, 1000) },
-                    });
-                }
-            }
+            const updated = (await Promise.all(writes)).filter(Boolean).length;
 
             console.log('\n' + '='.repeat(50));
             console.log(`📊 Summary:`);
