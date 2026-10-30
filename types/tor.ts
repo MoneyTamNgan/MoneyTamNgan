@@ -138,6 +138,10 @@ export interface TorApiListItem {
   techStack: string[];
   matchScore?: number | null;
   anomaly: {
+    baselinePrice?: number | null;
+    baselineSampleCount?: number;
+    baselineMethod?: "historical_category_median" | "tor_budget_fallback" | "unavailable";
+    tags?: string[];
     highBudgetFlag: boolean;
     budgetDeviationMultiplier: number;
   };
@@ -157,8 +161,15 @@ export interface TorApiFacetsResponse {
   agencies: Array<{ name: string; count: number }>;
 }
 
+export interface BudgetBaselineMetadata {
+  baselinePrice?: number | null;
+  baselineSampleCount?: number;
+  baselineMethod?: "historical_category_median" | "tor_budget_fallback" | "unavailable";
+  tags?: string[];
+}
+
 export type TorApiAnomaly =
-  | { type: "high_budget"; budgetDeviationMultiplier: number }
+  | (BudgetBaselineMetadata & { type: "high_budget"; tag?: "HIGH_BUDGET_ANOMALY"; budgetDeviationMultiplier: number })
   | {
       type: "flagged_clause";
       clauseText: string;
@@ -273,7 +284,7 @@ export interface TorApiSummary {
   };
 }
 
-export interface TorApiAnomalyReport {
+export interface TorApiAnomalyReport extends BudgetBaselineMetadata {
   id: string;
   highBudgetFlag: boolean;
   budgetDeviationMultiplier: number;

@@ -115,6 +115,12 @@ export interface ProjectRecord {
   anomalies: {
     high_budget_flag: boolean;
     budget_deviation_multiplier: number;
+    baseline_price?: number | null;
+    baseline_sample_count?: number;
+    baseline_method?: "historical_category_median" | "tor_budget_fallback" | "unavailable";
+    baseline_category?: "software" | "non_software" | null;
+    baseline_reference_date?: DatabaseDate;
+    tags?: string[];
     flagged_clauses: ProjectFlaggedClause[];
   };
   version_info: {
