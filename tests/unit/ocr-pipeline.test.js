@@ -8,6 +8,7 @@ import Project from '../../models/Project.js';
 import { processProject } from '../../lib/processing-pipeline.js';
 import { TOR_PROMPT_VERSION } from '../../lib/vertex/response-schema.js';
 import ProcessingJob from '../../models/ProcessingJob.js';
+import Keyword from '../../models/Keyword.js';
 import { recoverPendingProjects } from '../../lib/processing-recovery.js';
 import { claimNextJob, completeJob } from '../../lib/job-queue.js';
 
@@ -306,4 +307,33 @@ test('unverified announcement prevents a worker from bypassing official open-bid
     const result = await processProject(record.project_id, {}, dependencies);
     assert.equal(result.retryable, true);
     assert.equal(normalizedWrites.ocr, 0);
+});
+
+test('budget anomaly and tag are persisted even while Vertex is disabled', async t => {
+    const { record, dependencies, updates } = await fixture(t);
+    Object.assign(record, { budget: 160, timeline: { announce_date: new Date('2026-10-01') } });
+    t.mock.method(Project, 'find', () => ({ select: () => ({ lean: async () =>
+        [90, 100, 110].map((budget, i) => ({ project_id: `old-${i}`, budget })) }) }));
+    const result = await processProject(record.project_id, {}, dependencies);
+    assert.equal(result.status, 'ai_pending');
+    const set = updates.find(u => u.$set?.['anomalies.baseline_method'])?.$set;
+    assert.equal(set['anomalies.baseline_price'], 100);
+    assert.equal(set['anomalies.budget_deviation_multiplier'], 1.6);
+    assert.deepEqual(set['anomalies.tags'], ['HIGH_BUDGET_ANOMALY']);
+});
+
+test('newly classified software uses its new category for the historical baseline', async t => {
+    const { record, dependencies, updates } = await fixture(t);
+    Object.assign(record, { is_software: null, project_name: 'พัฒนาระบบสารสนเทศ', classification: { status: 'pending' },
+        budget: 160, timeline: { announce_date: new Date('2026-10-01') } });
+    t.mock.method(Keyword, 'estimatedDocumentCount', async () => 1);
+    t.mock.method(Keyword, 'find', () => ({ lean: async () => [] }));
+    t.mock.method(Project, 'find', filter => {
+        assert.equal(filter.is_software, true);
+        return { select: () => ({ lean: async () => [90, 100, 110].map((budget, i) => ({ project_id: `peer-${i}`, budget })) }) };
+    });
+    await processProject(record.project_id, {}, dependencies);
+    const set = updates.find(u => u.$set?.['anomalies.baseline_method'])?.$set;
+    assert.equal(set['anomalies.baseline_category'], 'software');
+    assert.equal(set['anomalies.budget_deviation_multiplier'], 1.6);
 });

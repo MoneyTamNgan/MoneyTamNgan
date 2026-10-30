@@ -155,6 +155,12 @@ const ProjectSchema = new mongoose.Schema({
     anomalies: {
         high_budget_flag: { type: Boolean, default: false },
         budget_deviation_multiplier: { type: Number, default: 1.0 },
+        baseline_price: { type: Number, min: 0, default: null },
+        baseline_sample_count: { type: Number, min: 0 },
+        baseline_method: { type: String, enum: ['historical_category_median', 'tor_budget_fallback', 'unavailable'] },
+        baseline_category: { type: String, enum: ['software', 'non_software', null] },
+        baseline_reference_date: Date,
+        tags: [{ type: String }],
     },
 
     // Current risk read cache, atomically linked to the versioned summary below.
