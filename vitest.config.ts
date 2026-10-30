@@ -22,6 +22,7 @@ export default defineConfig({
             'tests/unit/classification-run-route.test.js',
             'tests/unit/project-classification-route.test.js',
             'tests/unit/low-confidence-review.test.js',
+            'tests/unit/budget-anomaly.test.js',
             'tests/unit/processing-trigger-route.test.js',
             'tests/unit/notification-service.test.js',
             'tests/unit/project-analytics.test.js',
