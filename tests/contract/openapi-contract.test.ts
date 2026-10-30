@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/tor-response";
 import { toExportRow, toSpendAggregates } from "@/lib/analytics";
 import { toLowConfidenceReviewItem } from "@/lib/low-confidence-review";
+import { evaluateBudgetAnomaly } from "@/lib/budget-anomaly";
 
 /**
  * OpenAPI 3.0's `nullable: true` is not a JSON Schema keyword Ajv understands.
@@ -68,6 +69,19 @@ const fullProject = mockProjectRecords.find((p) => p.project_id === "DGA-2563-07
 const sparseProject = mockProjectRecords.find((p) => p.project_id === "TOR-2569-003");
 
 describe("TOR API responses match docs/api/openapi.yaml", () => {
+    it("includes baseline evidence and the budget anomaly tag without changing legacy field names", () => {
+        const project = { ...fullProject, budget: 160, anomalies: {
+            ...fullProject.anomalies,
+            ...evaluateBudgetAnomaly({ ...fullProject, budget: 160 }, [90, 100, 110].map((budget, i) => ({ project_id: `peer-${i}`, budget }))),
+        } };
+        expectValid(validatorFor("TorListItem"), toTorListItem(project));
+        expectValid(validatorFor("TorDetail"), toTorDetail(project));
+        expectValid(validatorFor("TorApiAnomalyReport"), toTorAnomalyReport(project));
+        expect(toTorDetail(project).anomalies[0]).toMatchObject({ tag: "HIGH_BUDGET_ANOMALY", baselinePrice: 100, budgetDeviationMultiplier: 1.6 });
+        const fallback = { ...project, anomalies: evaluateBudgetAnomaly(project, []) };
+        expectValid(validatorFor("TorApiAnomalyReport"), toTorAnomalyReport(fallback));
+        expect(toTorAnomalyReport(fallback)).toMatchObject({ baselinePrice: 160, baselineSampleCount: 0, budgetDeviationMultiplier: 1, tags: [] });
+    });
     it("low-confidence review returns its documented compact admin contract", () => {
         const item = toLowConfidenceReviewItem({ project_id: "fixture", project_name: "ชื่อโครงการ",
             dept_name: "หน่วยงาน", is_software: true, classification: { status: "software" },
