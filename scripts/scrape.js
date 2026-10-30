@@ -8,6 +8,13 @@
  *   node scripts/scrape.js --project-id=67039549408  # Scrape a single project
  *   node scripts/scrape.js --limit=20               # Scrape up to 20 projects
  *   node scripts/scrape.js --delay=5000             # 5 second delay between requests
+ *   node scripts/scrape.js --include-closed --years=2568,2569 --limit=1000
+ *       Historical backfill: also download TORs of closed procurements whose
+ *       project ID starts with one of the given fiscal years. Each project is
+ *       attempted once, so repeated runs work through the remaining backlog.
+ *   node scripts/scrape.js --include-closed --years=2568,2569 --shard=0/5
+ *       Run several processes in parallel (shards 0/5 ... 4/5); each takes the
+ *       projects whose ID ends in a digit d with d % n === k.
  */
 
 import 'dotenv/config';
@@ -38,6 +45,38 @@ function parseArgs() {
     return args;
 }
 
+const TRANSIENT_ERROR = /Waiting failed|empty page|timed? ?out|net::ERR|ECONNRESET|socket hang up/i;
+const THROTTLE_STREAK = 3;
+const THROTTLE_PAUSE_MS = 5 * 60 * 1000;
+
+/** Closed procurements still publish their TOR, so historical mode only checks the software rule. */
+function admitProject(project, keywordSets, includeClosed) {
+    if (!includeClosed) return verifySoftwareProcurement(project, keywordSets);
+    return verifySoftwareProcurement(project, keywordSets, async () => ({ status: 'open' }));
+}
+
+function batchFilter(args) {
+    const filter = { primary_document_id: { $exists: false } };
+    if (!args['include-closed']) return filter;
+    filter.is_software = true;
+    filter['processing.download_attempts'] = { $not: { $gte: 1 } };
+    const prefixes = typeof args.years === 'string'
+        ? args.years.split(',').map(year => year.trim().slice(-2)).filter(year => /^\d{2}$/.test(year))
+        : [];
+    let lastDigits = '';
+    if (typeof args.shard === 'string') {
+        const [index, count] = args.shard.split('/').map(Number);
+        if (![1, 2, 5, 10].includes(count) || !Number.isInteger(index) || index < 0 || index >= count) {
+            throw new RangeError('shard must be k/n with n in 1, 2, 5 or 10 and 0 <= k < n');
+        }
+        lastDigits = `[${[...Array(10).keys()].filter(digit => digit % count === index).join('')}]`;
+    }
+    if (prefixes.length || lastDigits) {
+        filter.project_id = { $regex: `^${prefixes.length ? `(?:${prefixes.join('|')})` : ''}${lastDigits ? `\\d*${lastDigits}$` : ''}` };
+    }
+    return filter;
+}
+
 async function persistScrapeResult(project, result) {
     if (!project || !result.pdf_path) return null;
     const hashed = await hashFile(result.pdf_path);
@@ -63,6 +102,7 @@ async function main() {
     const args = parseArgs();
     const projectId = args['project-id'];
     const limit = args['limit'] === undefined ? 10 : Number(args['limit']);
+    const includeClosed = Boolean(args['include-closed']);
     const delayMs = normalizeDelayMs(args['delay'] ?? DEFAULT_DELAY_MS);
 
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
@@ -87,7 +127,7 @@ async function main() {
         // Single project mode
         console.log(`🔍 Scraping single project: ${projectId}`);
         const existingProject = await Project.findOne({ project_id: projectId }).lean();
-        const admission = await verifySoftwareProcurement(existingProject, await loadKeywordSets());
+        const admission = await admitProject(existingProject, await loadKeywordSets(), includeClosed);
         if (!admission.allowed) {
             console.log(`Skipped ${projectId}: ${admission.reason}`);
             await mongoose.disconnect();
@@ -120,14 +160,14 @@ async function main() {
         }
     } else {
         // Batch mode
-        const candidates = await Project.find({ primary_document_id: { $exists: false } })
+        const candidates = await Project.find(batchFilter(args))
             .select('project_id project_name is_software classification timeline project_status primary_document_id')
             .limit(limit)
             .lean();
         const projects = [];
         const keywordSets = await loadKeywordSets();
         for (const project of candidates) {
-            const admission = await verifySoftwareProcurement(project, keywordSets);
+            const admission = await admitProject(project, keywordSets, includeClosed);
             if (admission.allowed) projects.push(project);
             else console.log(`Skipped ${project.project_id}: ${admission.reason}`);
         }
@@ -141,23 +181,44 @@ async function main() {
             const scrapeTargets = projects.map(project => ({
                 projectId: project.project_id,
             }));
-            const { results, summary } = await scrapeBatch(scrapeTargets, {
+            // Persist each project as soon as it finishes so a long run that dies
+            // part-way keeps everything downloaded so far.
+            const recordResult = async (result) => {
+                const project = projects.find(item => item.project_id === result.projectId);
+                try {
+                    if (result.pdf_path) {
+                        await persistScrapeResult(project, result);
+                        return true;
+                    }
+                    // Timeouts mean e-GP is throttling us, not that the TOR is missing; leave them queued.
+                    if (includeClosed && !TRANSIENT_ERROR.test(result.error || '')) {
+                        // Record the miss so the next historical run moves on to other projects.
+                        await Project.updateOne({ _id: project._id }, {
+                            $inc: { 'processing.download_attempts': 1 },
+                            $set: { 'processing.error': String(result.error || 'No documents on page').slice(0, 1000) },
+                        });
+                    }
+                } catch (err) {
+                    console.error(`   ⚠️  Could not save ${result.projectId}: ${err.message}`);
+                }
+                return false;
+            };
+            let updated = 0;
+            let transientStreak = 0;
+            const { summary } = await scrapeBatch(scrapeTargets, {
                 delayMs,
-                onProgress: (i, total, result) => {
+                onProgress: async (i, total, result) => {
                     const status = result.pdf_path ? '✅' : result.error ? '❌' : '⚠️';
                     console.log(`   ${status} [${i}/${total}] ${result.projectId}`);
+                    if (await recordResult(result)) updated++;
+                    transientStreak = TRANSIENT_ERROR.test(result.error || '') ? transientStreak + 1 : 0;
+                    if (transientStreak >= THROTTLE_STREAK) {
+                        console.log(`   ⏸️  ${transientStreak} timeouts in a row; pausing ${THROTTLE_PAUSE_MS / 60000} minutes`);
+                        await new Promise(resolve => setTimeout(resolve, THROTTLE_PAUSE_MS));
+                        transientStreak = 0;
+                    }
                 },
             });
-
-            // Update DB
-            let updated = 0;
-            for (const result of results) {
-                if (result.pdf_path) {
-                    const project = projects.find(item => item.project_id === result.projectId);
-                    await persistScrapeResult(project, result);
-                    updated++;
-                }
-            }
 
             console.log('\n' + '='.repeat(50));
             console.log(`📊 Summary:`);
