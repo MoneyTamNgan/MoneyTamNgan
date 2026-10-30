@@ -256,7 +256,7 @@ describe('toTorAnomalyReport', () => {
         const report = toTorAnomalyReport(highBudget);
         expect(report.highBudgetFlag).toBe(true);
         expect(report.anomalies).toEqual([
-            { type: 'high_budget', budgetDeviationMultiplier: 1.76 },
+            { type: 'high_budget', tag: 'HIGH_BUDGET_ANOMALY', budgetDeviationMultiplier: 1.76 },
         ]);
     });
 

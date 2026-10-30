@@ -11,7 +11,7 @@ function toTorStatus(project: ProjectRecord): TorStatus {
 export function projectToTor(project: ProjectRecord): Tor {
   const multiplier = project.anomalies.budget_deviation_multiplier;
   const budgetAnomaly = project.anomalies.high_budget_flag && multiplier > 0
-    ? { baselinePrice: project.budget / multiplier, deviationMultiplier: multiplier, tag: "HIGH_BUDGET_ANOMALY" as const }
+    ? { baselinePrice: project.anomalies.baseline_price ?? project.budget / multiplier, deviationMultiplier: multiplier, tag: "HIGH_BUDGET_ANOMALY" as const }
     : null;
   const fallbackDate = project.timeline.announce_date ?? "ยังไม่มีข้อมูล";
   return { id: project.project_id, title: project.project_name, agency: project.dept_name, budget: project.budget, releaseDate: fallbackDate, sourceUrl: project.pdf_url ?? "ยังไม่มีข้อมูล", pdfUrl: project.pdf_url ?? null, status: toTorStatus(project), isSoftware: project.is_software, classificationConfidence: null, supersededByTorId: project.version_info.superseded_by, matchScore: null, budgetAnomaly, createdAt: project.created_at ?? fallbackDate, updatedAt: project.updated_at ?? fallbackDate };

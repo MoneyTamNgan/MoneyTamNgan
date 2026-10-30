@@ -1262,6 +1262,10 @@ components:
       properties:
         highBudgetFlag: { type: boolean }
         budgetDeviationMultiplier: { type: number }
+        baselinePrice: { type: number, nullable: true }
+        baselineSampleCount: { type: integer, minimum: 0 }
+        baselineMethod: { type: string, enum: [historical_category_median, tor_budget_fallback, unavailable] }
+        tags: { type: array, items: { type: string } }
 
     TorListResponse:
       type: object
@@ -1282,7 +1286,12 @@ components:
           required: [type, budgetDeviationMultiplier]
           properties:
             type: { type: string, enum: [high_budget] }
+            tag: { type: string, enum: [HIGH_BUDGET_ANOMALY] }
             budgetDeviationMultiplier: { type: number }
+            baselinePrice: { type: number, nullable: true }
+            baselineSampleCount: { type: integer, minimum: 0 }
+            baselineMethod: { type: string, enum: [historical_category_median, tor_budget_fallback, unavailable] }
+            tags: { type: array, items: { type: string } }
         - type: object
           required: [type, clauseText, reason, explanation]
           properties:
@@ -1444,6 +1453,10 @@ components:
         id: { type: string }
         highBudgetFlag: { type: boolean }
         budgetDeviationMultiplier: { type: number }
+        baselinePrice: { type: number, nullable: true }
+        baselineSampleCount: { type: integer, minimum: 0 }
+        baselineMethod: { type: string, enum: [historical_category_median, tor_budget_fallback, unavailable] }
+        tags: { type: array, items: { type: string } }
         anomalies:
           type: array
           items:
