@@ -60,6 +60,9 @@ export interface TorListParams {
   stage?: TorStage;
   biddingStatus?: "open" | "closed" | "unknown";
   agency?: string;
+  q?: string;
+  budgetMin?: number;
+  budgetMax?: number;
   page?: number;
   pageSize?: number;
 }

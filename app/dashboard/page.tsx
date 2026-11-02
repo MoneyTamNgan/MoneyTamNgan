@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { listTorCards, listTorFacets } from "@/lib/services/tor-service";
 import type { TorApiListItem, TorApiListResponse } from "@/types/tor";
 
@@ -27,13 +28,20 @@ function feedCacheKey(
   biddingStatus: string,
   page: number,
   liveBiddingFilterTick: number,
+  search = "",
 ) {
-  return JSON.stringify({ softwareOnly, agency, biddingStatus, page, liveBiddingFilterTick });
+  return JSON.stringify({ softwareOnly, agency, biddingStatus, page, liveBiddingFilterTick, search });
 }
 
 function cacheFeed(cache: Map<string, TorApiListResponse>, key: string, value: TorApiListResponse) {
   if (cache.size >= 50) cache.delete(cache.keys().next().value);
   cache.set(key, value);
+}
+
+function parseBudget(value: string) {
+  if (value.trim() === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
 function formatDate(date: string | null) {
@@ -105,15 +113,32 @@ function biddingTimeRemaining(closesAt: string | null, now: number) {
   return { label: `เหลือ ${hoursLeft} ชั่วโมง ${remainingMinutes} นาที`, tone: "urgent" };
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const [items, setItems] = useState<DashboardTor[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(() => {
+    const value = Number(searchParams.get("page"));
+    return Number.isInteger(value) && value >= 1 ? value : 1;
+  });
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
+  const [budgetMin, setBudgetMin] = useState(() => searchParams.get("budgetMin") ?? "");
+  const [budgetMax, setBudgetMax] = useState(() => searchParams.get("budgetMax") ?? "");
+  const [applied, setApplied] = useState(() => ({
+    q: (searchParams.get("q") ?? "").trim(),
+    budgetMin: searchParams.get("budgetMin") ?? "",
+    budgetMax: searchParams.get("budgetMax") ?? "",
+  }));
+  const appliedRef = useRef(applied);
   const [agencies, setAgencies] = useState<string[]>(["ทั้งหมด"]);
-  const [agency, setAgency] = useState("ทั้งหมด");
-  const [biddingStatus, setBiddingStatus] = useState("ทั้งหมด");
-  const [softwareOnly, setSoftwareOnly] = useState(true);
+  const [agency, setAgency] = useState(() => searchParams.get("agency") || "ทั้งหมด");
+  const [biddingStatus, setBiddingStatus] = useState(() => {
+    const value = searchParams.get("status");
+    return value === "open" || value === "closed" || value === "unknown" ? value : "ทั้งหมด";
+  });
+  const [softwareOnly, setSoftwareOnly] = useState(() => searchParams.get("software") !== "0");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [activeSlide, setActiveSlide] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -148,8 +173,18 @@ export default function DashboardPage() {
         pageSize: DASHBOARD_PAGE_SIZE,
         agency: agency === "ทั้งหมด" ? undefined : agency,
         biddingStatus: biddingStatus === "ทั้งหมด" ? undefined : biddingStatus as "open" | "closed" | "unknown",
+        q: applied.q || undefined,
+        budgetMin: parseBudget(applied.budgetMin),
+        budgetMax: parseBudget(applied.budgetMax),
       };
-      const cacheKey = feedCacheKey(softwareOnly, agency, biddingStatus, page, liveBiddingFilterTick);
+      if (requestParams.budgetMin !== undefined && requestParams.budgetMax !== undefined && requestParams.budgetMin > requestParams.budgetMax) {
+        setError("งบประมาณต่ำสุดต้องไม่มากกว่างบประมาณสูงสุด");
+        setLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+      const searchKey = `${requestParams.q ?? ""}|${requestParams.budgetMin ?? ""}|${requestParams.budgetMax ?? ""}`;
+      const cacheKey = feedCacheKey(softwareOnly, agency, biddingStatus, page, liveBiddingFilterTick, searchKey);
       const cached = feedCacheRef.current.get(cacheKey);
 
       if (cached) {
@@ -174,7 +209,7 @@ export default function DashboardPage() {
         const totalPages = Math.max(1, Math.ceil(result.total / DASHBOARD_PAGE_SIZE));
         if (page < totalPages) {
           const nextPage = page + 1;
-          const nextKey = feedCacheKey(softwareOnly, agency, biddingStatus, nextPage, liveBiddingFilterTick);
+          const nextKey = feedCacheKey(softwareOnly, agency, biddingStatus, nextPage, liveBiddingFilterTick, searchKey);
           if (!feedCacheRef.current.has(nextKey)) {
             void listTorCards({ ...requestParams, page: nextPage }).then((nextResult) => {
               cacheFeed(feedCacheRef.current, nextKey, nextResult);
@@ -192,7 +227,34 @@ export default function DashboardPage() {
     }
     void loadFeed();
     return () => { cancelled = true; };
-  }, [agency, biddingStatus, liveBiddingFilterTick, page, softwareOnly]);
+  }, [agency, applied, biddingStatus, liveBiddingFilterTick, page, softwareOnly]);
+
+  // Apply the search text and budget range 300 ms after the last keystroke.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const next = { q: query.trim(), budgetMin, budgetMax };
+      const current = appliedRef.current;
+      if (current.q === next.q && current.budgetMin === next.budgetMin && current.budgetMax === next.budgetMax) return;
+      appliedRef.current = next;
+      setApplied(next);
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [query, budgetMin, budgetMax]);
+
+  // Keep the active filters in the URL so a search can be shared or reloaded.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (applied.q) params.set("q", applied.q);
+    if (agency !== "ทั้งหมด") params.set("agency", agency);
+    if (biddingStatus !== "ทั้งหมด") params.set("status", biddingStatus);
+    if (!softwareOnly) params.set("software", "0");
+    if (applied.budgetMin) params.set("budgetMin", applied.budgetMin);
+    if (applied.budgetMax) params.set("budgetMax", applied.budgetMax);
+    if (page > 1) params.set("page", String(page));
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+  }, [agency, applied, biddingStatus, page, pathname, router, softwareOnly]);
 
   useEffect(() => {
     let cancelled = false;
@@ -221,15 +283,12 @@ export default function DashboardPage() {
     return () => window.removeEventListener("scroll", updateStickyTools);
   }, []);
 
-  const visibleItems = useMemo(() => items.filter((tor) => {
-    const allText = `${tor.id} ${tor.title} ${tor.agency}`.toLowerCase();
-    return allText.includes(query.toLowerCase());
-  }).sort((first, second) => {
+  const visibleItems = useMemo(() => [...items].sort((first, second) => {
     if (sortBy === "best-match") return (second.matchScore ?? 0) - (first.matchScore ?? 0);
     if (sortBy === "budget-high") return budgetForSort(second.budget, "high") - budgetForSort(first.budget, "high");
     if (sortBy === "budget-low") return budgetForSort(first.budget, "low") - budgetForSort(second.budget, "low");
     return new Date(second.announceDate ?? 0).getTime() - new Date(first.announceDate ?? 0).getTime();
-  }), [items, query, sortBy]);
+  }), [items, sortBy]);
   const totalPages = Math.max(1, Math.ceil(total / DASHBOARD_PAGE_SIZE));
   const updateAgency = (value: string) => { setAgency(value); setPage(1); };
   const updateBiddingStatus = (value: string) => { setBiddingStatus(value); setPage(1); };
@@ -277,6 +336,8 @@ export default function DashboardPage() {
         <button type="button" className={`software-filter ${softwareOnly ? "is-active" : ""}`} onClick={updateSoftwareOnly} aria-pressed={softwareOnly}>ซอฟต์แวร์ / ไอที</button>
         <label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label>
         <label><span className="sr-only">สถานะการยื่นข้อเสนอ</span><select value={biddingStatus} onChange={(event) => updateBiddingStatus(event.target.value)}>{BIDDING_STATUS_OPTIONS.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
+        <label><span className="sr-only">งบประมาณต่ำสุด</span><input type="number" min="0" inputMode="numeric" value={budgetMin} onChange={(event) => setBudgetMin(event.target.value)} placeholder="งบต่ำสุด (บาท)" aria-label="งบประมาณต่ำสุด" style={{ width: 140 }} /></label>
+        <label><span className="sr-only">งบประมาณสูงสุด</span><input type="number" min="0" inputMode="numeric" value={budgetMax} onChange={(event) => setBudgetMax(event.target.value)} placeholder="งบสูงสุด (บาท)" aria-label="งบประมาณสูงสุด" style={{ width: 140 }} /></label>
         <label className="sort-control"><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">เรียงตาม: ล่าสุด</option><option value="budget-high">งบประมาณ: สูงไปต่ำ</option><option value="budget-low">งบประมาณ: ต่ำไปสูง</option><option value="best-match">ความตรงกับโปรไฟล์</option></select></label>
       </section>
 
@@ -308,4 +369,9 @@ export default function DashboardPage() {
       </nav>}
     </div>
   </main>;
+}
+
+export default function DashboardPage() {
+  // useSearchParams needs a Suspense boundary for static prerendering.
+  return <Suspense fallback={null}><DashboardContent /></Suspense>;
 }
