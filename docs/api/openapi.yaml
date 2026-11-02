@@ -1229,7 +1229,7 @@ components:
         bidding:
           $ref: "#/components/schemas/TorApiBidding"
         isLatestVersion: { type: boolean }
-        supersededBy: { type: string, nullable: true, description: Id of the newer revision, if any. }
+        supersededBy: { type: string, nullable: true, description: "Id of the newer revision, if any." }
         announceDate: { type: string, format: date-time, nullable: true }
         contractStart: { type: string, format: date-time, nullable: true, description: "Contract start; currently used only by the temporary TOR-stage display." }
         contractEnd: { type: string, format: date-time, nullable: true, description: "Contract end, not a bidding deadline." }
@@ -1425,7 +1425,7 @@ components:
             isLatest: { type: boolean }
             supersededBy: { type: string, nullable: true, description: Id of the next revision. }
             supersedes: { type: string, nullable: true, description: Id of the previous revision. }
-            lineageId: { type: string, nullable: true, description: Id of the first revision, null outside a lineage. }
+            lineageId: { type: string, nullable: true, description: "Id of the first revision, null outside a lineage." }
 
     TorApiEvidence:
       type: object
