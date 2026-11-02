@@ -13,6 +13,8 @@ import IngestionRun from '../models/IngestionRun.js';
 import Project from '../models/Project.js';
 import VertexChunk from '../models/VertexChunk.js';
 import DiscoveryCandidate from '../models/DiscoveryCandidate.js';
+import { embeddingConfig } from '../lib/embedding-config.js';
+import { ensureVectorSearchIndex, VECTOR_INDEX_NAME } from '../lib/vector-index.js';
 
 const MODELS = [
     Project,
@@ -40,6 +42,16 @@ async function main() {
             }
         }
         console.log(`Ensured indexes for ${model.collection.collectionName}`);
+        if (model === Project) {
+            // Atlas only: a plain mongod has no search-index support, so don't fail the run.
+            try {
+                const { dimensions } = embeddingConfig();
+                const outcome = await ensureVectorSearchIndex(model.collection, { dimensions });
+                console.log(`Vector Search index ${VECTOR_INDEX_NAME} (${dimensions} dims): ${outcome}`);
+            } catch (error) {
+                console.warn(`Skipped Vector Search index (needs MongoDB Atlas): ${error.message}`);
+            }
+        }
     }
     await mongoose.disconnect();
 }
