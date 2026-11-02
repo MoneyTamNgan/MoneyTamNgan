@@ -11,7 +11,6 @@
     "backfill:history": "node scripts/backfill-history.js",
     "schedule:extract": "node scripts/extract-announcement-schedule.js",
     "test:schedule-atlas": "node scripts/test-announcement-schedule-atlas.js",
-    "bench": "node scripts/bench-pipelines.js",
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",
     "processing:recover": "node scripts/recover-processing.js",
