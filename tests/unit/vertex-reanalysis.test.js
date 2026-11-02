@@ -65,3 +65,22 @@ test('stored v3 summary is reused idempotently', async () => {
     assert.equal(result.status, 'completed');
     assert.equal(updates[0][1].$set.latest_summary_id, 'summary-v3');
 });
+
+test('cached summary reuse refreshes budget policy without another Vertex call', async () => {
+    let update;
+    await reanalyzeStoredProject('target', {
+        ProjectModel: {
+            findOne: () => lean({ _id: 'project', project_id: 'target', budget: 150.0001, is_software: true,
+                timeline: { announce_date: '2026-10-01' }, primary_document_id: 'doc', latest_extraction_run_id: 'run' }),
+            find: () => ({ select: () => lean([90, 100, 110].map((budget, i) => ({ project_id: `old-${i}`, budget }))) }),
+            updateOne: async (_, value) => { update = value; return { matchedCount: 1 }; },
+        },
+        DocumentModel: { findById: () => lean({ _id: 'doc' }) },
+        ExtractionRunModel: { findById: () => lean({ _id: 'run', document_id: 'doc' }) },
+        SummaryModel: { findOne: () => lean({ _id: 'summary', extraction: {} }) },
+        extractWithVertex: () => assert.fail('cached summary must not invoke Vertex'),
+    });
+    assert.equal(update.$set['anomalies.baseline_price'], 100);
+    assert.equal(update.$set['anomalies.high_budget_flag'], true);
+    assert.deepEqual(update.$set['anomalies.tags'], ['HIGH_BUDGET_ANOMALY']);
+});
