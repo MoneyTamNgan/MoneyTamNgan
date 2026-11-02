@@ -16,9 +16,12 @@ import { notifyUsersOfMatchingTors } from '../lib/services/notification-service.
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
 import { createRecoverySweep } from '../lib/processing-recovery.js';
 import { refreshProjectFiscalBudget } from '../lib/fiscal-backfill.js';
+import { embedPending, embedProject, embeddingConfig } from '../lib/vertex/embedding.js';
 
 const watch = process.argv.includes('--watch');
 const pollMs = Math.max(1000, Number(process.env.WORKER_POLL_MS || 5000));
+const EMBEDDING_SWEEP_MS = Math.max(10_000, Number(process.env.EMBEDDING_SWEEP_MS || 60_000));
+let lastEmbeddingSweep = 0;
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -47,6 +50,18 @@ async function runOne() {
         }
         await completeJob(job._id, result);
         console.log(`✅ ${job.project_id}: ${result.status}`);
+
+        // FR-2.3.1: embed the freshly stored summary. A failure is recorded on the
+        // project for the sweep to retry and never fails the processing job.
+        if (job.type !== 'verify_candidate' && result.status === 'completed') {
+            try {
+                const embedding = await embedProject(job.project_id);
+                if (embedding.status === 'failed') console.error(`⚠️ Embedding for ${job.project_id} failed: ${embedding.error}`);
+                else if (embedding.status === 'ready') console.log(`🧭 Embedded ${job.project_id}`);
+            } catch (embedError) {
+                console.error(`⚠️ Embedding warning for ${job.project_id}: ${embedError.message}`);
+            }
+        }
 
         // Immediate email notifications for users whose skills match this newly completed project
         if (job.type !== 'verify_candidate' && result.status === 'completed') {
@@ -104,6 +119,13 @@ async function main() {
                         console.log(`Recovery: ${report.scanned} scanned, ${report.queued} queued, ${report.failed} errors; skipped ${JSON.stringify(report.skipped)}`);
                     }
                 } catch (error) { console.error(`Recovery deferred: ${error.message}`); }
+            }
+            if (!queued && embeddingConfig().enabled && Date.now() - lastEmbeddingSweep > EMBEDDING_SWEEP_MS) {
+                lastEmbeddingSweep = Date.now();
+                try {
+                    const swept = await embedPending({ limit: 5 });
+                    if (swept.length) console.log(`Embedding sweep: ${swept.map(item => `${item.projectId}=${item.status}`).join(', ')}`);
+                } catch (error) { console.error(`Embedding sweep deferred: ${error.message}`); }
             }
             if (!queued) await sleep(pollMs);
         }
