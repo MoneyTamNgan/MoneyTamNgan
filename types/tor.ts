@@ -131,6 +131,8 @@ export interface TorApiListItem {
   budget: number | null;
   projectStatus: string;
   bidding: TorApiBidding;
+  isLatestVersion: boolean;
+  supersededBy: string | null;
   announceDate: string | null;
   contractStart: string | null;
   contractEnd: string | null;
@@ -263,7 +265,7 @@ export interface TorApiDetail {
   summary: string | null;
   fiscalBudget: TorApiFiscalBudget | null;
   anomalies: TorApiAnomaly[];
-  version: { number: number; isLatest: boolean; supersededBy: string | null };
+  version: { number: number; isLatest: boolean; supersededBy: string | null; supersedes: string | null; lineageId: string | null };
 }
 
 export interface TorApiEvidence {
