@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
@@ -122,7 +123,7 @@ function normalizeBreakdown(items) {
 }
 
 /** GET /api/analytics/overview — aggregate the deduplicated TOR catalog for the Analytics UI. */
-export async function GET(request) {
+async function handleGET(request) {
     const parsed = parseAnalyticsQuery(new URL(request.url).searchParams);
     if (parsed.error) {
         return NextResponse.json({ error: { code: parsed.code, message: parsed.error } }, { status: 400 });
@@ -192,3 +193,5 @@ export async function GET(request) {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/analytics/overview", "GET");

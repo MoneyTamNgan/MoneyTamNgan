@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { classifyTor } from '@/lib/classification';
@@ -16,7 +17,7 @@ import { NextResponse } from 'next/server';
  *
  * Manual overrides are never touched.
  */
-export async function POST() {
+async function handlePOST() {
     try {
         await connectDB();
 
@@ -80,3 +81,5 @@ export async function POST() {
         );
     }
 }
+
+export const POST = withRouteSecurity(handlePOST, "/api/admin/classification/run", "POST");

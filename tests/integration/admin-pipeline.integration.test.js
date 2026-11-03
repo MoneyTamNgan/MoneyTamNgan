@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { asAdmin } from '../helpers/admin-route.js';
 
 vi.mock('@/lib/db', () => ({
     default: vi.fn().mockResolvedValue(undefined),
@@ -19,12 +20,15 @@ vi.mock('@/lib/keywords', () => ({
     }),
 }));
 
-const { GET: getStatusRoute, DELETE: deleteStatusRoute } = await import(
+const { GET: rawGetStatus, DELETE: rawDeleteStatus } = await import(
     '@/app/api/admin/pipeline/status/route'
 );
-const { POST: postTriggerRoute } = await import(
+const { POST: rawPostTrigger } = await import(
     '@/app/api/admin/pipeline/trigger/route'
 );
+const getStatusRoute = asAdmin(rawGetStatus);
+const deleteStatusRoute = asAdmin(rawDeleteStatus);
+const postTriggerRoute = asAdmin(rawPostTrigger);
 const { resetStatus, getStatus } = await import(
     '@/lib/services/pipeline-runner'
 );

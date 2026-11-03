@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import {
     DEFAULT_DELAY_MS,
@@ -61,7 +62,7 @@ async function persistScrapeResult(project, result) {
  *     delayMs?: number          // Delay between requests in ms (default: SCRAPER_DELAY_MS or 4000; min: 3000)
  *   }
  */
-export async function POST(request) {
+async function handlePOST(request) {
     try {
         await connectDB();
 
@@ -229,3 +230,5 @@ export async function POST(request) {
         }, { status: 500 });
     }
 }
+
+export const POST = withRouteSecurity(handlePOST, "/api/scraping/trigger", "POST");

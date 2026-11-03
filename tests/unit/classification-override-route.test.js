@@ -62,7 +62,7 @@ async function adminCookie() {
 
 async function patch(body, headers = {}, id = '69000000001') {
     return PATCH(new Request(`http://localhost/api/admin/tors/${id}/classification`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body),
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:3000', ...headers }, body: JSON.stringify(body),
     }), { params: Promise.resolve({ id }) });
 }
 
@@ -100,9 +100,9 @@ it('brings an irrelevant TOR back into the pipeline when reclassified as softwar
     expect(state.jobs).toEqual([['69000000001']]);
 });
 
-it('records pipeline-token callers as such', async () => {
-    await patch({ tags: ['GIS'] }, { authorization: `Bearer ${process.env.PIPELINE_ADMIN_TOKEN}` });
-    expect(state.audits[0].reviewer).toEqual({ user_id: null, email: null, via: 'pipeline_token' });
+it('pipeline tokens cannot perform admin overrides', async () => {
+    expect((await patch({ tags: ['GIS'] }, { authorization: `Bearer ${process.env.PIPELINE_ADMIN_TOKEN}` })).status).toBe(403);
+    expect(state.audits).toHaveLength(0);
     expect(state.project.classification.status).toBe('uncertain');
 });
 
@@ -142,7 +142,7 @@ it('returns 404 for unknown ids', async () => {
 
 it('lists the override history with the reviewer', async () => {
     await patch({ isSoftware: true }, { cookie: await adminCookie() });
-    const response = await GET(new Request('http://localhost/api/admin/tors/69000000001/classification'), { params: Promise.resolve({ id: '69000000001' }) });
+    const response = await GET(new Request('http://localhost/api/admin/tors/69000000001/classification', { headers: { cookie: await adminCookie() } }), { params: Promise.resolve({ id: '69000000001' }) });
     const { items } = await response.json();
     expect(items[0].reviewer).toEqual({ userId: 'admin-123', email: 'admin@example.com', via: 'admin_session' });
 });

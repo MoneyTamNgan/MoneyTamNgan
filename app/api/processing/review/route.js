@@ -1,10 +1,11 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { hydrateProjectsCompatibility } from '@/lib/project-compat';
 import { NextResponse } from 'next/server';
 import { authorizeAdminRequest } from '@/lib/admin-auth';
 
-export async function GET(request) {
+async function handleGET(request) {
     const auth = await authorizeAdminRequest(request);
     if (!auth.authorized) return NextResponse.json({ error: { code: auth.code, message: auth.message } }, { status: auth.status,
         headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie, Authorization' } });
@@ -40,3 +41,5 @@ export async function GET(request) {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/processing/review", "GET");

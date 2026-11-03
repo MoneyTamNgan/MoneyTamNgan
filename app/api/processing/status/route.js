@@ -1,10 +1,11 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import ProcessingJob from '@/models/ProcessingJob';
 import Project from '@/models/Project';
 import { hydrateProjectCompatibility } from '@/lib/project-compat';
 import { NextResponse } from 'next/server';
 
-export async function GET(request) {
+async function handleGET(request) {
     try {
         await connectDB();
         const jobId = new URL(request.url).searchParams.get('jobId');
@@ -45,3 +46,5 @@ export async function GET(request) {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/processing/status", "GET");

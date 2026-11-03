@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { OAUTH_STATE_COOKIE } from '@/lib/auth';
@@ -9,7 +10,7 @@ import { OAUTH_STATE_COOKIE } from '@/lib/auth';
  * cookie (CSRF guard) and redirect the browser to Google's consent screen.
  * Google returns to NEXT_PUBLIC_REDIRECT_URI (the /callback route).
  */
-export async function GET(request) {
+async function handleGET(request) {
     const state = crypto.randomUUID();
 
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -35,3 +36,5 @@ export async function GET(request) {
 
     return NextResponse.redirect(authUrl.toString());
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/auth/google/login", "GET");

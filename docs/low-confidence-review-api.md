@@ -13,18 +13,18 @@ GET /api/admin/classification/queue?page=1&pageSize=20&confidenceType=either
 
 ## Authentication
 
-Both the Next proxy and the route itself require either a signed `mtn_session` with `role: admin`, or `Authorization: Bearer <PIPELINE_ADMIN_TOKEN>`. The operator token must be explicitly configured and at least 32 characters long. Arbitrary bearer strings, forged role headers, ordinary user sessions and expired sessions are rejected. Authentication happens before database access. Responses are private/no-store.
+Both the Next proxy and the route itself require a version-2 signed JWT with `role: admin` and `admin:read`, supplied as the `mtn_session` cookie or an Authorization Bearer JWT. The static `PIPELINE_ADMIN_TOKEN` is limited to pipeline reads/triggers and cannot access admin review. Arbitrary bearer strings, forged role headers, ordinary user sessions and expired sessions are rejected. Authentication happens before database access. Responses are private/no-store. Existing sessions must sign in again after the scoped-session upgrade.
 
-The existing broader `GET /api/processing/review` is also admin/operator-only now. Its existing general review/failed-status selection and project-shaped response remain unchanged; use the new endpoint for the strict confidence threshold and compact payload. Public TOR browsing and processing-status reads remain unchanged.
+The broader `GET /api/processing/review` also requires admin:read. Its general review/failed-status selection and project-shaped response remain unchanged. Public TOR browsing remains available to guests; processing-status reads require pipeline:read.
 
 Example request from an operator shell (use your configured token, do not commit it):
 
 ```sh
 curl -s 'http://localhost:3000/api/admin/classification/queue?page=1&pageSize=20&confidenceType=either' \
-  -H "Authorization: Bearer $PIPELINE_ADMIN_TOKEN"
+  -H "Authorization: Bearer $ADMIN_SESSION_JWT"
 ```
 
-An admin browser session sends its existing cookie automatically. The existing static operator token is not a Firebase/GCP access token and is not an arbitrary session JWT passed in a Bearer header.
+An admin browser session sends its cookie automatically. `ADMIN_SESSION_JWT` above means a signed scoped admin session, not a new environment setting or the pipeline/GCP token. Browser mutations additionally require an allowed Origin.
 
 ## Response
 
