@@ -5,7 +5,7 @@ import Project from '@/models/Project';
 import { toTorListItem } from '@/lib/api/tor-response';
 
 import { hydrateProjectsCompatibility } from '@/lib/project-compat';
-import { parseDate, parseNonNegativeNumber, parsePositiveInteger, parseStage, parseBiddingStatus, stageFilter } from '@/lib/api/query-params';
+import { buildSearchFilter, parseDate, parseNonNegativeNumber, parsePositiveInteger, parseStage, parseBiddingStatus, stageFilter } from '@/lib/api/query-params';
 
 const MAX_LIMIT = 100;
 const CURRENT_TENDER_FILTER = { tender: { $exists: true, $ne: null } };
@@ -75,7 +75,8 @@ function biddingStatusPipeline(status, now = new Date()) {
  * - stage (temporary contract-start-derived TOR stage)
  * - biddingStatus (live open/closed/unknown value calculated from submission deadline)
  * - dateFrom / dateTo (inclusive announce-date range)
- * - q (full-text search across project title, agency, and extracted tech stack)
+ * - q (search: text index for Latin queries over title, agency and tech stack;
+ *   substring match on title/agency for Thai queries; prefix match for project ids)
  * - budgetMin / budgetMax (inclusive budget range)
  */
 async function handleGET(request) {
@@ -143,13 +144,14 @@ async function handleGET(request) {
             if (budgetMaxResult.value !== null) filter.budget.$lte = budgetMaxResult.value;
         }
 
-        if (q) filter.$text = { $search: q };
+        const search = buildSearchFilter(q);
+        Object.assign(filter, search.filter);
 
         const pipeline = [
             { $match: filter }
         ];
 
-        if (q) {
+        if (search.usesTextIndex) {
             pipeline.push({ $addFields: { score: { $meta: 'textScore' } } });
         }
 
@@ -170,7 +172,7 @@ async function handleGET(request) {
         // cannot make a newer project appear open or closed incorrectly.
         pipeline.push(...biddingStatusPipeline(biddingStatusResult.value));
 
-        const sort = q ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1, _id: -1 };
+        const sort = search.usesTextIndex ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1, _id: -1 };
 
         const [projects, totalResult] = await Promise.all([
             Project.aggregate([

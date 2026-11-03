@@ -22,6 +22,19 @@ const ProjectSchema = new mongoose.Schema({
     primary_document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', index: true },
     latest_extraction_run_id: { type: mongoose.Schema.Types.ObjectId, ref: 'ExtractionRun', index: true },
     latest_summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary', index: true },
+    // Vertex text embedding of the TOR summary (FR-2.3.1); indexed by the Atlas
+    // Vector Search index project_vector_index. Excluded from queries by default.
+    vectorEmbedding: { type: [Number], default: undefined, select: false },
+    embedding: {
+        status: { type: String, enum: ['pending', 'ready', 'failed'] },
+        model: String,
+        dimensions: Number,
+        source_hash: String,
+        summary_id: { type: mongoose.Schema.Types.ObjectId, ref: 'DocumentSummary' },
+        attempts: { type: Number, default: 0 },
+        error: String,
+        updated_at: Date,
+    },
     latest_fiscal_analysis_id: { type: mongoose.Schema.Types.ObjectId, ref: 'FiscalBudgetAnalysis' },
     fiscal_budget: mongoose.Schema.Types.Mixed,
     fiscal_budget_meta: mongoose.Schema.Types.Mixed,
@@ -150,6 +163,18 @@ const ProjectSchema = new mongoose.Schema({
             ],
         },
         error: { type: String },
+    },
+
+    // Revision lineage across re-announced tenders (lib/tor-lineage.js).
+    lineage_key: { type: String, index: true },
+    version_info: {
+        version: { type: Number, min: 1 },
+        is_latest: Boolean,
+        lineage_id: String,
+        supersedes: String,
+        superseded_by: { type: String, index: true },
+        status_before_superseded: String,
+        linked_at: Date,
     },
 
     anomalies: {

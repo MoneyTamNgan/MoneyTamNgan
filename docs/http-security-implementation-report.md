@@ -11,7 +11,15 @@ The user selected localhost only. With APP_ORIGIN and CORS_ALLOWED_ORIGINS unset
 - `http://localhost:3000`
 - `http://127.0.0.1:3000`
 
-No database migration or extraction/Vertex processing change is part of this work. Changes are local and have not been committed, pushed, or merged.
+No database migration or extraction/Vertex processing change is part of the security implementation. Publication and integration status are recorded in Git history.
+
+## Integration with develop
+
+The 2026-11-03 integration resolves the next.config.js conflict by retaining the nonce CSP and exact-origin CORS alongside develop's disabled X-Powered-By and Permissions-Policy (`camera=(), microphone=(), geolocation=()`). Permissions-Policy is also included in the shared response-header helper.
+
+The two admin pipeline routes introduced by develop now use independent route guards: status reads require admin:read, while triggers and status resets require admin:write. Their functional tests use signed scoped admin credentials. Guard-registration coverage includes all 35 current route modules, with the profile alias reusing guarded handlers.
+
+Merged validation: 264 Node tests and 222 Vitest tests passed (486 total); the production build passed. Live localhost checks confirmed the original five headers, CSP nonce matching, CORS and authorization denials, Permissions-Policy, and absence of X-Powered-By. No real pipeline, Vertex or notification operation was triggered during these live checks. The visual DevTools check remains pending as described below.
 
 ## Headers
 
