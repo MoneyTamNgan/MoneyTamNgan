@@ -275,7 +275,7 @@ paths:
       operationId: listClassificationQueue
       security:
         - sessionAuth: []
-        - pipelineBearer: []
+        - scopedJwtBearer: []
       parameters:
         - $ref: "#/components/parameters/PageParam"
         - $ref: "#/components/parameters/PageSizeParam"
@@ -1017,11 +1017,24 @@ components:
       in: cookie
       name: mtn_session
       description: >
-        Signed session cookie; admin endpoints additionally require role=admin.
+        Signed auth_version=2 JWT session cookie with role-bounded scopes.
+        Public TOR reads permit guests; profile routes require profile:read/write
+        and always target the signed-in owner. Admin routes require admin role
+        plus admin:read/write or tor:write. Legacy sessions require re-login.
+    scopedJwtBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Signed version-2 JWT with the route's required role and permission scope.
     pipelineBearer:
       type: http
       scheme: bearer
-      description: Operator token configured as PIPELINE_ADMIN_TOKEN (at least 32 characters).
+      description: >
+        PIPELINE_ADMIN_TOKEN (at least 32 characters), limited to pipeline:read
+        and pipeline:trigger; it cannot authorize admin or profile operations.
+        Scoped JWT bearer credentials are also supported with their signed role
+        and scopes. Browser mutations require an exact allowed Origin, even
+        with bearer credentials. No wildcard CORS origins are accepted.
 
   parameters:
     TorIdParam:
