@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import { buildProjectUpsert, fetchAllFromEGP } from '@/lib/egp-api';
 import { enqueueProject } from '@/lib/job-queue';
@@ -21,7 +22,7 @@ import { NextResponse } from 'next/server';
  *   { year?: string, keyword?: string, limit?: number, deptCode?: string,
  *     enqueueProcessing?: boolean } // defaults true; false is ingestion-only
  */
-export async function POST(request) {
+async function handlePOST(request) {
     try {
         await connectDB();
 
@@ -186,3 +187,5 @@ export async function POST(request) {
         }, { status: retryable ? 503 : 500 });
     }
 }
+
+export const POST = withRouteSecurity(handlePOST, "/api/ingestion/trigger", "POST");

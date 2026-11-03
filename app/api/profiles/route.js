@@ -1,30 +1,16 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import connectDB from '@/lib/db';
 import { User } from '@/models/User';
-import { SESSION_COOKIE, verifySession } from '@/lib/auth';
+import { SESSION_COOKIE } from '@/lib/auth';
+import { requestPrincipal } from '@/lib/request-authorization';
 
 // Helper to get authenticated user ID from session cookie or Authorization header
 async function getAuthUserId(req) {
-    // 1. Try session cookie
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE)?.value;
-    const session = await verifySession(token);
-    if (session?.sub) {
-        return session.sub;
-    }
-
-    // 2. Try Authorization header: Bearer <token>
-    const authHeader = req.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const bearerToken = authHeader.substring(7);
-        const bearerSession = await verifySession(bearerToken);
-        if (bearerSession?.sub) {
-            return bearerSession.sub;
-        }
-    }
-
-    return null;
+    // Use exactly the same authenticated identity as the scope guard. Never
+    // take a target user ID from the request body or switch identities here.
+    return (await requestPrincipal(req))?.session?.sub || null;
 }
 
 // Helper to clean array of strings
@@ -34,7 +20,7 @@ function cleanStringArray(arr) {
 }
 
 // 1. GET: Fetch Current User Profile
-export async function GET(req) {
+async function handleGET(req) {
     try {
         const userId = await getAuthUserId(req);
         if (!userId) {
@@ -73,7 +59,7 @@ export async function GET(req) {
 }
 
 // 2. PATCH / PUT: Update User Profile
-export async function PATCH(req) {
+async function handlePATCH(req) {
     try {
         const userId = await getAuthUserId(req);
         if (!userId) {
@@ -161,12 +147,12 @@ export async function PATCH(req) {
     }
 }
 
-export async function PUT(req) {
+async function handlePUT(req) {
     return PATCH(req);
 }
 
 // 3. DELETE: Delete User Account
-export async function DELETE(req) {
+async function handleDELETE(req) {
     try {
         const userId = await getAuthUserId(req);
         if (!userId) {
@@ -185,3 +171,8 @@ export async function DELETE(req) {
         return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/profiles", "GET");
+export const PATCH = withRouteSecurity(handlePATCH, "/api/profiles", "PATCH");
+export const PUT = withRouteSecurity(handlePUT, "/api/profiles", "PUT");
+export const DELETE = withRouteSecurity(handleDELETE, "/api/profiles", "DELETE");

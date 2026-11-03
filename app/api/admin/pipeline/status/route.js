@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withRouteSecurity } from '@/lib/route-security';
 import connectDB from '@/lib/db';
 import { getStatus, resetStatus } from '@/lib/services/pipeline-runner';
 import Project from '@/models/Project';
@@ -10,7 +11,7 @@ export const runtime = 'nodejs';
  *
  * Retrieves the current execution status and progress of the admin data pipeline.
  */
-export async function GET() {
+async function handleGET() {
     try {
         await connectDB();
 
@@ -49,7 +50,7 @@ export async function GET() {
  *
  * Resets the runner state back to idle (useful for clearing failed or stalled state).
  */
-export async function DELETE() {
+async function handleDELETE() {
     try {
         const run = resetStatus();
         return NextResponse.json({
@@ -67,3 +68,6 @@ export async function DELETE() {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, '/api/admin/pipeline/status', 'GET');
+export const DELETE = withRouteSecurity(handleDELETE, '/api/admin/pipeline/status', 'DELETE');
