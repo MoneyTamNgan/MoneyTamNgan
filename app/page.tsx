@@ -13,10 +13,31 @@ function BmaSeal() {
 
 export default function Home() {
   const [notice, setNotice] = useState("");
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [pending, setPending] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setNotice("โหมดสาธิต: การเข้าสู่ระบบด้วยอีเมลยังไม่เปิดใช้งาน กรุณาใช้ Google");
+    if (pending) return;
+    const form = new FormData(event.currentTarget);
+    const password = String(form.get("password") || "");
+    if (mode === "register" && password !== form.get("confirmPassword")) {
+      setNotice("รหัสผ่านทั้งสองช่องไม่ตรงกัน"); return;
+    }
+    setPending(true); setNotice("");
+    try {
+      const response = await fetch(`/api/auth/${mode}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+        body: JSON.stringify({ email: form.get("email"), password,
+          next: new URLSearchParams(window.location.search).get("next") }),
+      });
+      const data = await response.json();
+      if (!response.ok) { setNotice(data.error?.message || "ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่"); return; }
+      // API supplies a validated same-origin path; use a full navigation so
+      // server components and the shared auth UI see the new session cookie.
+      window.location.assign(data.redirectTo || "/dashboard");
+    } catch { setNotice("ไม่สามารถเชื่อมต่อระบบได้ กรุณาลองใหม่"); }
+    finally { setPending(false); }
   }
 
   function signInWithGoogle() {
@@ -34,16 +55,17 @@ export default function Home() {
     </section>
     <section className="login-area">
       <div className="login-card">
-        <header className="login-header"><div className="mobile-seal"><BmaSeal /></div><p className="section-label">ศูนย์วิเคราะห์ TOR โครงการเทคโนโลยี</p><h2>เข้าสู่ระบบ</h2><p>ติดตามโครงการที่ตรงกับทักษะและความสนใจของคุณ</p></header>
+        <header className="login-header"><div className="mobile-seal"><BmaSeal /></div><p className="section-label">ศูนย์วิเคราะห์ TOR โครงการเทคโนโลยี</p><h2>{mode === "register" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}</h2><p>ติดตามโครงการที่ตรงกับทักษะและความสนใจของคุณ</p></header>
         <button className="google-button" type="button" onClick={signInWithGoogle}><GoogleMark /><span>เข้าสู่ระบบด้วย Google</span></button>
-        <div className="divider"><span>หรือเข้าสู่ระบบด้วยอีเมล</span></div>
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="email">อีเมลหน่วยงาน</label><input id="email" type="email" placeholder="name@bangkok.go.th" autoComplete="email" required />
-          <label htmlFor="password">รหัสผ่าน</label><div className="password-wrap"><input id="password" type="password" placeholder="กรอกรหัสผ่าน" autoComplete="current-password" required /><span aria-hidden="true">•••</span></div>
-          <div className="form-options"><label className="remember"><input type="checkbox" /> <span>จดจำการเข้าสู่ระบบ</span></label><button type="button" className="text-button">ลืมรหัสผ่าน?</button></div>
-          <button className="sign-in" type="submit">เข้าสู่ระบบ <span aria-hidden="true">→</span></button>
+        <div className="divider"><span>หรือ{mode === "register" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}ด้วยอีเมล</span></div>
+        <form key={mode} onSubmit={handleSubmit} aria-busy={pending}>
+          <label htmlFor="email">อีเมล</label><input id="email" name="email" type="email" placeholder="name@example.com" autoComplete="email" maxLength={254} required />
+          <label htmlFor="password">รหัสผ่าน</label><div className="password-wrap"><input id="password" name="password" type="password" placeholder="รหัสผ่านอย่างน้อย 15 ตัวอักษร" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={15} maxLength={128} required /></div>
+          {mode === "register" && <><p className="password-hint">ใช้รหัสผ่าน 15–128 ตัวอักษร เช่น วลีที่จำง่าย</p><label htmlFor="confirmPassword">ยืนยันรหัสผ่าน</label><input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" minLength={15} maxLength={128} required /></>}
+          <button className="sign-in" type="submit" disabled={pending}>{pending ? "กำลังดำเนินการ…" : mode === "register" ? "สร้างบัญชี" : "เข้าสู่ระบบ"} <span aria-hidden="true">→</span></button>
         </form>
-        {notice && <p className="notice" role="status">{notice}</p>}
+        {notice && <p className="notice" role="alert">{notice}</p>}
+        <p className="auth-switch">{mode === "register" ? "มีบัญชีอยู่แล้ว? " : "ยังไม่มีบัญชี? "}<button type="button" className="text-button" disabled={pending} onClick={() => { setMode(mode === "login" ? "register" : "login"); setNotice(""); }}>{mode === "register" ? "เข้าสู่ระบบ" : "สร้างบัญชี"}</button></p>
         <Link className="guest-link" href="/analytics"><span className="globe" aria-hidden="true">◎</span>ดูข้อมูลวิเคราะห์ย้อนหลัง <small>(ไม่ต้องเข้าสู่ระบบ)</small></Link>
       </div>
       <p className="support">ต้องการความช่วยเหลือ? <a href="mailto:tor.analytics@bangkok.go.th">ติดต่อผู้ดูแลระบบ</a></p>
