@@ -514,7 +514,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PasswordAuthResult" }
-        "400": { description: Invalid email, name, password or JSON }
+        "400": { description: "Invalid email, name, password or JSON" }
         "403": { description: Missing or disallowed browser Origin }
         "409": { description: Account already exists; original login method must be used }
         "413": { description: JSON body exceeds 8 KiB }
@@ -560,7 +560,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "400": { description: Invalid email, password or JSON }
+        "400": { description: "Invalid email, password or JSON" }
         "403": { description: Missing or disallowed browser Origin }
         "413": { description: JSON body exceeds 8 KiB }
         "415": { description: Content-Type must be application/json }
