@@ -1,9 +1,10 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { enqueueProject } from '@/lib/job-queue';
 import { NextResponse } from 'next/server';
 
-export async function PATCH(request, { params }) {
+async function handlePATCH(request, { params }) {
     try {
         await connectDB();
         const { id } = await params;
@@ -54,3 +55,5 @@ export async function PATCH(request, { params }) {
         }, { status: 500 });
     }
 }
+
+export const PATCH = withRouteSecurity(handlePATCH, "/api/projects/[id]/classification", "PATCH");

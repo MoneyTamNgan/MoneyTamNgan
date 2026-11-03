@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { connectToDatabase } from '@/lib/mongodb';
@@ -17,7 +18,7 @@ import {
  * the cookie set by /login, exchange the code for tokens, upsert the user,
  * then set an httpOnly session cookie and redirect into the app.
  */
-export async function GET(request) {
+async function handleGET(request) {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     const state = searchParams.get('state');
@@ -101,3 +102,5 @@ export async function GET(request) {
         );
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/auth/google/callback", "GET");
