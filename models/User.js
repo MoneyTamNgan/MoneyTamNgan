@@ -6,6 +6,7 @@ const UserSchema = new Schema({
     email: { type: String, required: true, unique: true },
     name: String,
     googleId: String,
+    passwordHash: { type: String, select: false },
     picture: String,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     techStack: { type: [String], default: [] },
@@ -23,6 +24,11 @@ const UserSchema = new Schema({
         default: 'IMMEDIATE',
     },
     updatedAt: { type: Date, default: Date.now },
+});
+// Defense in depth for document serialization; lean queries still rely on
+// select:false and explicit public response fields.
+for (const option of ['toJSON', 'toObject']) UserSchema.set(option, {
+    transform(_doc, value) { delete value.passwordHash; return value; },
 });
 export const User = models.User || model('User', UserSchema);
 export default User;
