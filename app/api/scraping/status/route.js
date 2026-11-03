@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import Document from '@/models/Document';
@@ -12,7 +13,7 @@ import { NextResponse } from 'next/server';
  * - Projects without a locally stored TOR file
  * - Coverage percentage
  */
-export async function GET() {
+async function handleGET() {
     try {
         await connectDB();
 
@@ -52,3 +53,5 @@ export async function GET() {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/scraping/status", "GET");

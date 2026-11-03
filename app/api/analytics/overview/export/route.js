@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
@@ -22,7 +23,7 @@ function toCsv(items) {
 }
 
 /** GET /api/analytics/overview/export?format=csv|json plus the same filters as /search. */
-export async function GET(request) {
+async function handleGET(request) {
     const url = new URL(request.url);
     const format = url.searchParams.get('format');
     if (format !== 'csv' && format !== 'json') {
@@ -66,3 +67,5 @@ export async function GET(request) {
         return NextResponse.json({ error: { code: 'ANALYTICS_EXPORT_FAILED', message: error.message } }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/analytics/overview/export", "GET");

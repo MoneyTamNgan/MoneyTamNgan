@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withRouteSecurity } from '@/lib/route-security';
 import connectDB from '@/lib/db';
 import { getStatus, triggerPipeline } from '@/lib/services/pipeline-runner';
 
@@ -30,7 +31,7 @@ function badRequest(message) {
  *     sync?: boolean          // Wait for pipeline completion (default: false)
  *   }
  */
-export async function POST(request) {
+async function handlePOST(request) {
     try {
         await connectDB();
 
@@ -130,3 +131,5 @@ export async function POST(request) {
         }, { status: 500 });
     }
 }
+
+export const POST = withRouteSecurity(handlePOST, '/api/admin/pipeline/trigger', 'POST');

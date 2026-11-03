@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
@@ -5,7 +6,7 @@ import { toTorDetail } from '@/lib/api/tor-response';
 import { hydrateProjectCompatibility } from '@/lib/project-compat';
 
 /** GET /api/tors/{id} */
-export async function GET(_request, { params }) {
+async function handleGET(_request, { params }) {
     const { id } = await params;
     const projectId = typeof id === 'string' ? id.trim() : '';
 
@@ -34,3 +35,5 @@ export async function GET(_request, { params }) {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/tors/[id]", "GET");

@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import ClassificationOverride from '@/models/ClassificationOverride';
@@ -30,7 +31,7 @@ function projectIdFrom(id) {
  *   { isSoftware?: boolean, tags?: string[], processingStatus?: string,
  *     documentStatus?: string, reason?: string, enqueueProcessing?: boolean }
  */
-export async function PATCH(request, { params }) {
+async function handlePATCH(request, { params }) {
     const projectId = projectIdFrom((await params).id);
     if (!projectId) return errorResponse('INVALID_TOR_ID', 'TOR id is required', 400);
 
@@ -77,7 +78,7 @@ export async function PATCH(request, { params }) {
 }
 
 /** GET /api/admin/tors/{id}/classification — override history, newest first. */
-export async function GET(_request, { params }) {
+async function handleGET(_request, { params }) {
     const projectId = projectIdFrom((await params).id);
     if (!projectId) return errorResponse('INVALID_TOR_ID', 'TOR id is required', 400);
 
@@ -90,3 +91,6 @@ export async function GET(_request, { params }) {
         return errorResponse('CLASSIFICATION_HISTORY_FAILED', error.message, 500);
     }
 }
+
+export const PATCH = withRouteSecurity(handlePATCH, "/api/admin/tors/[id]/classification", "PATCH");
+export const GET = withRouteSecurity(handleGET, "/api/admin/tors/[id]/classification", "GET");

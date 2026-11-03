@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import { authorizeAdminRequest } from '@/lib/admin-auth';
 import { parsePositiveInteger } from '@/lib/api/query-params';
@@ -7,7 +8,7 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie, Authorization' };
 
-export async function GET(request) {
+async function handleGET(request) {
     const auth = await authorizeAdminRequest(request);
     if (!auth.authorized) return NextResponse.json({ error: { code: auth.code, message: auth.message } }, { status: auth.status, headers });
     const params = new URL(request.url).searchParams;
@@ -25,3 +26,5 @@ export async function GET(request) {
         return NextResponse.json({ error: { code: 'LOW_CONFIDENCE_REVIEW_FAILED', message: 'Unable to load low-confidence TOR records' } }, { status: 500, headers });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/admin/classification/queue", "GET");

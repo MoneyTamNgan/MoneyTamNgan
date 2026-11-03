@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 /**
  * POST /api/notifications/digest
  *
@@ -18,18 +19,8 @@ import Project from '@/models/Project';
 import { hydrateProjectsCompatibility } from '@/lib/project-compat';
 import { sendDailyDigest } from '@/lib/services/notification-service';
 
-function unauthorized() {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-}
-
-export async function POST(req) {
-    // ── Auth: CRON_SECRET or omit header check in dev ─────────────────────────
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-        const auth = req.headers.get('authorization') ?? '';
-        if (auth !== `Bearer ${cronSecret}`) return unauthorized();
-    }
-
+async function handlePOST(req) {
+    // withRouteSecurity requires notifications:send (admin JWT or scoped cron secret).
     await connectDB();
 
     let projects;
@@ -55,18 +46,11 @@ export async function POST(req) {
 
     return NextResponse.json({ status: 'success', ...result });
 }
-export async function GET(req) {
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret) {
-        const auth = req.headers.get('authorization') ?? '';
-        const url = new URL(req.url);
-        const querySecret = url.searchParams.get('secret');
-        if (auth !== `Bearer ${cronSecret}` && querySecret !== cronSecret) {
-            return unauthorized();
-        }
-    }
-
+async function handleGET(req) {
     await connectDB();
     const result = await sendDailyDigest();
     return NextResponse.json({ status: 'success', ...result });
 }
+
+export const POST = withRouteSecurity(handlePOST, "/api/notifications/digest", "POST");
+export const GET = withRouteSecurity(handleGET, "/api/notifications/digest", "GET");

@@ -1,23 +1,22 @@
-/** @type {import("next").NextConfig} */
+import { allowedOrigins, securityHeaders, CORS_METHODS, CORS_HEADERS } from './lib/security-policy.js';
 
-// Baseline hardening headers flagged by the OWASP ZAP baseline scan.
-// Not set on purpose: a Content-Security-Policy (a partial policy such as
-// frame-ancestors alone makes ZAP raise several CSP-quality alerts, and a full
-// one needs nonces for Next.js inline scripts; X-Frame-Options already blocks
-// clickjacking) and COEP/COOP/CORP (they can break the Google OAuth redirect
-// and third-party images).
-const securityHeaders = [
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-];
-
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  poweredByHeader: false,
-  async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
-  },
+    poweredByHeader: false,
+    async headers() {
+        const origins = allowedOrigins();
+        return [{ source: '/:path*', headers: securityHeaders() }, ...origins.map(origin => ({
+            source: '/api/:path*',
+            has: [{ type: 'header', key: 'origin', value: origin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }],
+            headers: [
+                { key: 'Access-Control-Allow-Origin', value: origin },
+                { key: 'Access-Control-Allow-Credentials', value: 'true' },
+                { key: 'Access-Control-Allow-Methods', value: CORS_METHODS.join(', ') },
+                { key: 'Access-Control-Allow-Headers', value: CORS_HEADERS.join(', ') },
+                { key: 'Vary', value: 'Origin' },
+            ],
+        }))];
+    },
 };
 
 export default nextConfig;
