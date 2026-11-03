@@ -18,6 +18,8 @@ export default function SidebarLayout({ children }) {
   const [isOrangeTheme, setIsOrangeTheme] = useState(true);
   // undefined while loading, null for a guest.
   const [account, setAccount] = useState(undefined);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
   const isHome = pathname === "/dashboard" || pathname.startsWith("/tors/");
 
   useEffect(() => {
@@ -28,8 +30,17 @@ export default function SidebarLayout({ children }) {
   }, [pathname]);
 
   async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/";
+    if (signingOut) return;
+    setSigningOut(true);
+    setSignOutError("");
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Logout failed");
+      window.location.href = "/";
+    } catch {
+      setSignOutError("ออกจากระบบไม่สำเร็จ กรุณาลองใหม่");
+      setSigningOut(false);
+    }
   }
 
   const isGuest = account === null;
@@ -40,7 +51,7 @@ export default function SidebarLayout({ children }) {
   if (pathname === "/") return <>{children}</>;
 
   return <div className={`sidebar-layout ${isOpen ? "is-open" : ""} ${isOrangeTheme ? "theme-orange" : "theme-mint"}`}>
-    <aside className="app-sidebar" aria-label="เมนูหลัก">
+    <aside className={`app-sidebar ${styles.sidebar}`} aria-label="เมนูหลัก">
       <div className="sidebar-top"><Link className="sidebar-brand" href="/dashboard" aria-label="หน้าหลัก BMA TOR TRACKER"><span className="sidebar-seal">BMA</span><span className="sidebar-brand-copy">BMA TOR<br /><strong>TRACKER</strong></span></Link></div>
       <section className="sidebar-profile-section" aria-label="ข้อมูลโปรไฟล์"><p className="sidebar-section-label">โปรไฟล์</p><div className="sidebar-profile-preview">{account?.picture ? <img className={`sidebar-profile-photo ${styles.photo}`} src={account.picture} alt="รูปโปรไฟล์" referrerPolicy="no-referrer" /> : <span className="sidebar-profile-photo" aria-hidden="true">{profileInitial}</span>}<span className="sidebar-profile-copy"><strong>{profileName}</strong><small>{roleLabel}</small></span></div>{isGuest
         ? <Link className="sidebar-profile-editor" href="/" title="เข้าสู่ระบบเพื่อจับคู่โครงการกับโปรไฟล์บริษัท"><span aria-hidden="true">→</span><strong>เข้าสู่ระบบเพื่อจับคู่โครงการ</strong><i aria-hidden="true">›</i></Link>
@@ -57,8 +68,9 @@ export default function SidebarLayout({ children }) {
         })}<div className="sidebar-nav-divider" aria-hidden="true" /><button className="sidebar-nav-control sidebar-toggle" type="button" onClick={() => setIsOpen((open) => !open)} aria-label={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"} aria-expanded={isOpen} title={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"}><span className="sidebar-icon" aria-hidden="true">{isOpen ? "‹" : "›"}</span><span className="sidebar-label">{isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"}</span></button><button className="sidebar-nav-control sidebar-theme-toggle" type="button" onClick={() => setIsOrangeTheme((orange) => !orange)} aria-label={isOrangeTheme ? "เปลี่ยนเป็นธีมมิ้นต์" : "เปลี่ยนเป็นธีมส้มครีม"} title={isOrangeTheme ? "เปลี่ยนเป็นธีมมิ้นต์" : "เปลี่ยนเป็นธีมส้มครีม"}><span className="sidebar-icon" aria-hidden="true">{isOrangeTheme ? "◐" : "◑"}</span><span className="sidebar-label">{isOrangeTheme ? "Light mode" : "Dark mode"}</span></button></nav>
       <div className="sidebar-bottom">
         {account
-          ? <button className="sidebar-signout" type="button" onClick={signOut} title="ออกจากระบบ"><span className="sidebar-icon" aria-hidden="true">⏻</span><span className="sidebar-label"><strong>ออกจากระบบ</strong><small>{account.email}</small></span></button>
-          : <Link className="sidebar-signout" href="/" title="เข้าสู่ระบบ"><span className="sidebar-icon" aria-hidden="true">⏻</span><span className="sidebar-label"><strong>เข้าสู่ระบบ</strong></span></Link>}
+          ? <button className={`sidebar-signout ${styles.accountAction}`} type="button" onClick={signOut} title="ออกจากระบบ" aria-label="ออกจากระบบ" disabled={signingOut}><span className="sidebar-icon" aria-hidden="true">⏻</span><span className={styles.accountText}><strong>{signingOut ? "กำลังออก…" : "ออกจากระบบ"}</strong>{isOpen && <small>{account.email}</small>}</span></button>
+          : <Link className={`sidebar-signout ${styles.accountAction}`} href="/" title="เข้าสู่ระบบ"><span className="sidebar-icon" aria-hidden="true">⏻</span><span className={styles.accountText}><strong>เข้าสู่ระบบ</strong></span></Link>}
+        {signOutError && <p className={styles.accountError} role="alert">{signOutError}</p>}
         <p className="sidebar-version">โหมดข้อมูลตัวอย่าง</p>
       </div>
     </aside>

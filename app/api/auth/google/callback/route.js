@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { connectToDatabase } from '@/lib/mongodb';
 import { User } from '@/models/User';
+import { normalizeEmail, emailFilter, safeAuthDestination } from '@/lib/password-auth';
 import {
     SESSION_COOKIE,
     OAUTH_STATE_COOKIE,
@@ -61,12 +62,17 @@ async function handleGET(request) {
             headers: { Authorization: `Bearer ${tokenData.access_token}` },
         });
         const googleUser = await userResponse.json();
-        if (!googleUser?.email) {
+        const email = normalizeEmail(googleUser?.email);
+        if (!userResponse.ok || !email || !googleUser.id || googleUser.verified_email !== true) {
             return NextResponse.json({ error: 'Could not read Google profile' }, { status: 400 });
         }
 
         // 3. Upsert the user.
         await connectToDatabase();
+        const existing = await User.findOne(emailFilter(email)).select('+passwordHash');
+        if (existing?.passwordHash || (existing?.googleId && existing.googleId !== googleUser.id)) {
+            return NextResponse.json({ error: 'This email already uses a different sign-in method. Sign in with the original method; automatic account linking is disabled.' }, { status: 409 });
+        }
         const updateFields = {
             name: googleUser.name,
             googleId: googleUser.id,
@@ -74,12 +80,12 @@ async function handleGET(request) {
             updatedAt: new Date(),
         };
 
-        if (isConfiguredAdmin(googleUser.email)) {
+        if (isConfiguredAdmin(email)) {
             updateFields.role = 'admin';
         }
 
         const user = await User.findOneAndUpdate(
-            { email: googleUser.email },
+            { email: existing?.email || email, passwordHash: { $exists: false } },
             { $set: updateFields },
             { upsert: true, new: true }
         );
@@ -91,11 +97,12 @@ async function handleGET(request) {
             role: user.role,
         });
 
-        const destination = next && next.startsWith('/') ? next : '/dashboard';
+        const destination = safeAuthDestination(next);
         const response = NextResponse.redirect(new URL(destination, request.url));
         response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
         return response;
     } catch (error) {
+        if (error?.code === 11000) return NextResponse.json({ error: 'Account already exists. Use your original sign-in method.' }, { status: 409 });
         return NextResponse.json(
             { error: error.message || 'Internal Server Error' },
             { status: 500 }
