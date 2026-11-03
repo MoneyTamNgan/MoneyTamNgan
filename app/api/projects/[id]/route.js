@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { hydrateProjectCompatibility } from '@/lib/project-compat';
@@ -8,7 +9,7 @@ import { NextResponse } from 'next/server';
  *
  * Fetch a single project by its project_id.
  */
-export async function GET(request, { params }) {
+async function handleGET(request, { params }) {
     try {
         await connectDB();
 
@@ -39,3 +40,5 @@ export async function GET(request, { params }) {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/projects/[id]", "GET");

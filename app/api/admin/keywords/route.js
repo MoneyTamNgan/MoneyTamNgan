@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Keyword from '@/models/Keyword';
 import { seedKeywordsIfEmpty } from '@/lib/keywords';
@@ -23,7 +24,7 @@ function errorResponse(code, message, status) {
 }
 
 /** GET /api/admin/keywords — list every classification keyword rule. */
-export async function GET() {
+async function handleGET() {
     try {
         await connectDB();
         await seedKeywordsIfEmpty();
@@ -38,7 +39,7 @@ export async function GET() {
  * PUT /api/admin/keywords — replace the whole keyword list.
  * Body: [{ keyword: string, category: 'software' | 'non-software' }]
  */
-export async function PUT(request) {
+async function handlePUT(request) {
     let body;
     try {
         body = await request.json();
@@ -91,3 +92,6 @@ export async function PUT(request) {
         return errorResponse('REPLACE_KEYWORDS_FAILED', error.message, 500);
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/admin/keywords", "GET");
+export const PUT = withRouteSecurity(handlePUT, "/api/admin/keywords", "PUT");
