@@ -45,6 +45,9 @@ it.each([
     ['/api/admin/keywords', 'PUT', 'admin:write'],
     ['/api/projects/p/classification', 'PATCH', 'tor:write'],
     ['/api/processing/review', 'GET', 'admin:read'],
+    ['/api/admin/pipeline/status', 'GET', 'admin:read'],
+    ['/api/admin/pipeline/status', 'DELETE', 'admin:write'],
+    ['/api/admin/pipeline/trigger', 'POST', 'admin:write'],
 ])('enforces %s %s inside route handling even without Proxy', async (path, method, scope) => {
     const handler = vi.fn(async () => NextResponse.json({ ok: true }));
     const secured = withRouteSecurity(handler, path, method);
@@ -105,7 +108,9 @@ it('never allows wildcard or malformed configured origins and does not trust arb
 });
 
 it('configures all five headers plus conditional exact-origin CORS in next.config.js', async () => {
+    expect(config.poweredByHeader).toBe(false);
     const rules = await config.headers();
+    expect(rules[0].headers).toContainEqual({ key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' });
     for (const header of securityHeaders()) expect(rules[0].headers).toContainEqual(header);
     for (const rule of rules.slice(1)) expect(rule.headers.find(h => h.key === 'Access-Control-Allow-Origin').value).not.toContain('*');
 });

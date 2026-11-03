@@ -2,6 +2,7 @@ import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import { buildProjectUpsert, fetchAllFromEGP } from '@/lib/egp-api';
 import { enqueueProject } from '@/lib/job-queue';
+import { linkProjectRevisions } from '@/lib/tor-lineage';
 import Project from '@/models/Project';
 import DiscoveryCandidate from '@/models/DiscoveryCandidate';
 import { classifyProjectMetadata } from '@/lib/classifier';
@@ -141,6 +142,15 @@ async function handlePOST(request) {
             }
         }
 
+        // Link re-announced tenders to their earlier revisions. A failure here
+        // leaves lineage stale but must not fail an otherwise good ingestion.
+        let revisions = null;
+        try {
+            revisions = await linkProjectRevisions(rawRecords.map(raw => raw.project_id));
+        } catch (err) {
+            errors.push({ project_id: null, error: `revision linking: ${err.message}` });
+        }
+
         const summary = {
             status: 'completed',
             source: 'EGP-CONTRACT',
@@ -153,6 +163,8 @@ async function handlePOST(request) {
             candidatesSaved,
             skipped,
             skipExamples,
+            revisionsLinked: revisions?.lineages ?? null,
+            revisionsSuperseded: revisions?.superseded ?? null,
             errors: errors.slice(0, 10), // Only show first 10 errors
             completedAt: new Date().toISOString(),
         };
