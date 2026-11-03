@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
@@ -78,7 +79,7 @@ function biddingStatusPipeline(status, now = new Date()) {
  *   substring match on title/agency for Thai queries; prefix match for project ids)
  * - budgetMin / budgetMax (inclusive budget range)
  */
-export async function GET(request) {
+async function handleGET(request) {
     const { searchParams } = new URL(request.url);
     const pageResult = parsePositiveInteger(searchParams.get('page'), 1, 'page');
     const limitResult = parsePositiveInteger(searchParams.get('limit'), 10, 'limit', MAX_LIMIT);
@@ -217,3 +218,5 @@ export async function GET(request) {
         return errorResponse('LIST_TORS_FAILED', error.message, 500);
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/tors", "GET");

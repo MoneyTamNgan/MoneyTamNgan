@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import DiscoveryCandidate from '@/models/DiscoveryCandidate';
@@ -25,7 +26,7 @@ function scheduleInfo() {
         return { error: error.message };
     }
 }
-export async function GET() {
+async function handleGET() {
     try {
         await connectDB();
 
@@ -64,3 +65,5 @@ export async function GET() {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/ingestion/status", "GET");

@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
@@ -10,7 +11,7 @@ const CURRENT_TENDER_FILTER = { tender: { $exists: true, $ne: null } };
  * Returns the complete, de-duplicated agency list for dashboard filters.
  * This deliberately is not constrained by the current list page/limit.
  */
-export async function GET(request) {
+async function handleGET(request) {
     try {
         const isSoftware = new URL(request.url).searchParams.get('isSoftware');
         if (isSoftware !== null && isSoftware !== 'true' && isSoftware !== 'false') {
@@ -56,3 +57,5 @@ export async function GET(request) {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/tors/facets", "GET");

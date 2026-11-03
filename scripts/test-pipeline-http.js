@@ -6,7 +6,7 @@ const origin = process.argv[2] || 'http://localhost:3107';
 if (!['localhost', '127.0.0.1'].includes(new URL(origin).hostname)) throw new Error('HTTP smoke test only supports localhost');
 const projectId = '66089621472';
 const session = await signSession({ sub: '000000000000000000000001', role: 'admin' });
-const headers = { Cookie: `${SESSION_COOKIE}=${session}` };
+const headers = { Cookie: `${SESSION_COOKIE}=${session}`, Origin: new URL(origin).origin };
 assert.equal((await fetch(`${origin}/api/processing/trigger`, { method: 'POST', body: '{}' })).status, 401);
 console.log('PASS anonymous mutations blocked');
 const paths = ['/api/tors?isSoftware=true', `/api/tors/${projectId}`, `/api/tors/${projectId}/summary`,
@@ -22,7 +22,9 @@ for (const endpoint of paths) {
         assert.ok(detail.summary);
     }
     if (endpoint === `/tors/${projectId}`) assert.ok(text.includes('ปีงบประมาณ') && text.includes('2565'));
-    if (endpoint === '/admin' || endpoint === '/analytics') assert.ok(text.includes('E2E fixture'));
+    if (endpoint === '/admin') assert.ok(text.includes('E2E fixture'));
+    // Analytics fetches its data on the client; its initial HTML is the shell.
+    if (endpoint === '/analytics') assert.ok(text.includes('ข้อมูลวิเคราะห์'));
     console.log(`PASS ${endpoint}`);
 }
 if (process.argv.includes('--queue')) {

@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
@@ -14,7 +15,7 @@ function errorResponse(code, message, status = 400) {
  * /api/analytics/search. At most EXPORT_ROW_LIMIT rows; X-Export-Truncated
  * reports whether more matched.
  */
-export async function GET(request) {
+async function handleGET(request) {
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format');
     if (format !== 'csv' && format !== 'json') {
@@ -44,3 +45,5 @@ export async function GET(request) {
         return errorResponse('ANALYTICS_EXPORT_FAILED', error.message, 500);
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/analytics/export", "GET");
