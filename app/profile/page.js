@@ -8,7 +8,44 @@ import {
   deleteContractorAccount,
 } from "@/lib/services/contractor-profile-service";
 
-const skills = ["React", "Node.js", "Python", "PostgreSQL", "Cloud", "TypeScript", "Docker", "UX/UI", "Data analysis", "Security", "Service Virtualization", "Integration Platforms as a Service (iPaaS)", "MS Project", "MS Excel", "Utility Platform (UTP)", "Enterprise Resource Planning (ERP)", "ระบบคอมพิวเตอร์"];
+const skills = [
+  "React",
+  "Node.js",
+  "Python",
+  "PostgreSQL",
+  "Cloud",
+  "TypeScript",
+  "Docker",
+  "UX/UI",
+  "Data analysis",
+  "Security",
+  "Service Virtualization",
+  "Integration Platforms as a Service (iPaaS)",
+  "MS Project",
+  "MS Excel",
+  "Utility Platform (UTP)",
+  "Enterprise Resource Planning (ERP)",
+  "ระบบคอมพิวเตอร์",
+  "Airport Operational Database (AODB)",
+  "Airport Collaboration Decision Making (A-CDM)",
+  "Aeronautical Message Handling System (AMHS)",
+  "Flight Permit Online System (FPOS)",
+  "Open API",
+  "Flight Information Display System (FIDS)",
+  "Passenger Tracking System (PTS)",
+  "Central Database",
+  "Microsoft Excel File",
+  "SQL Server",
+  "MySQL",
+  "MariaDB",
+  "Google Sheet",
+  "Digital Marketing",
+  "AI",
+  "Online Platforms",
+  "E-commerce Setup",
+  "Live Selling (Live สดขายสินค้า)",
+  "Virtual Reality (VR)",
+];
 const certifications = ["ISO 27001", "ISO 29110", "CMMI", "Cloud certification"];
 const emptyProfile = { company_name: "", skills: [], registered_capital: null, highest_past_project_value: null, concurrent_project_capacity: null, certifications: [], email_notifications_enabled: false, match_score_threshold: 70, notification_frequency: 'IMMEDIATE' };
 
