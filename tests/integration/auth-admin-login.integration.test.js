@@ -23,6 +23,7 @@ const mockUser = {
 
 vi.mock('@/models/User', () => ({
     User: {
+        findOne: vi.fn(),
         findOneAndUpdate: vi.fn(),
     },
     default: {
@@ -41,6 +42,7 @@ const { verifySession } = await import('@/lib/auth');
 describe('Google OAuth Callback - Admin Auto-Promotion & Default Dashboard Redirect', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        User.findOne.mockReturnValue({ select: vi.fn().mockResolvedValue(null) });
         process.env.JWT_SECRET = 'ci-jwt-secret-key-for-test-32chars!!';
         process.env.GOOGLE_CLIENT_ID = 'test-client-id';
         process.env.GOOGLE_CLIENT_SECRET = 'test-client-secret';
@@ -64,6 +66,7 @@ describe('Google OAuth Callback - Admin Auto-Promotion & Default Dashboard Redir
             json: async () => ({
                 id: '101665045470883854654',
                 email: 'admin@example.com',
+                verified_email: true,
                 name: 'Admin User',
                 picture: 'https://example.com/pic.jpg',
             }),
@@ -85,7 +88,7 @@ describe('Google OAuth Callback - Admin Auto-Promotion & Default Dashboard Redir
 
         // Verify DB update included role: 'admin'
         expect(User.findOneAndUpdate).toHaveBeenCalledWith(
-            { email: 'admin@example.com' },
+            { email: 'admin@example.com', passwordHash: { $exists: false } },
             {
                 $set: expect.objectContaining({
                     role: 'admin',
@@ -116,6 +119,7 @@ describe('Google OAuth Callback - Admin Auto-Promotion & Default Dashboard Redir
             json: async () => ({
                 id: '101665045470883854654',
                 email: 'admin@example.com',
+                verified_email: true,
                 name: 'Admin User',
             }),
         });
@@ -143,6 +147,7 @@ describe('Google OAuth Callback - Admin Auto-Promotion & Default Dashboard Redir
             json: async () => ({
                 id: '999999999',
                 email: 'regular.contractor@example.com',
+                verified_email: true,
                 name: 'Regular Contractor',
             }),
         });
@@ -168,5 +173,23 @@ describe('Google OAuth Callback - Admin Auto-Promotion & Default Dashboard Redir
         const sessionCookie = res.cookies.get('mtn_session');
         const payload = await verifySession(sessionCookie.value);
         expect(payload.role).toBe('user');
+    });
+    it('rejects an unverified Google email before writing or issuing a session', async () => {
+        mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'token' }) });
+        mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ id: '123', email: 'admin@example.com', verified_email: false }) });
+        const response = await GET(new Request('http://localhost:3000/api/auth/google/callback?code=code&state=valid-state'));
+        expect(response.status).toBe(400);
+        expect(User.findOneAndUpdate).not.toHaveBeenCalled();
+        expect(response.cookies.get('mtn_session')).toBeUndefined();
+    });
+
+    it('does not link a password account to Google or promote it by email alone', async () => {
+        User.findOne.mockReturnValue({ select: vi.fn().mockResolvedValue({ email: 'admin@example.com', passwordHash: 'existing-hash', role: 'user' }) });
+        mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'token' }) });
+        mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ id: '123', email: 'admin@example.com', verified_email: true }) });
+        const response = await GET(new Request('http://localhost:3000/api/auth/google/callback?code=code&state=valid-state'));
+        expect(response.status).toBe(409);
+        expect(User.findOneAndUpdate).not.toHaveBeenCalled();
+        expect(response.cookies.get('mtn_session')).toBeUndefined();
     });
 });

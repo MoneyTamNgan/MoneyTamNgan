@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { hydrateProjectsCompatibility } from '@/lib/project-compat';
@@ -18,7 +19,7 @@ import { NextResponse } from 'next/server';
  *   - dateTo (ISO date, upper bound on timeline.announce_date)
  *   - search (text search on project_name)
  */
-export async function GET(request) {
+async function handleGET(request) {
     try {
         await connectDB();
 
@@ -95,3 +96,5 @@ export async function GET(request) {
         }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/projects", "GET");

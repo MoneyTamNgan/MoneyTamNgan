@@ -1,13 +1,12 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { connectToDatabase } from '@/lib/mongodb';
 import { User } from '@/models/User';
-import { SESSION_COOKIE, verifySession } from '@/lib/auth';
+import { requestPrincipal } from '@/lib/request-authorization';
 
 /** GET /api/auth/me — the signed-in user, or 401. */
-export async function GET() {
-    const token = (await cookies()).get(SESSION_COOKIE)?.value;
-    const session = await verifySession(token);
+async function handleGET(request) {
+    const session = (await requestPrincipal(request))?.session;
     if (!session) {
         return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
@@ -32,3 +31,5 @@ export async function GET() {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export const GET = withRouteSecurity(handleGET, "/api/auth/me", "GET");

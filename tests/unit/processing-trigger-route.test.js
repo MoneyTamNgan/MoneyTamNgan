@@ -4,7 +4,9 @@ vi.mock('@/lib/job-queue', () => ({ enqueueProject: vi.fn(async () => ({ job: { 
 vi.mock('@/lib/processing-recovery', () => ({ recoverPendingProjects: vi.fn() }));
 vi.mock('@/models/Project', () => ({ default: { exists: vi.fn(async () => true) } }));
 vi.mock('@/models/DiscoveryCandidate', () => ({ default: { exists: vi.fn(async () => true) } }));
-const { POST } = await import('@/app/api/processing/trigger/route');
+import { asAdmin } from "../helpers/admin-route";
+const { POST: securedHandler } = await import('@/app/api/processing/trigger/route');
+const POST = asAdmin(securedHandler);
 const { recoverPendingProjects } = await import('@/lib/processing-recovery');
 const { enqueueProject } = await import('@/lib/job-queue');
 const request = body => new Request('http://localhost/api/processing/trigger', { method: 'POST', body: JSON.stringify(body) });

@@ -4,7 +4,8 @@ const cookieStore = { get: vi.fn(), delete: vi.fn() };
 
 vi.mock('next/headers', () => ({ cookies: vi.fn(async () => cookieStore) }));
 vi.mock('@/lib/db', () => ({ default: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('@/lib/auth', () => ({
+vi.mock('@/lib/auth', async importOriginal => ({
+    ...await importOriginal(),
     SESSION_COOKIE: 'mtn_session',
     verifySession: vi.fn(async () => null),
 }));
@@ -38,14 +39,14 @@ const { User } = await import('@/models/User');
 const { GET, PATCH, DELETE } = await import('@/app/api/profiles/route');
 
 function requestWithBody(body) {
-    return { headers: { get: () => null }, json: async () => body };
+    return { headers: { get: name => name === 'origin' ? 'http://localhost:3000' : null }, json: async () => body };
 }
 
-const authedRequest = { headers: { get: () => null }, json: async () => ({}) };
+const authedRequest = { headers: { get: name => name === 'origin' ? 'http://localhost:3000' : null }, json: async () => ({}) };
 
 beforeEach(() => {
     cookieStore.get.mockReturnValue({ value: 'valid-token' });
-    vi.mocked(verifySession).mockResolvedValue({ sub: 'user-1' });
+    vi.mocked(verifySession).mockResolvedValue({ sub: 'user-1', role: 'user', scopes: ['profile:read', 'profile:write'] });
 });
 
 describe('GET /api/profiles', () => {

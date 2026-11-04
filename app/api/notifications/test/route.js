@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 /**
  * POST /api/notifications/test
  *
@@ -9,17 +10,14 @@
  *   Omit `matches` to receive a sample payload.
  */
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifySession, SESSION_COOKIE } from '@/lib/auth';
+import { requestPrincipal } from '@/lib/request-authorization';
 import connectDB from '@/lib/db';
 import { User } from '@/models/User';
 import { sendMatchNotificationEmail } from '@/lib/email';
 
-export async function POST(req) {
+async function handlePOST(req) {
     // ── Auth ──────────────────────────────────────────────────────────────────
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE)?.value;
-    const session = await verifySession(token);
+    const session = (await requestPrincipal(req))?.session;
     if (!session?.sub) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -74,3 +72,5 @@ export async function POST(req) {
 
     return NextResponse.json({ status: 'success', emailId: result.id, sentTo: user.email });
 }
+
+export const POST = withRouteSecurity(handlePOST, "/api/notifications/test", "POST");
