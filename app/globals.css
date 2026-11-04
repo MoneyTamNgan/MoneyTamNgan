@@ -6238,6 +6238,79 @@ body {
   }
 }
 
+/* Labeled dashboard filters accommodate the budget range without overflow. */
+.feed-filters.feed-filters-labeled {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 18px 16px;
+  padding: 22px;
+}
+
+.feed-filters-labeled .filter-title {
+  grid-column: 1 / -1;
+  min-height: 0;
+  gap: 8px;
+  padding: 0;
+  color: var(--ink-secondary);
+}
+
+.feed-filters-labeled>label,
+.feed-filters-labeled .feed-filter-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.feed-filters-labeled>label>span,
+.feed-filters-labeled .feed-filter-field>span {
+  color: var(--ink-secondary);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.feed-filters-labeled .sort-control { margin-left: 0; }
+
+.feed-filters-labeled select,
+.feed-filters-labeled input,
+.feed-filters-labeled .software-filter {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 50px;
+  padding: 0 14px;
+  border: 1px solid var(--orange-border);
+  border-radius: 11px;
+  background: var(--cream-input);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.05rem;
+}
+
+.feed-filters-labeled input::placeholder { color: var(--ink-muted); }
+.feed-filters-labeled .software-filter.is-active {
+  border-color: var(--orange-primary);
+  background: var(--cream-soft);
+  color: var(--orange-primary);
+  font-weight: 900;
+}
+.feed-filters-labeled :is(input, select, button):focus-visible {
+  outline: 3px solid var(--orange-primary);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1000px) {
+  .feed-filters.feed-filters-labeled { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 650px) {
+  .feed-filters.feed-filters-labeled { grid-template-columns: minmax(0, 1fr); padding: 18px; }
+}
+
 .analytics-revamp {
   max-width: 1480px
 }
@@ -7352,8 +7425,34 @@ body {
 }
 
 .tor-observation-toggle strong {
-  display: block
+  display: block;
+  color: var(--ink)
 }
+
+.tor-overview .tor-anomaly-card>p:last-child { color: var(--ink-secondary); }
+.tor-overview .tor-anomaly-card .tor-anomaly-budget { color: var(--warning); }
+.tor-overview .tor-observation-toggle strong { color: var(--ink); }
+
+/* Detail-page status colors keep contrast on both light and dark surfaces. */
+.tor-overview { --tor-info: #36749a; }
+.theme-mint .tor-overview {
+  --success: #8cdeb0;
+  --danger: #ffb4a8;
+  --tor-info: #a9cfff;
+}
+.tor-overview .tor-priority-lifecycle>div.stage-official {
+  border-color: var(--tor-info);
+  background: color-mix(in srgb, var(--tor-info) 12%, var(--paper));
+}
+.tor-overview .tor-priority-lifecycle>div.stage-official strong { color: var(--tor-info); }
+.tor-overview .tor-lifecycle a { color: var(--orange-primary); }
+.tor-overview .tor-tech-tags span { color: var(--ink); }
+.tor-overview .tor-obsolete-banner {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+  color: var(--ink-secondary);
+}
+.tor-overview .tor-obsolete-banner :is(strong, a) { color: var(--warning); }
 
 .tor-observation-toggle span {
   display: inline-flex;
@@ -7867,6 +7966,47 @@ body {
   .sidebar-signout {
     min-height: 52px;
     padding-inline: 14px;
+  }
+}
+
+/* Moderate navigation sizing in both sidebar modes, including utility buttons. */
+.sidebar-layout .app-sidebar .sidebar-nav {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 10px;
+  padding: 18px 15px;
+}
+
+.sidebar-layout .app-sidebar .sidebar-nav > :is(a, .sidebar-nav-control) {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 60px;
+  height: 60px;
+  gap: 15px;
+  padding: 0 16px;
+  font-size: 1.14rem;
+}
+
+.sidebar-layout .app-sidebar .sidebar-nav > :is(a, .sidebar-nav-control) > .sidebar-icon {
+  flex: 0 0 28.5px;
+  width: 28.5px;
+  font-size: 1.51rem;
+}
+
+.sidebar-layout:not(.is-open) .sidebar-nav > :is(a, .sidebar-nav-control) {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.sidebar-layout:not(.is-open) .sidebar-nav :is(.sidebar-label, .sidebar-restricted) {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .sidebar-layout .app-sidebar .sidebar-nav > :is(a, .sidebar-nav-control) {
+    min-height: 53px;
+    height: 53px;
+    font-size: 1.04rem;
   }
 }
 
@@ -8452,7 +8592,7 @@ body {
 .admin-review-table th { padding: 13px 16px; border-bottom: 1px solid var(--orange-border-soft); background: var(--cream-soft); color: var(--ink-muted); font-size: .72rem; font-weight: 900; letter-spacing: .035em; white-space: nowrap; }
 .admin-review-table td { padding: 16px; border-bottom: 1px solid var(--orange-border-soft); vertical-align: middle; }
 .admin-review-table tbody tr:last-child td { border-bottom: 0; }
-.admin-review-table tbody tr:hover { background: #fffaf5; }
+.admin-review-table tbody tr:hover { background: var(--cream-soft); }
 .admin-project-cell { display: grid; min-width: 310px; gap: 3px; }
 .admin-project-cell>span { color: var(--orange-primary); font-size: .71rem; font-weight: 900; letter-spacing: .045em; }
 .admin-project-cell strong { color: var(--ink); font-size: .9rem; line-height: 1.42; }
@@ -8469,6 +8609,28 @@ body {
 .admin-processing-status.is-review_required { background: #fff3df; color: var(--warning); }
 .admin-processing-status.is-retry_pending { background: #fff0ee; color: var(--danger); }
 .admin-processing-status.is-document_pending { background: #edf2fa; color: #577ba4; }
+
+/* Dark surfaces with readable semantic colors for review badges. */
+.theme-mint .admin-ops {
+  --review-critical: #ffb4a8;
+  --review-info: #a9cfff;
+}
+.theme-mint .admin-confidence-badge.is-critical,
+.theme-mint .admin-processing-status.is-retry_pending {
+  background: color-mix(in srgb, var(--review-critical) 12%, var(--paper));
+  border-color: color-mix(in srgb, var(--review-critical) 45%, var(--paper));
+  color: var(--review-critical);
+}
+.theme-mint .admin-confidence-badge:is(.is-warning, .is-caution),
+.theme-mint .admin-processing-status.is-review_required {
+  background: var(--warning-soft);
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--paper));
+  color: var(--warning);
+}
+.theme-mint .admin-processing-status.is-document_pending {
+  background: color-mix(in srgb, var(--review-info) 12%, var(--paper));
+  color: var(--review-info);
+}
 .admin-row-actions { display: grid; min-width: 158px; gap: 6px; }
 .admin-row-actions button { min-height: 30px; padding: 4px 9px; border: 1px solid var(--orange-primary); border-radius: 7px; background: var(--orange-primary); color: var(--paper); font: inherit; font-size: .71rem; font-weight: 900; cursor: pointer; white-space: nowrap; transition: background .18s ease, opacity .18s ease; }
 .admin-row-actions button:hover:not(:disabled) { background: var(--orange-primary-hover); }
