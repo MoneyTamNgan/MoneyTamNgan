@@ -84,7 +84,6 @@ export default function AnalyticsDashboard() {
       <button type="button" className="analytics-clear-filter" onClick={clearFilters}>ล้างตัวกรอง</button>
     </section>
 
-    <p className="analytics-data-note">วิเคราะห์เฉพาะโครงการที่มีข้อมูล tender โดยสถานะและวันปิดรับคำนวณจากกำหนดเวลายื่นข้อเสนอจริง ส่วนมูลค่าใช้ราคากลางเมื่อยังไม่มีงบประมาณโครงการ</p>
     {error ? <p className="analytics-api-error" role="alert">{error}</p> : null}
 
     <section className="analytics-studio-grid" aria-label="ภาพรวมข้อมูลวิเคราะห์" aria-busy={loading}>
