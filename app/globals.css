@@ -433,6 +433,9 @@ dd {
 }
 
 /* Root login page */
+.auth-page .auth-switch { text-align: center; margin-top: 18px; }
+.auth-page .password-hint { font-size: 12px; margin: 6px 0 12px; }
+.auth-page button:disabled { opacity: .65; cursor: wait; }
 .auth-page {
   grid-template-columns: minmax(360px, .93fr) minmax(520px, 1.07fr);
   position: relative;
@@ -650,6 +653,7 @@ dd {
   font-weight: 700
 }
 
+.auth-page input[type=text],
 .auth-page input[type=email],
 .auth-page input[type=password] {
   width: 100%;

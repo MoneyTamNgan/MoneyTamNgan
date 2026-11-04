@@ -7,10 +7,11 @@ const { GET } = await import('@/app/api/admin/classification/queue/route');
 const { default: connectDB } = await import('@/lib/db');
 const { listLowConfidenceTors } = await import('@/lib/low-confidence-review');
 const request = (query = '', headers = {}) => new Request(`http://localhost/api/admin/classification/queue${query}`, { headers });
-const token = 'review-fixture-token-'.repeat(3);
-beforeEach(() => {
+let token;
+beforeEach(async () => {
     vi.clearAllMocks();
-    vi.stubEnv('PIPELINE_ADMIN_TOKEN', token);
+    vi.stubEnv('PIPELINE_ADMIN_TOKEN', 'review-fixture-token-'.repeat(3));
+    token = await signSession({ sub: 'fixture-admin', role: 'admin' });
     listLowConfidenceTors.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20, totalPages: 0, threshold: 0.7, confidenceType: 'either' });
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -30,13 +31,13 @@ it('denies ordinary sessions and expired admin sessions', async () => {
     expect((await GET(request('', { cookie: `${SESSION_COOKIE}=${expired}` }))).status).toBe(401);
     expect(connectDB).not.toHaveBeenCalled();
 });
-it('accepts admin sessions and configured operator bearer tokens', async () => {
+it('accepts scoped admin sessions and admin JWT bearer tokens', async () => {
     const admin = await signSession({ sub: 'admin', role: 'admin' });
     for (const headers of [{ cookie: `${SESSION_COOKIE}=${admin}` }, { Authorization: `Bearer ${token}` }]) {
         const response = await GET(request('', headers));
         expect(response.status).toBe(200);
         expect(response.headers.get('cache-control')).toContain('no-store');
-        expect(response.headers.get('vary')).toBe('Cookie, Authorization');
+        expect(response.headers.get('vary')).toBe('Cookie, Authorization, Origin');
     }
     expect(listLowConfidenceTors).toHaveBeenCalledWith({ page: 1, pageSize: 20, confidenceType: 'either' });
 });

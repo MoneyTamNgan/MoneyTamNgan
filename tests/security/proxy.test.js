@@ -64,24 +64,24 @@ describe('proxy middleware', () => {
                 const admin = await signSession({ sub: 'admin', role: 'admin' });
                 expect((await proxy(request(path, { headers: { cookie: `${SESSION_COOKIE}=${admin}` } }))).status).toBe(200);
                 process.env.PIPELINE_ADMIN_TOKEN = 'r'.repeat(40);
-                expect((await proxy(request(path, { headers: { Authorization: `Bearer ${'r'.repeat(40)}` } }))).status).toBe(200);
+                expect((await proxy(request(path, { headers: { Authorization: `Bearer ${'r'.repeat(40)}` } }))).status).toBe(403);
             }
         });
         const triggerUrl = '/api/processing/trigger';
 
-        it('denies anonymous mutation but preserves read-only status', async () => {
+        it('denies anonymous pipeline mutation and private pipeline status reads', async () => {
             const postRes = await proxy(request(triggerUrl, { method: 'POST' }));
             expect(postRes.status).toBe(401);
 
             const getRes = await proxy(request('/api/processing/status'));
-            expect(getRes.status).toBe(200);
+            expect(getRes.status).toBe(401);
         });
 
         it('requires admin role and rejects cross-origin admin mutations', async () => {
             for (const role of ['user', 'admin']) {
                 const cookie = `${SESSION_COOKIE}=${await signSession({ sub: 'test', role })}`;
 
-                const res = await proxy(request(triggerUrl, { method: 'POST', headers: { cookie } }));
+                const res = await proxy(request(triggerUrl, { method: 'POST', headers: { cookie, Origin: 'http://localhost:3000' } }));
                 expect(res.status).toBe(role === 'admin' ? 200 : 403);
 
                 if (role === 'admin') {

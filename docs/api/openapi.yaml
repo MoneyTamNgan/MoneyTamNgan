@@ -275,7 +275,7 @@ paths:
       operationId: listClassificationQueue
       security:
         - sessionAuth: []
-        - pipelineBearer: []
+        - scopedJwtBearer: []
       parameters:
         - $ref: "#/components/parameters/PageParam"
         - $ref: "#/components/parameters/PageSizeParam"
@@ -478,42 +478,54 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   # ---------------------------------------------------------------------------
-  # Planned - Auth (supports FR-2.2, FR-2.3)
+  # Auth (supports FR-2.2, FR-2.3)
   # ---------------------------------------------------------------------------
-  /auth/google:
-    post:
-      summary: Log in with a Google ID token
-      description: Planned, matches the mockup's "เข้าสู่ระบบด้วย Google" button.
+  /auth/google/login:
+    get:
+      summary: Start Google OAuth sign-in
+      description: Sets a short-lived state cookie and redirects to Google. Existing Google login remains available alongside password login.
       tags: [Auth]
       operationId: loginWithGoogle
+      responses:
+        "307":
+          description: Redirect to Google consent screen
+
+  /auth/register:
+    post:
+      summary: Create an email/password account and sign in immediately
+      description: Requires an approved Origin. Creates only a normal user. Stores a salted scrypt hash; existing Google/password accounts cannot be overwritten or automatically linked. Local version does not verify email ownership.
+      tags: [Auth]
+      operationId: register
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [idToken]
+              required: [email, password]
               properties:
-                idToken:
-                  type: string
-                  description: Google Sign-In ID token from the frontend.
+                name: { type: string, maxLength: 100, description: Optional; not requested by the sign-up page }
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, format: password, minLength: 15, maxLength: 128, writeOnly: true }
+                next: { type: string, description: Same-origin path; unsafe values fall back to /dashboard }
       responses:
-        "200":
-          description: Session established (sets sessionAuth cookie)
+        "201":
+          description: User created; sets HttpOnly mtn_session cookie
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/User"
-        "401":
-          description: Invalid Google token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: "#/components/schemas/PasswordAuthResult" }
+        "400": { description: "Invalid email, name, password or JSON" }
+        "403": { description: Missing or disallowed browser Origin }
+        "409": { description: Account already exists; original login method must be used }
+        "413": { description: JSON body exceeds 8 KiB }
+        "415": { description: Content-Type must be application/json }
+        "429": { description: Too many attempts; Retry-After is returned }
+        "503": { description: Authentication service unavailable or busy }
 
   /auth/login:
     post:
       summary: Log in with email + password
+      description: Requires an approved Origin. Email is normalized; missing, Google-only and wrong-password accounts receive the same 401 response. Rate limits are shared with registration.
       tags: [Auth]
       operationId: login
       requestBody:
@@ -530,19 +542,30 @@ paths:
                 password:
                   type: string
                   format: password
+                  minLength: 15
+                  maxLength: 128
+                  writeOnly: true
+                next:
+                  type: string
       responses:
         "200":
           description: Session established (sets sessionAuth cookie)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                $ref: "#/components/schemas/PasswordAuthResult"
         "401":
           description: Invalid credentials
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "400": { description: "Invalid email, password or JSON" }
+        "403": { description: Missing or disallowed browser Origin }
+        "413": { description: JSON body exceeds 8 KiB }
+        "415": { description: Content-Type must be application/json }
+        "429": { description: Too many attempts; Retry-After is returned }
+        "503": { description: Authentication service unavailable or busy }
 
   /auth/logout:
     post:
@@ -1017,11 +1040,24 @@ components:
       in: cookie
       name: mtn_session
       description: >
-        Signed session cookie; admin endpoints additionally require role=admin.
+        Signed auth_version=2 JWT session cookie with role-bounded scopes.
+        Public TOR reads permit guests; profile routes require profile:read/write
+        and always target the signed-in owner. Admin routes require admin role
+        plus admin:read/write or tor:write. Legacy sessions require re-login.
+    scopedJwtBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Signed version-2 JWT with the route's required role and permission scope.
     pipelineBearer:
       type: http
       scheme: bearer
-      description: Operator token configured as PIPELINE_ADMIN_TOKEN (at least 32 characters).
+      description: >
+        PIPELINE_ADMIN_TOKEN (at least 32 characters), limited to pipeline:read
+        and pipeline:trigger; it cannot authorize admin or profile operations.
+        Scoped JWT bearer credentials are also supported with their signed role
+        and scopes. Browser mutations require an exact allowed Origin, even
+        with bearer credentials. No wildcard CORS origins are accepted.
 
   parameters:
     TorIdParam:
@@ -1537,9 +1573,16 @@ components:
           type: string
           format: date-time
 
+    PasswordAuthResult:
+      type: object
+      required: [user, redirectTo]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        redirectTo: { type: string, example: /dashboard }
+
     User:
       type: object
-      description: "[Planned]"
+      description: Public account fields. Password hashes are never returned.
       required: [id, email, role]
       properties:
         id:
@@ -1552,7 +1595,7 @@ components:
           nullable: true
         role:
           type: string
-          enum: [contractor, admin]
+          enum: [user, admin]
 
     ContractorProfileInput:
       type: object

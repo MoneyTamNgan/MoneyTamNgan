@@ -71,7 +71,7 @@ jobs:
 
       - name: Show run status
         if: always()
-        run: curl -fsS http://localhost:3000/api/ingestion/status | jq '.lastRun' || true
+        run: curl -fsS -H "Authorization:Bearer $PIPELINE_ADMIN_TOKEN" http://localhost:3000/api/ingestion/status | jq '.lastRun' || true
 
       - name: App log
         if: failure()

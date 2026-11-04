@@ -1,3 +1,4 @@
+import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import { enqueueProject } from '@/lib/job-queue';
 import Project from '@/models/Project';
@@ -19,7 +20,7 @@ function badRequest(message) {
 /** POST { projectId?: string, batchSize?: number, scanLimit?: number,
  * afterId?: string, dryRun?: boolean, retryFailed?: boolean }
  * Recovery options apply to bulk requests without projectId/candidateId. */
-export async function POST(request) {
+async function handlePOST(request) {
     try {
         await connectDB();
         const body = await request.json().catch(() => ({}));
@@ -84,3 +85,5 @@ export async function POST(request) {
         }, { status: 500 });
     }
 }
+
+export const POST = withRouteSecurity(handlePOST, "/api/processing/trigger", "POST");

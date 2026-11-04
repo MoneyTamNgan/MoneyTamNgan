@@ -3,7 +3,9 @@ vi.mock('@/lib/db', () => ({ default: vi.fn() }));
 vi.mock('@/models/Project', () => ({ default: { find: vi.fn() } }));
 vi.mock('@/lib/keywords', () => ({ loadKeywordSets: vi.fn(async () => ({})) }));
 vi.mock('@/lib/job-queue', () => ({ enqueueProject: vi.fn() }));
-const { POST } = await import('@/app/api/admin/classification/run/route');
+import { asAdmin } from "../helpers/admin-route";
+const { POST: securedHandler } = await import('@/app/api/admin/classification/run/route');
+const POST = asAdmin(securedHandler);
 const { default: Project } = await import('@/models/Project');
 const { enqueueProject } = await import('@/lib/job-queue');
 const record = (id, title) => ({ project_id: id, project_name: title, processing: {}, workflow: {},
