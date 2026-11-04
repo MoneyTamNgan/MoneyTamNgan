@@ -6178,6 +6178,24 @@ body {
   transition: border-color .2s ease, background .2s ease, color .2s ease
 }
 
+/* Keep the dashboard filter controls on one visual baseline. The dashboard
+   type scale makes selects 50px tall, so the software filter and title must
+   match rather than sitting several pixels high. */
+.feed-filters .filter-title {
+  display: inline-flex;
+  align-items: center;
+  min-height: 50px;
+}
+
+.feed-filters .software-filter {
+  min-height: 50px;
+}
+
+.feed-filters>label {
+  display: flex;
+  align-items: center;
+}
+
 .software-filter:hover {
   border-color: var(--orange-primary);
   color: var(--orange-primary)
@@ -6203,6 +6221,16 @@ body {
     height: 40px;
     padding-inline: 9px;
     font-size: .78rem
+  }
+}
+
+@media(max-width:650px) {
+  .feed-filters .filter-title {
+    min-height: auto;
+  }
+
+  .feed-filters .software-filter {
+    width: 100%;
   }
 }
 
@@ -8480,3 +8508,4 @@ body {
 .admin-row-actions button { font-size: .9rem; }
 .admin-review-empty span, .admin-review-footer { font-size: .96rem; }
 @media (max-width: 680px) { .admin-ops-hero h1 { font-size: clamp(2.25rem, 11vw, 3.1rem); } .admin-review-table td::before { font-size: .88rem; } }
+.tor-obsolete-banner{margin-top:18px;padding:18px 22px;border:1px solid #8a6a1f;border-left:4px solid #f2cf75;border-radius:16px;background:#2a2410;color:#f6e7bd}.tor-obsolete-banner strong{display:block;color:#f2cf75;font-size:1.05rem}.tor-obsolete-banner p{margin:6px 0 0;line-height:1.6}.tor-obsolete-banner a{display:inline-flex;margin-top:10px;color:#f2cf75;font-weight:800;text-decoration:none}.tor-lifecycle a+a{margin-left:14px}

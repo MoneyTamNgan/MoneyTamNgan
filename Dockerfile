@@ -31,9 +31,15 @@ RUN npm run build
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY package.json next.config.js proxy.js ./
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/.next ./.next
+COPY --chown=node:node package.json next.config.js proxy.js ./
 # No public/ directory exists yet; add a COPY line here if one is introduced.
+# /app/storage is where compose mounts the TOR volume. Creating it here, owned
+# by the unprivileged user, makes a fresh named volume inherit that ownership.
+RUN mkdir -p /app/storage && chown node:node /app/storage
+# Run as the unprivileged user that ships with the node image, not root
+# (Semgrep dockerfile.security.missing-user).
+USER node
 EXPOSE 3000
 CMD ["npm", "start"]
