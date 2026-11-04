@@ -331,14 +331,14 @@ function DashboardContent() {
 
       <label className="feed-search feed-search-main"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสโครงการ ชื่อ หรือหน่วยงาน" aria-label="ค้นหา TOR" /></label>
 
-      <section className="feed-filters" aria-label="ตัวกรอง TOR" ref={filterBarRef}>
+      <section className="feed-filters feed-filters-labeled" aria-label="ตัวกรอง TOR" ref={filterBarRef}>
         <div className="filter-title"><span aria-hidden="true">☷</span> ตัวกรอง</div>
-        <button type="button" className={`software-filter ${softwareOnly ? "is-active" : ""}`} onClick={updateSoftwareOnly} aria-pressed={softwareOnly}>ซอฟต์แวร์ / ไอที</button>
-        <label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label>
-        <label><span className="sr-only">สถานะการยื่นข้อเสนอ</span><select value={biddingStatus} onChange={(event) => updateBiddingStatus(event.target.value)}>{BIDDING_STATUS_OPTIONS.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
-        <label><span className="sr-only">งบประมาณต่ำสุด</span><input type="number" min="0" inputMode="numeric" value={budgetMin} onChange={(event) => setBudgetMin(event.target.value)} placeholder="งบต่ำสุด (บาท)" aria-label="งบประมาณต่ำสุด" style={{ width: 140 }} /></label>
-        <label><span className="sr-only">งบประมาณสูงสุด</span><input type="number" min="0" inputMode="numeric" value={budgetMax} onChange={(event) => setBudgetMax(event.target.value)} placeholder="งบสูงสุด (บาท)" aria-label="งบประมาณสูงสุด" style={{ width: 140 }} /></label>
-        <label className="sort-control"><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">เรียงตาม: ล่าสุด</option><option value="budget-high">งบประมาณ: สูงไปต่ำ</option><option value="budget-low">งบประมาณ: ต่ำไปสูง</option><option value="best-match">ความตรงกับโปรไฟล์</option></select></label>
+        <div className="feed-filter-field"><span id="software-filter-label">ประเภทโครงการ</span><button type="button" aria-describedby="software-filter-label" className={`software-filter ${softwareOnly ? "is-active" : ""}`} onClick={updateSoftwareOnly} aria-pressed={softwareOnly}>ซอฟต์แวร์ / ไอที</button></div>
+        <label><span>หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label>
+        <label><span>สถานะการยื่นข้อเสนอ</span><select value={biddingStatus} onChange={(event) => updateBiddingStatus(event.target.value)}>{BIDDING_STATUS_OPTIONS.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
+        <label><span>งบประมาณต่ำสุด (บาท)</span><input type="number" min="0" inputMode="numeric" value={budgetMin} onChange={(event) => setBudgetMin(event.target.value)} placeholder="ไม่จำกัด" /></label>
+        <label><span>งบประมาณสูงสุด (บาท)</span><input type="number" min="0" inputMode="numeric" value={budgetMax} onChange={(event) => setBudgetMax(event.target.value)} placeholder="ไม่จำกัด" /></label>
+        <label className="sort-control"><span>เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบประมาณ: สูงไปต่ำ</option><option value="budget-low">งบประมาณ: ต่ำไปสูง</option><option value="best-match">ความตรงกับโปรไฟล์</option></select></label>
       </section>
 
       <section className="feed-grid" aria-label="รายการ TOR">

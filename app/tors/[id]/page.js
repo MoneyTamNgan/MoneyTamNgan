@@ -20,16 +20,16 @@ function thaiDate(value) {
 }
 
 function fiscalYearForBidClose(value, fiscal) {
-  if (fiscal?.status === "found" && fiscal.year) return `ปีงบประมาณ ${fiscal.year}`;
-  if (fiscal?.status === "ambiguous") return "รอตรวจสอบปีงบประมาณ";
-  if (!value) return "ยังไม่ระบุปีงบประมาณ";
+  if (fiscal?.status === "found" && fiscal.year) return String(fiscal.year);
+  if (fiscal?.status === "ambiguous") return "รอตรวจสอบ";
+  if (!value) return "ยังไม่ระบุ";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "ยังไม่ระบุปีงบประมาณ";
+  if (Number.isNaN(date.getTime())) return "ยังไม่ระบุ";
   const parts = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "numeric", timeZone: "Asia/Bangkok" }).formatToParts(date);
   const year = Number(parts.find((part) => part.type === "year")?.value);
   const month = Number(parts.find((part) => part.type === "month")?.value);
-  if (!year || !month) return "ยังไม่ระบุปีงบประมาณ";
-  return `ปีงบประมาณ ${year + 543 + (month >= 10 ? 1 : 0)}`;
+  if (!year || !month) return "ยังไม่ระบุ";
+  return String(year + 543 + (month >= 10 ? 1 : 0));
 }
 
 function biddingStatus(status) {
@@ -207,10 +207,9 @@ export default async function TorOverviewPage({ params }) {
     )}
     <header className="tor-overview-header"><div><p className="tor-overview-id">รหัสโครงการ {project.project_id}</p><h1>{project.project_name}</h1><p className="tor-overview-agency">{project.dept_name}{project.dept_sub_name ? ` · ${project.dept_sub_name}` : ""}</p><div className="tor-overview-actions tor-priority-actions"><span className={`tor-document-version ${versionInfo.is_latest ? "is-latest" : "is-superseded"}`}>{versionStatus}</span>{torPdfUrl && <a className="tor-detail-pdf-button" href={torPdfUrl} target="_blank" rel="noreferrer">เปิด TOR PDF ↗</a>}{announcementDocument?.sourceUrl && <a className="tor-detail-pdf-button" href={announcementDocument.sourceUrl} target="_blank" rel="noreferrer">ประกาศเชิญชวน ↗</a>}</div></div></header>
     {!versionInfo.is_latest && <section className="tor-obsolete-banner" role="alert"><strong>TOR ฉบับนี้ถูกแทนที่แล้ว</strong><p>หน่วยงานประกาศโครงการนี้ใหม่{versionInfo.superseded_by ? ` (รหัส ${versionInfo.superseded_by})` : ""} ข้อมูลในหน้านี้อาจไม่เป็นปัจจุบัน กรุณาตรวจสอบเงื่อนไขจากฉบับล่าสุดก่อนยื่นข้อเสนอ</p>{versionInfo.superseded_by && <Link href={`/tors/${versionInfo.superseded_by}`}>ไปยังฉบับล่าสุด →</Link>}</section>}
-    <section className="tor-metrics tor-priority-metrics" aria-label="ข้อมูลสำคัญสำหรับการยื่นข้อเสนอ"><article className="tor-budget-metric"><span>งบประมาณ / ราคากลาง</span><strong>{formatBudget(project.budget)}</strong></article><article><span>ปีงบประมาณ{project.fiscal_budget?.status === "found" ? " · จากเอกสาร" : project.fiscal_budget?.status === "ambiguous" ? " · รอตรวจสอบ" : " · ประมาณจากวันปิดรับ"}</span><strong>{fiscalYearForBidClose(project.bidding.closesAt, project.fiscal_budget)}</strong></article><article><span>วันปิดรับข้อเสนอ</span><strong>{bidDate}</strong></article><article><span>ช่วงเวลารับข้อเสนอ</span><strong>{submissionTimeRange(bidStartTime, bidEndTime)}</strong></article></section>
+    <section className="tor-metrics tor-priority-metrics" aria-label="ข้อมูลสำคัญสำหรับการยื่นข้อเสนอ"><article className="tor-budget-metric"><span>งบประมาณ / ราคากลาง</span><strong>{formatBudget(project.budget)}</strong></article><article><span>ปีงบประมาณ</span><strong>{fiscalYearForBidClose(project.bidding.closesAt, project.fiscal_budget)}</strong></article><article><span>วันปิดรับข้อเสนอ</span><strong>{bidDate}</strong></article><article><span>ช่วงเวลารับข้อเสนอ</span><strong>{submissionTimeRange(bidStartTime, bidEndTime)}</strong></article></section>
     <section className="tor-lifecycle tor-priority-lifecycle" aria-label="สถานะการยื่นข้อเสนอและ TOR"><div className={`is-${remainingTime.tone}`}><span>ระยะเวลาคงเหลือ</span><strong>{remainingTime.label}</strong></div><div className={`is-${status.tone}`}><span>สถานะการยื่นข้อเสนอ</span><strong>{status.label}</strong></div><div className={`stage-${stage.tone}`}><span>สถานะ TOR</span><strong>{stage.label}</strong>{versionInfo.supersedes && <Link href={`/tors/${versionInfo.supersedes}`}>← ดูฉบับก่อนหน้า</Link>}</div></section>
     <ProjectSummaryCard summary={project.extracted_data.summary} />
-    <section className="tor-project-summary"><article className="tor-summary-card"><h2>ปีงบประมาณ</h2><p>{project.fiscal_budget?.years?.length ? project.fiscal_budget.years.join(", ") : "ไม่พบปีงบประมาณที่ยืนยันได้จากเอกสาร"}</p>{project.fiscal_budget?.status === "ambiguous" && <p>พบหลายปี — ต้องตรวจสอบ</p>}{project.fiscal_budget?.evidence?.map((item, index) => <blockquote key={index}>{item.clause_text}<small> · หน้า {item.page}{item.section ? ` · หัวข้อ ${item.section}` : ""} · {item.method}</small></blockquote>)}{project.fiscal_budget?.warnings?.map((warning, index) => <p key={index}>{warning}</p>)}</article></section>
     <section className="tor-detail-grid"><article className="tor-detail-card"><p className="tor-section-kicker">ข้อมูลโครงการ</p><h2>รายละเอียดที่จัดเก็บ</h2><dl><div><dt>หน่วยงาน</dt><dd>{valueOrUnknown(project.dept_name)}</dd></div><div><dt>หน่วยงานย่อย / ฝ่าย</dt><dd>{valueOrUnknown(project.dept_sub_name)}</dd></div><div><dt>สถานะการยื่นข้อเสนอ</dt><dd>{status.label}</dd></div><div><dt>สถานะ TOR</dt><dd>{stage.label}</dd></div><div><dt>วันยื่นข้อเสนอ</dt><dd>{bidDate}</dd></div><div><dt>เวลาเปิดรับข้อเสนอ</dt><dd>{bidStartTime !== "ยังไม่มีข้อมูล" ? `${bidStartTime} น.` : bidStartTime}</dd></div><div><dt>เวลาปิดรับข้อเสนอ</dt><dd>{bidEndTime !== "ยังไม่มีข้อมูล" ? `${bidEndTime} น.` : bidEndTime}</dd></div><div><dt>TOR PDF</dt><dd>{torPdfUrl ? <a className="tor-document-link" title={torDocument?.filename ?? "เปิดเอกสาร TOR"} href={torPdfUrl} target="_blank" rel="noreferrer">{torDocument?.filename ?? "เปิดเอกสาร TOR"} ↗</a> : "ยังไม่มีเอกสาร TOR"}</dd></div><div><dt>ประกาศเชิญชวน PDF</dt><dd>{announcementDocument?.sourceUrl ? <a className="tor-document-link" title={announcementDocument.filename ?? "เปิดประกาศเชิญชวน"} href={announcementDocument.sourceUrl} target="_blank" rel="noreferrer">{announcementDocument.filename ?? "เปิดประกาศเชิญชวน"} ↗</a> : "ยังไม่มีประกาศเชิญชวน"}</dd></div><div><dt>บันทึกข้อมูลเมื่อ</dt><dd>{thaiDate(project.created_at)}</dd></div><div><dt>ปรับปรุงข้อมูลเมื่อ</dt><dd>{thaiDate(project.updated_at)}</dd></div></dl></article><BidderQualificationCard items={qualificationItems} hasDocument={hasDocument} /></section>
     <DocumentObservationsCard anomalies={project.anomalies} />
     <section className="tor-extracted-data"><AdditionalInfoCard scopeItems={project.extracted_data.scope_of_work} /></section>
