@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import { connectToDatabase } from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { normalizeEmail, emailFilter, safeAuthDestination } from '@/lib/password-auth';
+import { withOAuthLimit } from '@/lib/oauth-security';
+import { logAuthAudit } from '@/lib/auth-audit';
 import {
     SESSION_COOKIE,
     OAUTH_STATE_COOKIE,
@@ -33,6 +35,7 @@ async function handleGET(request) {
         return NextResponse.json({ error: 'Authorization code is missing' }, { status: 400 });
     }
     if (!state || !expectedState || state !== expectedState) {
+        logAuthAudit(request, 'oauth_invalid_state', !state ? 'missing_state' : !expectedState ? 'missing_cookie' : 'mismatch');
         return NextResponse.json({ error: 'Invalid OAuth state' }, { status: 400 });
     }
 
@@ -110,4 +113,4 @@ async function handleGET(request) {
     }
 }
 
-export const GET = withRouteSecurity(handleGET, "/api/auth/google/callback", "GET");
+export const GET = withRouteSecurity(withOAuthLimit(handleGET, 'callback'), "/api/auth/google/callback", "GET");

@@ -480,15 +480,66 @@ paths:
   # ---------------------------------------------------------------------------
   # Auth (supports FR-2.2, FR-2.3)
   # ---------------------------------------------------------------------------
+  /auth/google/start:
+    get:
+      summary: Start Google OAuth sign-in
+      description: Sets a short-lived state cookie and redirects to Google. Limited to 5 requests per IP per 15-minute fixed window; shares its budget with /auth/google/login.
+      tags: [Auth]
+      operationId: startGoogleOAuth
+      responses:
+        "200":
+          description: When Accept is application/json, returns the Google authorization URL for browser navigation; sets the same state cookie and counts one attempt.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authorizationUrl]
+                properties:
+                  authorizationUrl: { type: string, format: uri }
+        "307":
+          description: Redirect to Google consent screen
+        "429":
+          description: Too many authentication attempts
+          headers:
+            Retry-After:
+              description: Whole seconds to wait before retrying
+              schema: { type: integer, minimum: 1 }
+
+  /auth/google/callback:
+    get:
+      summary: Complete Google OAuth sign-in
+      description: Validates the state cookie, exchanges the code, and creates a session. Limited to 5 requests per IP per 15-minute fixed window, independently of the start budget. Invalid state and rate-limited attempts are audited without recording OAuth secrets.
+      tags: [Auth]
+      operationId: completeGoogleOAuth
+      responses:
+        "307": { description: Session established; redirect to validated destination }
+        "400": { description: Missing code, invalid state, or Google verification failure }
+        "409": { description: Existing account uses a different sign-in method }
+        "500": { description: Authentication processing failed }
+        "429":
+          description: Too many authentication attempts
+          headers:
+            Retry-After:
+              description: Whole seconds to wait before retrying
+              schema: { type: integer, minimum: 1 }
+
   /auth/google/login:
     get:
       summary: Start Google OAuth sign-in
-      description: Sets a short-lived state cookie and redirects to Google. Existing Google login remains available alongside password login.
+      description: Compatibility alias for /auth/google/start. Shares its limit of 5 requests per IP per 15-minute fixed window.
       tags: [Auth]
       operationId: loginWithGoogle
       responses:
+        "200":
+          description: With Accept application/json, returns authorizationUrl and sets the state cookie, matching /auth/google/start.
         "307":
           description: Redirect to Google consent screen
+        "429":
+          description: Too many authentication attempts
+          headers:
+            Retry-After:
+              description: Whole seconds to wait before retrying
+              schema: { type: integer, minimum: 1 }
 
   /auth/register:
     post:

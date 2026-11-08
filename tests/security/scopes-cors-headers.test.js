@@ -7,6 +7,7 @@ import { allowedOrigins, contentSecurityPolicy, securityHeaders } from '@/lib/se
 import { proxy } from '@/proxy';
 import config from '@/next.config';
 import { readFile, readdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 const request = (path, method = 'GET', headers = {}) => new NextRequest(`http://localhost:3000${path}`, { method, headers });
 const credential = async (role, scopes) => `Bearer ${await signSession({ sub: `${role}-fixture`, role, ...(scopes ? { scopes } : {}) })}`;
@@ -147,7 +148,7 @@ it('registers independent security wrappers for every route export, with the pro
             }
         }
     }
-    await walk(new URL('../../app/api', import.meta.url).pathname);
+    await walk(fileURLToPath(new URL('../../app/api', import.meta.url)));
 });
 
 it('protects actual sensitive handlers before any database or outbound operation', async () => {

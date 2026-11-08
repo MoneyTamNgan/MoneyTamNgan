@@ -8675,3 +8675,14 @@ body {
 .admin-review-empty span, .admin-review-footer { font-size: .96rem; }
 @media (max-width: 680px) { .admin-ops-hero h1 { font-size: clamp(2.25rem, 11vw, 3.1rem); } .admin-review-table td::before { font-size: .88rem; } }
 .tor-obsolete-banner{margin-top:18px;padding:18px 22px;border:1px solid #8a6a1f;border-left:4px solid #f2cf75;border-radius:16px;background:#2a2410;color:#f6e7bd}.tor-obsolete-banner strong{display:block;color:#f2cf75;font-size:1.05rem}.tor-obsolete-banner p{margin:6px 0 0;line-height:1.6}.tor-obsolete-banner a{display:inline-flex;margin-top:10px;color:#f2cf75;font-weight:800;text-decoration:none}.tor-lifecycle a+a{margin-left:14px}
+
+/* Authentication cooldown popup */
+.auth-wait-dialog { width: min(420px, calc(100vw - 32px)); margin: auto; padding: 32px 28px; border: 1px solid var(--orange-border, #ead4bc); border-radius: 24px; background: var(--paper, #fffaf4); color: var(--ink, #30281f); text-align: center; box-shadow: 0 24px 80px #0005; }
+.auth-wait-dialog::backdrop { background: #17120dcc; backdrop-filter: blur(5px); }
+.auth-wait-icon { display: grid; place-items: center; width: 60px; height: 60px; margin: 0 auto 18px; border-radius: 50%; background: var(--cream-soft, #fff0dc); color: var(--orange-primary, #c46c2d); font-size: 38px; }
+.auth-wait-dialog h2 { margin: 0 0 12px; font-size: 1.5rem; }
+.auth-wait-dialog p { color: var(--ink-secondary, #756452); line-height: 1.7; }
+.auth-wait-time { margin: 24px 0 4px; color: var(--orange-primary, #c46c2d); font-size: clamp(3rem, 14vw, 4rem); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .06em; }
+.auth-wait-caption { margin: 0 0 24px; font-size: .88rem; }
+.auth-wait-dialog button { width: 100%; min-height: 48px; border: 0; border-radius: 12px; background: var(--orange-primary, #c46c2d); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.auth-wait-dialog button:focus-visible { outline: 3px solid var(--ink, #30281f); outline-offset: 4px; }
