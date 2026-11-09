@@ -513,7 +513,7 @@ paths:
       operationId: completeGoogleOAuth
       responses:
         "307": { description: Session established; redirect to validated destination }
-        "400": { description: Missing code, invalid state, or Google verification failure }
+        "400": { description: "Missing code, invalid state, or Google verification failure" }
         "409": { description: Existing account uses a different sign-in method }
         "500": { description: Authentication processing failed }
         "429":
