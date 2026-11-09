@@ -5754,7 +5754,7 @@ body {
   color: var(--orange-primary)
 }
 
-/* Five requirements per page; all pages adopt the height of the largest page. */
+/* Five requirements per page with a shared minimum height for collapsed pages. */
 .tor-detail-grid {
   align-items: stretch
 }
@@ -5771,10 +5771,33 @@ body {
 
 .tor-qualification-card .qualification-list {
   flex: 0 0 auto;
-  height: var(--qualification-page-height, auto);
-  min-height: 0;
-  align-content: start;
+  min-height: var(--qualification-page-height, 0px);
+  align-content: start
+}
+
+.tor-qualification-card .qualification-list p {
+  overflow-wrap: anywhere
+}
+
+.qualification-text-collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
   overflow: hidden
+}
+
+.qualification-text-toggle {
+  margin-top: 6px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-secondary);
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer
 }
 
 .qualification-page-measurements {
