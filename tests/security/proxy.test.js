@@ -11,6 +11,16 @@ describe('proxy middleware', () => {
     });
 
     describe('Guest Access & Rate Limiting (FR-4.2.1, FR-4.2.2)', () => {
+        it('lets OAuth routes reach their dedicated route limiter even after the public read budget is exhausted', async () => {
+            const headers = { 'x-forwarded-for': '203.0.113.201' };
+            for (let i = 0; i < 61; i++) await proxy(request('/api/tors', { headers }));
+            for (const stage of ['start', 'login', 'callback']) {
+                const response = await proxy(request(`/api/auth/google/${stage}`, { headers }));
+                expect(response.status).toBe(200);
+                expect(response.headers.get('x-ratelimit-limit')).toBeNull();
+                expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+            }
+        });
         it('lets guests open public dashboard, analytics, and TOR pages', async () => {
             for (const path of ['/dashboard', '/analytics', '/tors/69010000001']) {
                 const response = await proxy(request(path));

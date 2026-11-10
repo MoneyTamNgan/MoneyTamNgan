@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import AuthWaitDialog from '@/components/AuthWaitDialog';
 
 function GoogleMark() {
   return <svg aria-hidden="true" className="google-mark" viewBox="0 0 24 24"><path fill="#4285F4" d="M21.8 12.23c0-.71-.06-1.2-.2-1.72H12v3.38h5.64c-.11.84-.72 2.1-2.08 2.95l-.02.11 3.02 2.29.21.02c1.92-1.73 3.03-4.28 3.03-7.33Z" /><path fill="#34A853" d="M12 21.95c2.76 0 5.08-.89 6.77-2.42l-3.22-2.42c-.86.59-2.02 1-3.55 1-2.7 0-4.99-1.74-5.81-4.15l-.1.01-3.14 2.38-.03.09C4.6 19.7 8.04 21.95 12 21.95Z" /><path fill="#FBBC05" d="M6.19 13.96A5.9 5.9 0 0 1 5.86 12c0-.68.12-1.33.32-1.96l-.01-.13L3 7.5l-.1.05A9.73 9.73 0 0 0 2 12c0 1.61.39 3.14.9 4.45l3.29-2.49Z" /><path fill="#EA4335" d="M12 5.89c1.93 0 3.23.82 3.97 1.5l2.9-2.78C17.07 2.98 14.76 2 12 2 8.04 2 4.6 4.25 2.9 7.55l3.29 2.49C7.01 7.63 9.3 5.89 12 5.89Z" /></svg>;
@@ -15,10 +16,44 @@ export default function Home() {
   const [notice, setNotice] = useState("");
   const [mode, setMode] = useState<"login" | "register">("login");
   const [pending, setPending] = useState(false);
+  const [waitUntil, setWaitUntil] = useState(0);
+  const [showWait, setShowWait] = useState(false);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const returnedUntil = Number(url.searchParams.get('auth_wait_until'));
+    if (returnedUntil > Date.now() && returnedUntil <= Date.now() + 15 * 60 * 1000) {
+      setWaitUntil(returnedUntil); setShowWait(true);
+      try { sessionStorage.setItem('auth-wait-until', String(returnedUntil)); } catch { /* optional */ }
+    }
+    if (url.searchParams.has('auth_wait_until')) {
+      url.searchParams.delete('auth_wait_until');
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+    try {
+      const until = Number(sessionStorage.getItem('auth-wait-until'));
+      if (until > Date.now()) { setWaitUntil(until); setShowWait(true); }
+    } catch { /* Storage may be disabled; the server still enforces the limit. */ }
+  }, []);
+
+  function showRateLimit(response: Response) {
+    const value = response.headers.get('Retry-After');
+    const seconds = value && /^\d+$/.test(value) ? Number(value) : NaN;
+    const until = Number.isFinite(seconds) ? Date.now() + seconds * 1000 : Date.parse(value || '');
+    const deadline = Number.isFinite(until) && until > Date.now() ? until : Date.now() + 60000;
+    setWaitUntil(deadline); setShowWait(true);
+    try { sessionStorage.setItem('auth-wait-until', String(deadline)); } catch { /* optional */ }
+  }
+
+  function stillWaiting() {
+    if (waitUntil > Date.now()) { setShowWait(true); return true; }
+    return false;
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
+    if (stillWaiting()) return;
     const form = new FormData(event.currentTarget);
     const password = String(form.get("password") || "");
     if (mode === "register" && password !== form.get("confirmPassword")) {
@@ -31,6 +66,7 @@ export default function Home() {
         body: JSON.stringify({ email: form.get("email"), password,
           next: new URLSearchParams(window.location.search).get("next") }),
       });
+      if (response.status === 429) { showRateLimit(response); return; }
       const data = await response.json();
       if (!response.ok) { setNotice(data.error?.message || "ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่"); return; }
       // API supplies a validated same-origin path; use a full navigation so
@@ -41,12 +77,16 @@ export default function Home() {
   }
 
   function signInWithGoogle() {
+    if (pending || stillWaiting()) return;
+    setPending(true); setNotice('');
     const next = new URLSearchParams(window.location.search).get("next");
-    window.location.href =
-      "/api/auth/google/login" + (next ? `?next=${encodeURIComponent(next)}` : "");
+    // OAuth is a top-level navigation. A blocked HTML request returns HTTP 429
+    // and takes the browser back here with the server's countdown deadline.
+    window.location.assign('/api/auth/google/start' + (next ? `?next=${encodeURIComponent(next)}` : ''));
   }
 
   return <main className="auth-page">
+    {showWait && <AuthWaitDialog until={waitUntil} onClose={() => setShowWait(false)} />}
     <div className="city-grid" aria-hidden="true" />
     <section className="brand-panel" aria-label="BMA TOR TRACKER">
       <div className="brand-lockup"><BmaSeal /><span className="brand-name">BMA TOR<br />TRACKER</span></div>
