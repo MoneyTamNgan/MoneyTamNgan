@@ -3,6 +3,7 @@ import { SESSION_COOKIE, verifySession, hasScope } from '@/lib/auth';
 import { authorizeScopeRequest, permissionFor } from '@/lib/request-authorization';
 import { applyCors, contentSecurityPolicy, originError, securityHeaders } from '@/lib/security-policy';
 import { randomBytes } from 'node:crypto';
+import { isGoogleOAuthPath } from '@/lib/oauth-security';
 import {
     clientAddress,
     createRateLimiter,
@@ -67,7 +68,7 @@ export async function proxy(request) {
                 const error = originError(permission.mutation ? { headers: request.headers, method: 'POST' } : request,
                     { machine: ['pipeline', 'bearer', 'cron'].includes(auth.principal?.kind) });
                 response = error ? NextResponse.json({ error: { code: 'FORBIDDEN_ORIGIN', message: error } }, { status: 403 })
-                    : permission.public && READ_METHODS.has(request.method) ? rateLimit(request, auth.principal?.session) : next();
+                    : permission.public && READ_METHODS.has(request.method) && !isGoogleOAuthPath(pathname) ? rateLimit(request, auth.principal?.session) : next();
             }
         }
         try { applyCors(response, request); } catch { /* configuration errors already fail closed */ }
