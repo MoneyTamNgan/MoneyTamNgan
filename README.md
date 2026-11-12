@@ -2,36 +2,45 @@
 
 ## Project documents
 
-This inventory is current as of 12 November 2026 (Asia/Bangkok).
+This inventory matches the Google documents as they stand on 12 November 2026
+(Asia/Bangkok).
 
 - [MoneyTamNgan_SRS](https://docs.google.com/document/d/1_o6RmB_G54MWgXHGiePvBzy-vLkhECAzDnhtU15rz0A/edit?usp=sharing).
-  The official SRS (the use case diagram lives here): scope, use cases, and
-  the original functional requirements for TOR aggregation, matching, and
-  analytics. Last updated 17 September 2026; BidPrep requirements are in the
-  newer short SRS below and are not fully folded into this document yet.
+  Official SRS (the use case diagram lives here) for TOR aggregation, matching,
+  and analytics. An addendum dated 12 November 2026 was appended; it does not
+  replace the original scope, and BidPrep is not treated as customer-confirmed.
+  The short BidPrep SRS is linked below.
 - [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing).
-  Short English SRS for the Bid Preparation Assistant (epic #135): company
-  profile, compliance checklist, sourced proposal draft, DOCX export, and
-  FR-4.7 security/privacy; the system prepares documents only and never
-  submits to e-GP. Version 0.1 draft dated 12 November 2026, waiting for
-  customer confirmation (#143).
+  Short English SRS for the Bid Preparation Assistant (epic #135). Version 0.1
+  draft, still waiting for customer confirmation (#143). An
+  implementation-status section dated 12 November 2026 was appended; it does
+  not change the requirements. Issues #136–#142 remain open even where related
+  routes exist on develop.
 - [MoneyTamNgan Testcase doc](https://docs.google.com/spreadsheets/d/1R6gXlBh75GxtKXlraxE6N0eJU5URTa0pgbbUvg4j3GE/edit?usp=sharing).
-  Maps automated test cases (TC-001 onward) to modules, source files, and
-  Pass/Fail status, covering security, auth, analytics, skill matching, and
-  OpenAPI contract tests. Last updated 19 October 2026; may not yet include
-  BidPrep tests added in PRs #148 and #149.
+  Maps automated tests (TC-001 through TC-251) to modules and source files.
+  Existing TC-001–212 were left as they were; TC-213–251 were added on
+  12 November 2026 for suites that were missing (including BidPrep and security
+  tests from PRs #148 and #149). The Atlas suite (TC-251) is Pending, not Pass.
+  The Status column is color-coded (Pass / Pending).
 - [Sprint api planing](https://docs.google.com/spreadsheets/d/1aXUlWRg__PmH6LtbzPxBnOCS7z7v9pk-xxEpwySVCU0/edit?usp=sharing).
-  Sprint API plan: ticket, endpoint, expected response, and implementation
-  status for the TOR, profile, and related APIs. Last updated 16 September
-  2026; several Status cells still say To Do or In Progress even though that
-  work has landed in the repo (for example session/auth and embeddings), and
-  issue #17 (Atlas Search index) is still open because live Atlas verification
-  remains.
-- [MoneyTamNgan_Assignment 1](https://docs.google.com/spreadsheets/d/1mZCqus4RaeYQnVjN70ffu9_TbxBNA1OslLpimWm1YYU/edit?gid=1505854712#gid=1505854712).
-  STRIDE threat catalog (TH-01 onward) with mitigation status, plus the ASVS
-  Level 1 traceability sheet. Last updated 5 November 2026; newer notes are
-  in [docs/security/](docs/security/) (TH-11 through TH-18 from PR #149, and
-  refreshed SAST/ZAP reports from PR #152).
+  Sprint API plan with ticket, endpoint, expected response, and status,
+  reviewed 12 November 2026 against develop. Tickets #10–#20 were brought up
+  to date (#17 stays In Progress because live Atlas verification is still
+  open). Rows were added for health, auth (Google and email/password), admin
+  extras, analytics, matching, and BidPrep (#136 To Do; #137–#142 In Progress).
+  The Status column is color-coded (Done / In Progress / To Do).
+- [MoneyTamNgan Secure Test](https://docs.google.com/spreadsheets/d/1zl9NWZmycvNj0Brg7PMB2kdizVcQq-ihKPNbVODycvY/edit?usp=sharing).
+  Working copy of the security catalog (STRIDE + ASVS), named and updated on
+  12 November 2026: TH-05 and TH-10 set to DONE from current code; TH-03 left
+  IN PLANNING; BidPrep threats appended as TH-11–TH-18; selected ASVS rows
+  updated (headers, email/password V6.2, scanners in CI). It also has a
+  Project status tab reflecting open GitHub issues the same day. Status cells
+  are color-coded.
+- [MoneyTamNgan_Assignment 1](https://docs.google.com/spreadsheets/d/1mZCqus4RaeYQnVjN70ffu9_TbxBNA1OslLpimWm1YYU/edit?gid=1505854712#gid=1505854712)
+  is the original assignment workbook (owner usa.sa@ku.th). It could not be
+  edited from the connected account, so the working copy above is the one to
+  maintain. Do not confuse assignment TH-01–TH-10 with the later in-repo
+  TH-1–TH-10 numbering in docs/security/.
 - [MoneyTamNgan TOR Discovery, Extraction, and Display](docs/diagrams/tor-discovery-extraction-display.png).
   Sequence diagram of the current pipeline: e-GP discovery and classification,
   official ZIP/PDF download, text/OCR/Vertex extraction, and dashboard display.
