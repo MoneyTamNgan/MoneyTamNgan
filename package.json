@@ -22,6 +22,7 @@
     "vertex:reanalyze": "node scripts/reanalyze-vertex.js",
     "embed": "node scripts/embed-projects.js",
     "db:ensure-indexes": "node scripts/ensure-indexes.js",
+    "db:migrate-users": "node scripts/migrate-user-schema.js",
     "db:migrate-normalized": "node scripts/migrate-normalized-schema.js",
     "db:reconcile-normalized": "node scripts/reconcile-normalized-schema.js",
     "db:cleanup-legacy": "node scripts/cleanup-legacy-schema.js",

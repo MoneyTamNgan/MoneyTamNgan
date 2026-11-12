@@ -1,0 +1,72 @@
+name: ZAP DAST baseline
+
+# Passive OWASP ZAP baseline scan of the production Docker image running
+# against a throwaway MongoDB. Heavier than SAST, so it runs on PRs to main,
+# weekly, and on demand rather than on every push.
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "41 3 * * 1" # weekly, Monday 03:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    name: ZAP baseline (http://localhost:3000)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start app and throwaway MongoDB
+        run: |
+          cp .env.example .env
+          # Generated per run; nothing here is a real credential.
+          {
+            echo "JWT_SECRET=$(openssl rand -hex 32)"
+            echo "APP_ORIGIN=http://localhost:3000"
+            echo "NEXT_PUBLIC_REDIRECT_URI=http://localhost:3000/api/auth/google/callback"
+          } >> .env
+          docker compose up -d --build mongo app
+
+      - name: Wait for the app to be healthy
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health >/dev/null; then echo "app is up"; exit 0; fi
+            sleep 5
+          done
+          docker compose logs app | tail -50
+          echo "app did not become healthy" >&2
+          exit 1
+
+      - name: Run ZAP baseline scan
+        run: |
+          mkdir -p reports && chmod 777 reports
+          # Exit codes: 0 pass, 1 FAIL rule, 2 warnings only, 3 scan error.
+          # Warnings are tolerated here; High-risk alerts are gated in the next step.
+          set +e
+          docker run --rm --network host -v "$PWD/reports:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t http://localhost:3000 -m 2 \
+            -J zap-dast-report.json -r zap-dast-report.html
+          code=$?
+          echo "zap-baseline exit code: $code"
+          [ "$code" -eq 0 ] || [ "$code" -eq 2 ] || exit "$code"
+
+      - name: Summarize and fail on High-risk alerts
+        run: python3 scripts/ci/summarize-zap.py reports/zap-dast-report.json
+
+      - name: Upload DAST reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-dast-report
+          path: reports/
+          if-no-files-found: error
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down -v

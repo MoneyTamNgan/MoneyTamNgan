@@ -63,8 +63,11 @@ export default function Home() {
     try {
       const response = await fetch(`/api/auth/${mode}`, {
         method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
-        body: JSON.stringify({ email: form.get("email"), password,
-          next: new URLSearchParams(window.location.search).get("next") }),
+        body: JSON.stringify({
+          ...(mode === "login"
+            ? { identifier: String(form.get("identifier") || "").trim() }
+            : { email: form.get("email"), username: String(form.get("username") || "").trim() || undefined }),
+          password, next: new URLSearchParams(window.location.search).get("next") }),
       });
       if (response.status === 429) { showRateLimit(response); return; }
       const data = await response.json();
@@ -97,9 +100,13 @@ export default function Home() {
       <div className="login-card">
         <header className="login-header"><div className="mobile-seal"><BmaSeal /></div><p className="section-label">ศูนย์วิเคราะห์ TOR โครงการเทคโนโลยี</p><h2>{mode === "register" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}</h2><p>ติดตามโครงการที่ตรงกับทักษะและความสนใจของคุณ</p></header>
         <button className="google-button" type="button" onClick={signInWithGoogle}><GoogleMark /><span>เข้าสู่ระบบด้วย Google</span></button>
-        <div className="divider"><span>หรือ{mode === "register" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}ด้วยอีเมล</span></div>
+        <div className="divider"><span>หรือ{mode === "register" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}ด้วยอีเมล{mode === "login" ? " หรือชื่อผู้ใช้" : ""}</span></div>
         <form key={mode} onSubmit={handleSubmit} aria-busy={pending}>
-          <label htmlFor="email">อีเมล</label><input id="email" name="email" type="email" placeholder="name@example.com" autoComplete="email" maxLength={254} required />
+          {mode === "login"
+            ? <><label htmlFor="identifier">อีเมลหรือชื่อผู้ใช้</label><input id="identifier" name="identifier" type="text" placeholder="name@example.com หรือ username" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} required /></>
+            : <><label htmlFor="email">อีเมล</label><input id="email" name="email" type="email" placeholder="name@example.com" autoComplete="email" maxLength={254} required />
+              <label htmlFor="username">ชื่อผู้ใช้ (ไม่บังคับ)</label><input id="username" name="username" type="text" placeholder="เช่น somchai.s" autoComplete="off" autoCapitalize="none" spellCheck={false} minLength={3} maxLength={30} pattern="[A-Za-z0-9][A-Za-z0-9._\-]{1,28}[A-Za-z0-9]" title="3–30 ตัวอักษร ใช้ a-z 0-9 . _ - และต้องขึ้นต้น/ลงท้ายด้วยตัวอักษรหรือตัวเลข" />
+              <p className="password-hint">ไม่ใส่ก็ได้ ระบบจะสร้างให้จากอีเมล</p></>}
           <label htmlFor="password">รหัสผ่าน</label><div className="password-wrap"><input id="password" name="password" type="password" placeholder="รหัสผ่านอย่างน้อย 15 ตัวอักษร" autoComplete={mode === "register" ? "new-password" : "current-password"} minLength={15} maxLength={128} required /></div>
           {mode === "register" && <><p className="password-hint">ใช้รหัสผ่าน 15–128 ตัวอักษร เช่น วลีที่จำง่าย</p><label htmlFor="confirmPassword">ยืนยันรหัสผ่าน</label><input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" minLength={15} maxLength={128} required /></>}
           <button className="sign-in" type="submit" disabled={pending}>{pending ? "กำลังดำเนินการ…" : mode === "register" ? "สร้างบัญชี" : "เข้าสู่ระบบ"} <span aria-hidden="true">→</span></button>
