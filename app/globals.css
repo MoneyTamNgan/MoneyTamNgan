@@ -8720,3 +8720,51 @@ body {
 .auth-wait-caption { margin: 0 0 24px; font-size: .88rem; }
 .auth-wait-dialog button { width: 100%; min-height: 48px; border: 0; border-radius: 12px; background: var(--orange-primary, #c46c2d); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .auth-wait-dialog button:focus-visible { outline: 3px solid var(--ink, #30281f); outline-offset: 4px; }
+
+.tor-schedule-plan {
+  margin-top: 18px
+}
+
+.tor-schedule-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none
+}
+
+.tor-schedule-list li {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid #294b52;
+  border-left: 4px solid #5f7f78;
+  border-radius: 12px;
+  background: #0c2227
+}
+
+.tor-schedule-list li.is-done {
+  border-left-color: #4fbf8f
+}
+
+.tor-schedule-list li.is-upcoming {
+  border-left-color: #e0b84f
+}
+
+.tor-schedule-list span {
+  color: #9fb9af;
+  font-size: .85rem
+}
+
+.tor-schedule-list strong {
+  color: #e8f5ef;
+  font-size: .95rem;
+  line-height: 1.4
+}
+
+.tor-schedule-duration {
+  margin: 14px 0 0;
+  color: #9fb9af
+}
