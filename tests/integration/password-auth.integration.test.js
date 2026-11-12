@@ -8,7 +8,9 @@ const state = vi.hoisted(() => ({ users: [], fail: false }));
 vi.mock('@/lib/db', () => ({ default: vi.fn(async () => { if (state.fail) throw new Error('private database detail'); }) }));
 vi.mock('@/models/User', () => ({ User: {
     init: vi.fn().mockResolvedValue(undefined),
-    findOne: vi.fn(filter => ({ select: vi.fn(async () => state.users.find(u => new RegExp(filter.email.$regex, 'i').test(u.email)) || null) })),
+    findOne: vi.fn(filter => ({ select: vi.fn(async () => (filter.username
+        ? state.users.find(u => u.username === filter.username)
+        : state.users.find(u => new RegExp(filter.email.$regex, 'i').test(u.email))) || null) })),
     create: vi.fn(async data => {
         if (state.users.some(u => u.email === data.email)) throw Object.assign(new Error('duplicate'), { code: 11000 });
         if (data.username && state.users.some(u => u.username === data.username)) throw Object.assign(new Error('duplicate'), { code: 11000, keyPattern: { username: 1 } });
@@ -77,7 +79,7 @@ it('returns the same login failure for absent, Google-only and wrong-password ac
     const wrong = await login(request('login', data));
     expect([absent.status, google.status, wrong.status]).toEqual([401, 401, 401]);
     expect(await absent.json()).toEqual(await google.json());
-    expect(await wrong.json()).toEqual({ error: { code: 'INVALID_CREDENTIALS', message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง หรือโปรดใช้ Google หากสมัครด้วย Google' } });
+    expect(await wrong.json()).toEqual({ error: { code: 'INVALID_CREDENTIALS', message: 'อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือโปรดใช้ Google หากสมัครด้วย Google' } });
 });
 
 it('rejects duplicate/legacy-case Google registration without changing existing credentials', async () => {
@@ -151,4 +153,52 @@ it('rejects invalid or reserved usernames and reports taken ones as 409', async 
     expect(clash.status).toBe(409);
     expect((await clash.json()).error.code).toBe('USERNAME_TAKEN');
     expect(state.users).toHaveLength(1);
+});
+
+it('logs in with a username (any case) or an email, with the same result', async () => {
+    const data = details();
+    const created = await (await register(request('register', { ...data, username: 'Login_User' }))).json();
+    address = `test-${++counter}`;
+    const byUsername = await login(request('login', { identifier: '  LOGIN_user ', password }));
+    expect(byUsername.status).toBe(200);
+    expect((await byUsername.json()).user.id).toBe(created.user.id);
+    address = `test-${++counter}`;
+    const byEmail = await login(request('login', { identifier: data.email, password }));
+    expect(byEmail.status).toBe(200);
+    address = `test-${++counter}`;
+    expect((await login(request('login', { email: data.email, password }))).status).toBe(200); // legacy field
+});
+it('gives unknown usernames, wrong passwords and Google-only users the same 401', async () => {
+    await register(request('register', { ...details(), username: 'real_user' }));
+    state.users.push({ _id: randomUUID(), email: 'g@example.com', username: 'google_user' });
+    const responses = [];
+    for (const identifier of ['nobody_here', 'real_user', 'google_user']) {
+        address = `test-${++counter}`;
+        responses.push(await login(request('login', { identifier, password: identifier === 'real_user' ? 'Another long wrong passphrase!' : password })));
+    }
+    expect(responses.map(r => r.status)).toEqual([401, 401, 401]);
+    const bodies = await Promise.all(responses.map(r => r.json()));
+    expect(bodies[1]).toEqual(bodies[0]);
+    expect(bodies[2]).toEqual(bodies[0]);
+});
+it('rejects malformed login identifiers before touching the database', async () => {
+    for (const identifier of ['ab', 'has space', '{"$ne":null}', undefined, 42]) {
+        address = `test-${++counter}`;
+        const response = await login(request('login', { identifier, password }));
+        expect(response.status, String(identifier)).toBe(400);
+    }
+    expect(User.findOne).not.toHaveBeenCalled();
+});
+it('shares one attempt budget per account across email and username', async () => {
+    const data = details();
+    await register(request('register', { ...data, username: 'budget_user' }));
+    const statuses = [];
+    // Each request comes from a fresh address, so only the per-account budget can trip.
+    for (let i = 0; i < 12; i += 1) {
+        address = `test-${++counter}`;
+        const identifier = i % 2 ? data.email : 'budget_user';
+        statuses.push((await login(request('login', { identifier, password: 'Wrong but long enough passphrase' }))).status);
+    }
+    expect(statuses.slice(0, 5)).toEqual([401, 401, 401, 401, 401]);
+    expect(statuses).toContain(429);
 });
