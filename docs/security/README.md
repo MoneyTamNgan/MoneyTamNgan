@@ -4,10 +4,10 @@
 
 | Workflow | Runs | What it does | Fails the build when |
 |---|---|---|---|
-| `.github/workflows/semgrep.yml` | push/PR to `develop` and `main`, weekly, manual | `semgrep --config p/owasp-top-ten` over the repo; uploads `sast-report.json` as an artifact and writes a summary to the run page | any **ERROR** (High) finding or scan error |
+| `.github/workflows/semgrep.yml` | push/PR to `develop` and `main`, weekly, manual | `semgrep --config p/owasp-top-ten` over the repo; uploads `sast-report.json` as an artifact and writes a summary to the run page | any **ERROR** (High) finding, or a scan error that is not a warning-level parse issue |
 | `.github/workflows/zap-dast.yml` | PR to `main`, weekly, manual | builds the production Docker image against a throwaway MongoDB, runs the ZAP baseline container against `http://localhost:3000`, uploads `zap-dast-report.json/.html` | any **High**-risk alert, or a ZAP scan error |
 
-Both gates are implemented in `scripts/ci/summarize-sast.py` and `scripts/ci/summarize-zap.py`, which also work locally: `python3 scripts/ci/summarize-sast.py docs/security/reports/sast-report.json`. Checked against the reports below: the current SAST report passes (0 ERROR) and `sast-report.before-fix.json` fails (1 ERROR), as intended. WARNING-level findings (the 17 below) do not fail the build; they are listed in the run summary.
+Both gates are implemented in `scripts/ci/summarize-sast.py` and `scripts/ci/summarize-zap.py`, which also work locally: `python3 scripts/ci/summarize-sast.py docs/security/reports/sast-report.json`. Checked against the reports below: the current SAST report passes (0 ERROR) and `sast-report.before-fix.json` fails (1 ERROR), as intended. WARNING-level findings (the 17 below) do not fail the build; they are listed in the run summary. Warning-level Semgrep parse errors (for example an unknown YAML escape, or a GitHub Actions expression a rule cannot parse) are also listed and do not fail the build.
 
 The reports in `docs/security/reports/` are the committed snapshot from the audit below. CI artifacts are the up-to-date copies. Refresh the snapshot by downloading the artifacts from a green run on `main`.
 
