@@ -24,3 +24,12 @@ Issue #103 asked for this file. It was not on `develop` when FR-4.7 started, so 
 | TH-18 | Elevation of privilege | A BidPrep route submits to e-GP | No e-GP client is imported. The file and the pages tell the user to submit | Mitigated | privacy test `does not submit a bid` |
 
 Residual: rate-limit counters are in memory, and the customer has not set a retention period.
+
+## Admin pipeline control evidence — #78
+
+| Id | STRIDE | Threat | Mitigation | Evidence |
+|---|---|---|---|---|
+| TH-19 | Denial of service / tampering | Parallel manual pipelines or a restart leaving a permanent running flag | Atomic singleton MongoDB lease, heartbeat, expiry recovery, owner fencing; active reset returns 409 | `lib/admin-pipeline-control.js`, `lib/admin-pipeline-store.js`, `tests/integration/admin-pipeline-recovery.test.js` |
+| TH-20 | Repudiation / elevation of privilege | Unattributed or unauthorized pipeline triggers | Independent Proxy/handler admin scopes, durable allowed-attempt audit and bounded denial logs | `lib/admin-pipeline-audit.js`, `models/PipelineTriggerAudit.js`, `tests/integration/admin-pipeline.integration.test.js` |
+
+The issue refers to **TH-02** and **TH-06 in a separate STRIDE sheet**. That sheet's link/definitions have not been supplied. Proposed card cross-reference for the sheet owner: admin privilege/audit evidence is TH-8 + TH-20 above; concurrency/restart evidence is TH-19. Both requested sheet cells can link to [the #78 evidence and manual runbook](../admin-pipeline-control.md). This is a prepared mapping, not a claim that an external sheet was edited. Existing repository TH-2 (OAuth abuse) and TH-6 (login disclosure) retain their original meanings.
