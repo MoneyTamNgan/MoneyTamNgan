@@ -1,4 +1,5 @@
 import type { ContractorProfileRecord } from "@/types/contractor-profile";
+import { DELETE_COMPANY_DATA_CONFIRMATION } from "@/lib/bid-prep/notices";
 
 const storageKey = "moneytamngan.contractor-profile";
 
@@ -102,6 +103,32 @@ export async function saveContractorProfile(
   }
 
   return { profile, isRemote: false };
+}
+
+export async function deleteCompanyBidData(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/bid-prep/data", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: DELETE_COMPANY_DATA_CONFIRMATION }),
+    });
+    if (!res.ok) return false;
+    const local = loadLocalContractorProfile();
+    if (local) {
+      saveLocalContractorProfile({
+        ...local,
+        company_name: "",
+        skills: [],
+        registered_capital: null,
+        highest_past_project_value: null,
+        concurrent_project_capacity: null,
+        certifications: [],
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function deleteContractorAccount(): Promise<boolean> {

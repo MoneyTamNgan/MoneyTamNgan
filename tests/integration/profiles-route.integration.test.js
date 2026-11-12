@@ -34,8 +34,16 @@ vi.mock('@/models/User', () => ({
     },
 }));
 
+vi.mock('@/models/BidPrepDraft', () => ({
+    BidPrepDraft: {
+        deleteMany: vi.fn().mockResolvedValue({ deletedCount: 0 }),
+        countDocuments: vi.fn().mockResolvedValue(0),
+    },
+}));
+
 const { verifySession } = await import('@/lib/auth');
 const { User } = await import('@/models/User');
+const { BidPrepDraft } = await import('@/models/BidPrepDraft');
 const { GET, PATCH, DELETE } = await import('@/app/api/profiles/route');
 
 function requestWithBody(body) {
@@ -91,10 +99,28 @@ describe('PATCH /api/profiles', () => {
 
 describe('DELETE /api/profiles', () => {
     it('deletes the account and clears the session cookie', async () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const response = await DELETE(authedRequest);
         expect(response.status).toBe(200);
+        expect(BidPrepDraft.deleteMany).toHaveBeenCalledWith({ userId: 'user-1' });
+        expect(BidPrepDraft.countDocuments).toHaveBeenCalledWith({ userId: 'user-1' });
         expect(User.findByIdAndDelete).toHaveBeenCalledWith('user-1');
         expect(cookieStore.delete).toHaveBeenCalledWith('mtn_session');
+        const audit = warn.mock.calls.map(call => String(call[0])).find(line => line.includes('bid_prep_data_deleted'));
+        expect(JSON.parse(audit)).toMatchObject({ event: 'bid_prep_data_deleted', userId: 'user-1', scope: 'account' });
+        expect(JSON.parse(audit).timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+        warn.mockRestore();
+    });
+
+    it('rate limits authenticated profile reads', async () => {
+        vi.stubEnv('BID_PREP_PROFILE_PER_MINUTE', '1');
+        vi.mocked(verifySession).mockResolvedValue({ sub: 'rate-limit-user', role: 'user', scopes: ['profile:read', 'profile:write'] });
+        expect((await GET(authedRequest)).status).toBe(200);
+        const again = await GET(authedRequest);
+        expect(again.status).toBe(429);
+        expect(again.headers.get('retry-after')).toBeTruthy();
+        expect(await again.json()).toEqual({ error: { code: 'RATE_LIMITED', message: expect.stringMatching(/Too many requests/) } });
+        vi.unstubAllEnvs();
     });
 
     it('returns 401 when unauthenticated', async () => {
