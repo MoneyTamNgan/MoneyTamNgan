@@ -34,6 +34,10 @@ ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/.next ./.next
 COPY --chown=node:node package.json next.config.js proxy.js ./
+# next.config.js imports ./lib/security-policy.js when `next start` boots, and the
+# build output does not include it. The file has no imports of its own. Without
+# this line the container exits at start-up with ERR_MODULE_NOT_FOUND.
+COPY --chown=node:node lib/security-policy.js ./lib/security-policy.js
 # No public/ directory exists yet; add a COPY line here if one is introduced.
 # /app/storage is where compose mounts the TOR volume. Creating it here, owned
 # by the unprivileged user, makes a fresh named volume inherit that ownership.
