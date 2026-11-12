@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/ui/AppShell";
+import NoEgpSubmissionNotice from "@/components/ui/NoEgpSubmissionNotice";
 import {
   getContractorProfile,
   saveContractorProfile,
   deleteContractorAccount,
+  deleteCompanyBidData,
 } from "@/lib/services/contractor-profile-service";
 
 const skills = ["React", "Node.js", "Python", "PostgreSQL", "Cloud", "TypeScript", "Docker", "UX/UI", "Data analysis", "Security", "Service Virtualization", "Integration Platforms as a Service (iPaaS)", "MS Project", "MS Excel", "Utility Platform (UTP)", "Enterprise Resource Planning (ERP)", "ระบบคอมพิวเตอร์"];
@@ -26,6 +28,9 @@ export default function ProfilePage() {
   // Modal state for delete confirmation
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showCompanyDeleteModal, setShowCompanyDeleteModal] = useState(false);
+  const [isDeletingCompany, setIsDeletingCompany] = useState(false);
+  const [companyDeleteMessage, setCompanyDeleteMessage] = useState("");
   const [testEmailStatus, setTestEmailStatus] = useState(null); // null | 'sending' | 'sent' | 'error'
 
   useEffect(() => {
@@ -64,6 +69,29 @@ export default function ProfilePage() {
     setIsRemoteSaved(isRemote);
     setSaved(true);
     setIsSaving(false);
+  }
+
+  async function handleDeleteCompanyData() {
+    setIsDeletingCompany(true);
+    setCompanyDeleteMessage("");
+    const success = await deleteCompanyBidData();
+    if (success) {
+      setProfile((current) => ({
+        ...current,
+        company_name: "",
+        skills: [],
+        registered_capital: null,
+        highest_past_project_value: null,
+        concurrent_project_capacity: null,
+        certifications: [],
+      }));
+      setSaved(false);
+      setCompanyDeleteMessage("ลบข้อมูลบริษัทและฉบับร่างออกจากระบบแล้ว");
+      setShowCompanyDeleteModal(false);
+    } else {
+      setCompanyDeleteMessage("ลบข้อมูลไม่สำเร็จ โปรดเข้าสู่ระบบแล้วลองอีกครั้ง");
+    }
+    setIsDeletingCompany(false);
   }
 
   async function handleDeleteAccount() {
@@ -299,6 +327,53 @@ export default function ProfilePage() {
             {isSaving ? "กำลังบันทึก..." : "บันทึกข้อมูลโปรไฟล์"}
           </button>
         </div>
+
+        <NoEgpSubmissionNotice />
+
+        <section className="profile-delete-card">
+          <div>
+            <h2>ลบข้อมูลบริษัทและฉบับร่าง</h2>
+            <p>ลบข้อมูลบริษัทที่ใช้เตรียมซอง และฉบับร่างทั้งหมดของบัญชีนี้ บัญชีผู้ใช้ยังอยู่ สามารถบันทึกข้อมูลใหม่ได้ภายหลัง</p>
+          </div>
+          <button
+            className="profile-delete-button"
+            type="button"
+            onClick={() => setShowCompanyDeleteModal(true)}
+          >
+            ลบข้อมูลบริษัท
+          </button>
+        </section>
+        {companyDeleteMessage && <p role="status">{companyDeleteMessage}</p>}
+
+        {showCompanyDeleteModal && (
+          <div className="profile-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-company-title">
+            <div className="profile-modal-box">
+              <div className="profile-modal-icon">⚠️</div>
+              <h3 id="delete-company-title">ยืนยันการลบข้อมูลบริษัท</h3>
+              <p>
+                ข้อมูลบริษัทและฉบับร่างข้อเสนอของบัญชีนี้จะถูกลบจากฐานข้อมูล การลบนี้ไม่ปิดบัญชีผู้ใช้
+              </p>
+              <div className="profile-modal-actions">
+                <button
+                  className="profile-cancel-button"
+                  type="button"
+                  onClick={() => setShowCompanyDeleteModal(false)}
+                  disabled={isDeletingCompany}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  className="profile-confirm-delete-button"
+                  type="button"
+                  onClick={handleDeleteCompanyData}
+                  disabled={isDeletingCompany}
+                >
+                  {isDeletingCompany ? "กำลังลบ..." : "ยืนยันลบข้อมูล"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete Account Danger Zone */}
         <section className="profile-delete-card">
