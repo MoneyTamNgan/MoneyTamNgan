@@ -64,7 +64,9 @@ node scripts/test-admin-pipeline-http.js /tmp/admin-pipeline-evidence.json
 
 The HTTP script uses its own localhost port 3127 and random `mtn_admin_test_*` database. It tests five independent MongoDB claimants, actual 401/403/409 responses, lease recovery, a real admin-session 202 followed by polling to completion, and durable audit provenance. Its explicit non-software fixture prevents government scraping, Vertex charges and email. It cleans up only its own server/database and never prints tokens. For running against a disposable local MongoDB instead of Atlas, provide `MONGODB_URI` in the command environment.
 
-Local evidence so far: 29 targeted tests passed; 280 Node tests passed; 305 Vitest tests passed; production build and Redocly lint passed. The first live Atlas attempt was blocked by the IP/network allowlist; do not count it as a passed live/manual test. CI and Semgrep evidence are attached to the PR. Update this paragraph when the live check succeeds.
+Local evidence: 29 targeted tests passed; 280 Node tests passed; 305 Vitest tests passed; production build and Redocly lint passed. After Atlas IP access was restored, the live MongoDB/HTTP check passed, including one winner across five independent controllers, 401/403/409 responses, restart recovery, and an admin-session 202 followed by completed status. The test's non-software fixture intentionally produced no document/Vertex/email activity. Its isolated database was removed. Full sanitized responses are committed in [evidence/admin-pipeline-http.json](evidence/admin-pipeline-http.json).
+
+PR #162 CI and Semgrep both passed before the fixture/evidence update. The latest PR check runs are authoritative for the final revision.
 
 ## Manual admin demo
 
@@ -86,4 +88,12 @@ console.log(r.status, await r.json());
 
 ## Review / team acceptance
 
-The PR closes #78 and includes this runbook and test evidence. A real teammate who is not the author must approve before merge to develop; author self-review/bot approval does not satisfy this card. The owner demo and any external STRIDE sheet update remain human acceptance items until evidence is attached. The separate STRIDE sheet link has been requested; the repository cross-reference is proposed in THREAT_MODEL.md without overwriting existing TH-2/TH-6 meanings.
+The PR closes #78 and includes this runbook and test evidence. A real teammate who is not the author must approve before merge to develop; author self-review/bot approval does not satisfy this card. The live admin-session command evidence is attached above; an owner demo remains available using the manual steps. The supplied STRIDE sheet was inspected: TH-02 is row 3 (privilege escalation), TH-06 is row 7 (pipeline denial of service). Current access is View only, so external edits await editor access. Exact proposed cell updates are prepared below; existing G3/G7 status values are left unchanged.
+
+### STRIDE sheet cell updates
+
+Sheet: [STRIDE Threat Catalog & Mitigation Plan](https://docs.google.com/spreadsheets/d/1mZCqus4RaeYQnVjN70ffu9_TbxBNA1OslLpimWm1YYU/edit?gid=1505854712#gid=1505854712).
+
+**F3 — TH-02** (append to existing mitigation): Admin role plus scoped permission is checked independently in proxy.js and in route handlers. Normal-user 403 and anonymous 401 are covered in tests/integration/admin-pipeline.integration.test.js. Evidence: https://github.com/MoneyTamNgan/MoneyTamNgan/pull/162 and docs/evidence/admin-pipeline-http.json.
+
+**F7 — TH-06** (replace the old in-memory RUNNING-flag description): Existing public API rate limiting remains. The admin pipeline uses an atomic MongoDB singleton lease: concurrent requests receive 409, a heartbeat renews a healthy run, and a restart/expired lease becomes failed after 90 seconds and permits retry. A stale owner cannot overwrite a newer run. Evidence: https://github.com/MoneyTamNgan/MoneyTamNgan/pull/162, tests/integration/admin-pipeline-recovery.test.js, and docs/evidence/admin-pipeline-http.json.

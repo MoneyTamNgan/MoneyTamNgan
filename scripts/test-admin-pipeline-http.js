@@ -69,7 +69,7 @@ try {
     assert.ok(recovered.run.startedAt);
     await callbacks[0](); // stale execution must be fenced by the database lease.
     evidence.checks.push('Restart/expired-lease recovery and stale callback fencing');
-    await Project.create({ project_id: '69000000000', project_name: 'Non-software control fixture', is_software: false,
+    await Project.create({ project_id: '69000000000', project_name: 'Non-software control fixture', dept_name: 'Fixture agency', budget: 1, is_software: false,
         classification: { status: 'manual_override' } });
     const accepted = await trigger(admin, { limit: 1, projectIds: ['69000000000'] });
     assert.equal(accepted.status, 202);
