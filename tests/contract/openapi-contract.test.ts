@@ -145,6 +145,39 @@ describe("TOR API responses match docs/api/openapi.yaml", () => {
         expectValid(validate, { error: { code: "TOR_NOT_FOUND", message: "No TOR exists with id: x" } });
     });
 
+    it("BidPrep draft and checklist responses match the FR-4.7 schemas", () => {
+        const notices = {
+            aiDraft: "This is an AI draft. Check every statement and its source before submitting.",
+            noEgpSubmission: "MoneyTamNgan does not submit a bid to e-GP. The seller must review this draft and submit it with their own digital signature.",
+            noEgpSubmissionTh: "ระบบนี้ไม่ยื่นซองต่อ e-GP ให้ผู้ใช้",
+        };
+        expectValid(validatorFor("BidPrepDraft"), {
+            id: "a".repeat(24),
+            projectId: "TOR-2569-001",
+            title: "ร่างข้อเสนอ",
+            version: 1,
+            createdAt: "2026-11-12T03:00:00.000Z",
+            updatedAt: "2026-11-12T03:00:00.000Z",
+            notices,
+            sections: [{ heading: "Overview", body: "Plain text", sources: ["profile.company_name"] }],
+        });
+        expectValid(validatorFor("BidPrepDeletion"), { status: "deleted", draftsDeleted: 1 });
+        expectValid(validatorFor("BidPrepChecklist"), {
+            projectId: "TOR-2569-001",
+            notices,
+            summary: { pass: 0, fail: 0, manual: 1 },
+            missingProfileFields: ["registered_capital"],
+            truncated: false,
+            items: [{
+                requirement: "ทุนจดทะเบียน",
+                status: "manual",
+                reason: "Not compared automatically.",
+                evidencePages: [3],
+                needsReview: false,
+            }],
+        });
+    });
+
     it("a sourced proposal draft and its queued job match the FR-4.3 schemas", () => {
         const draft = groundProposalDraft({
             company_overview: [],

@@ -39,6 +39,8 @@ tags:
     description: "[Planned] Budget and qualification anomaly flags on a TOR (FR-3.1, FR-3.2)."
   - name: Public Analytics
     description: "[Current] Public historical search, dashboard aggregates, and export for the Analytics page."
+  - name: Bid preparation
+    description: "[Current] Company-data deletion, owned proposal drafts, checklist access and DOCX export. The system does not submit a bid to e-GP (FR-4.7)."
   - name: Bid Preparation
     description: "[Current] Sourced technical proposal drafts for a processed TOR (FR-4.3). Generation is queued and the system does not submit a bid."
 
@@ -1198,6 +1200,353 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  # ---------------------------------------------------------------------------
+  # Current - Bid preparation (FR-4.7). Live Next.js routes are /api + path
+  # on port 3000. No operation submits a bid to e-GP.
+  # ---------------------------------------------------------------------------
+  /bid-prep/data:
+    delete:
+      summary: Delete the signed-in user's company bid data and drafts
+      description: >
+        Clears company fields and deletes every draft owned by the session.
+        The account itself is not deleted. A follow-up read must show the
+        company fields empty and the draft count at zero before this returns
+        success. Requires JSON `{ "confirm": "DELETE_COMPANY_DATA" }`.
+      operationId: deleteBidPrepCompanyData
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm]
+              properties:
+                confirm:
+                  type: string
+                  enum: [DELETE_COMPANY_DATA]
+      responses:
+        "200":
+          description: Company data and drafts were deleted and verified gone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BidPrepDeletion"
+        "400":
+          description: Confirmation missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /bid-prep/drafts:
+    get:
+      summary: List the signed-in user's proposal drafts
+      operationId: listBidPrepDrafts
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      responses:
+        "200":
+          description: Drafts owned by the caller
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [drafts, notices]
+                properties:
+                  drafts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BidPrepDraftSummary"
+                  notices:
+                    $ref: "#/components/schemas/BidPrepNotices"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      summary: Create a proposal draft for the signed-in user
+      description: >
+        The owner is the session subject. A user id in the body is ignored.
+        Creation is limited per user (default 5 per hour) and returns 429
+        with Retry-After. Draft text is not written to the audit log.
+      operationId: createBidPrepDraft
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BidPrepDraftInput"
+      responses:
+        "201":
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BidPrepDraft"
+        "400":
+          description: Invalid draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          description: Draft content is too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /bid-prep/drafts/{id}:
+    parameters:
+      - $ref: "#/components/parameters/BidPrepDraftIdParam"
+    get:
+      summary: Read one draft owned by the signed-in user
+      operationId: getBidPrepDraft
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      responses:
+        "200":
+          description: The caller's draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BidPrepDraft"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Missing draft, or a draft owned by someone else
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      summary: Update one draft owned by the signed-in user
+      description: Send the current version. A stale version returns 409. Another user's draft returns 404.
+      operationId: updateBidPrepDraft
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BidPrepDraftPatch"
+      responses:
+        "200":
+          description: Updated draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BidPrepDraft"
+        "400":
+          description: Invalid draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Missing draft, or a draft owned by someone else
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      summary: Delete one draft owned by the signed-in user
+      operationId: deleteBidPrepDraft
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      responses:
+        "200":
+          description: Draft deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, notices]
+                properties:
+                  status:
+                    type: string
+                    enum: [deleted]
+                  notices:
+                    $ref: "#/components/schemas/BidPrepNotices"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Missing draft, or a draft owned by someone else
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /bid-prep/drafts/{id}/export:
+    post:
+      summary: Download the caller's draft as DOCX
+      description: >
+        Plain-text DOCX. The file says it is an AI draft and that the seller
+        submits to e-GP. Another user's draft returns 404. The audit record
+        stores the user id, time and client address, not the draft text.
+      operationId: exportBidPrepDraft
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/BidPrepDraftIdParam"
+      responses:
+        "200":
+          description: DOCX file
+          content:
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Draft is empty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Missing draft, or a draft owned by someone else
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /bid-prep/tors/{projectId}/checklist:
+    get:
+      summary: Checklist for one TOR using the signed-in user's profile
+      description: >
+        A user id in the query is ignored. Items are manual until the
+        comparison engine is allowed to decide; this endpoint does not guess
+        a pass. Missing or unprocessed TORs return 404 or 409.
+      operationId: getBidPrepChecklist
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/BidPrepProjectIdParam"
+      responses:
+        "200":
+          description: Checklist for the caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BidPrepChecklist"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: TOR has not been processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
   securitySchemes:
     sessionAuth:
@@ -1232,6 +1581,21 @@ components:
       schema:
         type: string
       example: "TOR-2569-014"
+    BidPrepDraftIdParam:
+      name: id
+      in: path
+      required: true
+      description: Draft id owned by the signed-in user. Anyone else's id is not found.
+      schema:
+        type: string
+        pattern: "^[a-f0-9]{24}$"
+    BidPrepProjectIdParam:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: TOR-2569-001
     PageParam:
       name: page
       in: query
@@ -2072,6 +2436,104 @@ components:
           type: integer
         pageSize:
           type: integer
+
+    BidPrepNotices:
+      type: object
+      required: [aiDraft, noEgpSubmission, noEgpSubmissionTh]
+      properties:
+        aiDraft: { type: string }
+        noEgpSubmission: { type: string }
+        noEgpSubmissionTh: { type: string }
+    BidPrepDraftSection:
+      type: object
+      required: [heading, body, sources]
+      properties:
+        heading: { type: string }
+        body: { type: string }
+        sources:
+          type: array
+          items: { type: string }
+    BidPrepDraftSummary:
+      type: object
+      required: [id, projectId, title, version, createdAt, updatedAt, notices]
+      properties:
+        id: { type: string }
+        projectId: { type: string }
+        title: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        notices:
+          $ref: "#/components/schemas/BidPrepNotices"
+    BidPrepDraft:
+      allOf:
+        - $ref: "#/components/schemas/BidPrepDraftSummary"
+        - type: object
+          required: [sections]
+          properties:
+            sections:
+              type: array
+              items:
+                $ref: "#/components/schemas/BidPrepDraftSection"
+    BidPrepDraftInput:
+      type: object
+      required: [projectId]
+      properties:
+        projectId: { type: string }
+        title: { type: string }
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/BidPrepDraftSection"
+    BidPrepDraftPatch:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, minimum: 1 }
+        title: { type: string }
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/BidPrepDraftSection"
+    BidPrepDeletion:
+      type: object
+      required: [status, draftsDeleted]
+      properties:
+        status: { type: string, enum: [deleted] }
+        draftsDeleted: { type: integer, minimum: 0 }
+    BidPrepChecklistItem:
+      type: object
+      required: [requirement, status, reason, evidencePages, needsReview]
+      properties:
+        requirement: { type: string }
+        status: { type: string, enum: [pass, fail, manual] }
+        reason: { type: string }
+        evidencePages:
+          type: array
+          items: { type: integer, minimum: 1 }
+        needsReview: { type: boolean }
+    BidPrepChecklist:
+      type: object
+      required: [projectId, notices, summary, missingProfileFields, truncated, items]
+      properties:
+        projectId: { type: string }
+        notices:
+          $ref: "#/components/schemas/BidPrepNotices"
+        summary:
+          type: object
+          required: [pass, fail, manual]
+          properties:
+            pass: { type: integer, minimum: 0 }
+            fail: { type: integer, minimum: 0 }
+            manual: { type: integer, minimum: 0 }
+        missingProfileFields:
+          type: array
+          items: { type: string }
+        truncated: { type: boolean }
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BidPrepChecklistItem"
 
     ProposalDraftSource:
       type: object

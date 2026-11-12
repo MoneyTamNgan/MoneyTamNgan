@@ -13,6 +13,7 @@ import IngestionRun from '../models/IngestionRun.js';
 import Project from '../models/Project.js';
 import VertexChunk from '../models/VertexChunk.js';
 import { User } from '../models/User.js';
+import { BidPrepDraft } from '../models/BidPrepDraft.js';
 import DiscoveryCandidate from '../models/DiscoveryCandidate.js';
 import { embeddingConfig } from '../lib/embedding-config.js';
 import { ensureVectorSearchIndex, VECTOR_INDEX_NAME } from '../lib/vector-index.js';
@@ -29,6 +30,7 @@ const MODELS = [
     ClassificationOverride,
     IngestionRun,
     User,
+    BidPrepDraft,
 ];
 
 async function main() {

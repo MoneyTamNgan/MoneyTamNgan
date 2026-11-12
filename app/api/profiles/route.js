@@ -5,6 +5,14 @@ import connectDB from '@/lib/db';
 import { User } from '@/models/User';
 import { SESSION_COOKIE } from '@/lib/auth';
 import { requestPrincipal } from '@/lib/request-authorization';
+import { deleteDraftsForUser } from '@/lib/bid-prep/deletion';
+import { bidPrepError, logBidPrepAudit, profileRateLimitResponse } from '@/lib/bid-prep/security';
+
+function profileFailure(action, error) {
+    try {
+        console.error(JSON.stringify({ event: 'profile_error', action, name: error?.name || 'Error' }));
+    } catch { /* logging must not change the response */ }
+}
 
 // Helper to get authenticated user ID from session cookie or Authorization header
 async function getAuthUserId(req) {
@@ -26,6 +34,8 @@ async function handleGET(req) {
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+        const limited = profileRateLimitResponse(userId);
+        if (limited) return limited;
 
         await connectDB();
         const user = await User.findById(userId).select('-googleId').lean();
@@ -53,7 +63,7 @@ async function handleGET(req) {
 
         return NextResponse.json({ status: 'success', data: profile }, { status: 200 });
     } catch (error) {
-        console.error('GET /api/profiles error:', error);
+        profileFailure('get', error);
         return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
     }
 }
@@ -65,6 +75,8 @@ async function handlePATCH(req) {
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+        const limited = profileRateLimitResponse(userId);
+        if (limited) return limited;
 
         await connectDB();
         const body = await req.json();
@@ -142,7 +154,7 @@ async function handlePATCH(req) {
 
         return NextResponse.json({ status: 'success', data: profile }, { status: 200 });
     } catch (error) {
-        console.error('PATCH /api/profiles error:', error);
+        profileFailure('update', error);
         return NextResponse.json({ error: 'Failed to update profile' }, { status: 400 });
     }
 }
@@ -158,16 +170,21 @@ async function handleDELETE(req) {
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+        const limited = profileRateLimitResponse(userId);
+        if (limited) return limited;
 
         await connectDB();
+        const drafts = await deleteDraftsForUser(userId);
+        if (drafts.remaining !== 0) return bidPrepError('DELETE_INCOMPLETE', 'Account data could not be deleted.', 500);
         await User.findByIdAndDelete(userId);
+        logBidPrepAudit(req, 'bid_prep_data_deleted', { userId, scope: 'account', draftsDeleted: drafts.deleted });
 
         const cookieStore = await cookies();
         cookieStore.delete(SESSION_COOKIE);
 
         return NextResponse.json({ status: 'success', message: 'Account deleted successfully' }, { status: 200 });
     } catch (error) {
-        console.error('DELETE /api/profiles error:', error);
+        profileFailure('delete', error);
         return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
     }
 }

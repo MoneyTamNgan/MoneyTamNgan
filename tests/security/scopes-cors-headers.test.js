@@ -143,12 +143,14 @@ it('registers independent security wrappers for every route export, with the pro
                 if (path.endsWith('/profile/route.js')) expect(source).toMatch(/export \{ GET, PATCH, PUT, DELETE \} from/);
                 else {
                     expect(source).not.toMatch(/export async function (GET|POST|PUT|PATCH|DELETE)/);
-                    expect(source).toMatch(/export const (GET|POST|PUT|PATCH|DELETE) = withRouteSecurity/);
+                    expect(source).toMatch(/export const (GET|POST|PUT|PATCH|DELETE) = with(?:RouteSecurity|BidPrep)/);
                 }
             }
         }
     }
     await walk(fileURLToPath(new URL('../../app/api', import.meta.url)));
+    const guard = await readFile(fileURLToPath(new URL('../../lib/bid-prep/security.js', import.meta.url)), 'utf8');
+    expect(guard).toMatch(/return withRouteSecurity\(/);
 });
 
 it('protects actual sensitive handlers before any database or outbound operation', async () => {
