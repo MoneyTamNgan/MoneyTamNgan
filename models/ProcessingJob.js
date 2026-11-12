@@ -1,8 +1,10 @@
 import mongoose from 'mongoose';
 
 const ProcessingJobSchema = new mongoose.Schema({
-    type: { type: String, enum: ['process_project', 'verify_candidate'], default: 'process_project', index: true },
+    type: { type: String, enum: ['process_project', 'verify_candidate', 'proposal_draft'], default: 'process_project', index: true },
     project_id: { type: String, required: true, index: true },
+    // Set only for proposal_draft jobs. The signed-in user, never a body field.
+    owner_id: { type: String, index: true },
     active_key: { type: String },
     status: {
         type: String,
