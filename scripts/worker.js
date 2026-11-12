@@ -17,6 +17,7 @@ import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
 import { createRecoverySweep } from '../lib/processing-recovery.js';
 import { refreshProjectFiscalBudget } from '../lib/fiscal-backfill.js';
 import { embedPending, embedProject, embeddingConfig } from '../lib/vertex/embedding.js';
+import { settleProposalDraftJob } from '../lib/proposal/job.js';
 
 const watch = process.argv.includes('--watch');
 const pollMs = Math.max(1000, Number(process.env.WORKER_POLL_MS || 5000));
@@ -40,6 +41,12 @@ async function runOne() {
         }).catch(error => console.error(`Lease renewal failed: ${error.message}`));
     }, 30000);
     try {
+        // Proposal drafts share this queue but must not change project processing
+        // status, send match mail, or embed the TOR. A failure stays on the job.
+        if (job.type === 'proposal_draft') {
+            await settleProposalDraftJob(job);
+            return true;
+        }
         const result = job.type === 'verify_candidate' ? await verifyDiscoveryCandidate(job.project_id) : await processProject(job.project_id, { onProgress: progress => {
             console.log(`Vertex ${progress.stage}: ${progress.chunk || progress.attempt}/${progress.total || 'retry'}`);
         } });
@@ -79,6 +86,10 @@ async function runOne() {
         }
     } catch (error) {
         const { finalFailure } = await failJob(job, error);
+        if (job.type === 'proposal_draft') {
+            console.error(`❌ proposal draft ${job._id}: ${error.message}`);
+            return true;
+        }
         if (job.type === 'verify_candidate') {
             await DiscoveryCandidate.updateOne({ project_id: job.project_id }, { $set: {
                 status: finalFailure ? 'review_required' : 'pending', error: error.message,
