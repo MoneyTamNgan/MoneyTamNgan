@@ -557,6 +557,7 @@ paths:
               properties:
                 name: { type: string, maxLength: 100, description: Optional; not requested by the sign-up page }
                 email: { type: string, format: email, maxLength: 254 }
+                username: { type: string, minLength: 3, maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{1,28}[A-Za-z0-9]$', description: "Optional. Stored lowercase; unique. Derived from the email when omitted. Reserved names such as admin are rejected." }
                 password: { type: string, format: password, minLength: 15, maxLength: 128, writeOnly: true }
                 next: { type: string, description: Same-origin path; unsafe values fall back to /dashboard }
       responses:
@@ -565,9 +566,9 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PasswordAuthResult" }
-        "400": { description: "Invalid email, name, password or JSON" }
+        "400": { description: "Invalid email, name, username, password or JSON" }
         "403": { description: Missing or disallowed browser Origin }
-        "409": { description: Account already exists; original login method must be used }
+        "409": { description: "Account already exists (original login method must be used) or the requested username is taken (error.code USERNAME_TAKEN)" }
         "413": { description: JSON body exceeds 8 KiB }
         "415": { description: Content-Type must be application/json }
         "429": { description: Too many attempts; Retry-After is returned }
@@ -1641,6 +1642,10 @@ components:
         email:
           type: string
           format: email
+        username:
+          type: string
+          nullable: true
+          description: Lowercase unique handle; null for older accounts until `npm run db:migrate-users` has run.
         name:
           type: string
           nullable: true

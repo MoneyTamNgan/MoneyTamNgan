@@ -11,6 +11,7 @@ vi.mock('@/models/User', () => ({ User: {
     findOne: vi.fn(filter => ({ select: vi.fn(async () => state.users.find(u => new RegExp(filter.email.$regex, 'i').test(u.email)) || null) })),
     create: vi.fn(async data => {
         if (state.users.some(u => u.email === data.email)) throw Object.assign(new Error('duplicate'), { code: 11000 });
+        if (data.username && state.users.some(u => u.username === data.username)) throw Object.assign(new Error('duplicate'), { code: 11000, keyPattern: { username: 1 } });
         const user = { ...data, _id: randomUUID() }; state.users.push(user); return user;
     }),
     findById: vi.fn(id => ({ lean: async () => state.users.find(u => u._id === id) })),
@@ -120,4 +121,34 @@ it('does not disclose database errors or accept external redirects', async () =>
     expect(JSON.stringify(await response.json())).not.toContain('private');
     for (const value of ['https://evil.example', '//evil.example', '/\\evil.example', '/\n/evil.example']) expect(safeAuthDestination(value)).toBe('/dashboard');
     expect(safeAuthDestination('/tors/123?tab=summary')).toBe('/tors/123?tab=summary');
+});
+
+it('stores a normalized username on registration and returns it', async () => {
+    const response = await register(request('register', { ...details(), username: '  Money.Tam_01 ' }));
+    expect(response.status).toBe(201);
+    expect((await response.json()).user.username).toBe('money.tam_01');
+    expect(state.users[0].username).toBe('money.tam_01');
+});
+it('derives a unique username from the email when none is supplied', async () => {
+    const first = await register(request('register', { email: 'somchai@example.com', password }));
+    expect((await first.json()).user.username).toBe('somchai');
+    address = `test-${++counter}`;
+    const second = await register(request('register', { email: 'somchai@example.org', password }));
+    expect(second.status).toBe(201);
+    expect((await second.json()).user.username).toBe('somchai-2');
+});
+it('rejects invalid or reserved usernames and reports taken ones as 409', async () => {
+    for (const username of ['ab', 'has space', 'admin', '-bad-', 'x'.repeat(31), 42]) {
+        address = `test-${++counter}`;
+        const response = await register(request('register', { ...details(), username }));
+        expect(response.status, String(username)).toBe(400);
+        expect((await response.json()).error.code).toBe('INVALID_USERNAME');
+    }
+    expect(state.users).toHaveLength(0);
+    await register(request('register', { ...details(), username: 'taken_name' }));
+    address = `test-${++counter}`;
+    const clash = await register(request('register', { email: 'other@example.com', password, username: 'Taken_Name' }));
+    expect(clash.status).toBe(409);
+    expect((await clash.json()).error.code).toBe('USERNAME_TAKEN');
+    expect(state.users).toHaveLength(1);
 });
