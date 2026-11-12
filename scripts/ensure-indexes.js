@@ -10,6 +10,8 @@ import ExtractionRun from '../models/ExtractionRun.js';
 import ProcessingJob from '../models/ProcessingJob.js';
 import ClassificationOverride from '../models/ClassificationOverride.js';
 import IngestionRun from '../models/IngestionRun.js';
+import AdminPipelineState from '../models/AdminPipelineState.js';
+import PipelineTriggerAudit from '../models/PipelineTriggerAudit.js';
 import Project from '../models/Project.js';
 import VertexChunk from '../models/VertexChunk.js';
 import { User } from '../models/User.js';
@@ -29,6 +31,8 @@ const MODELS = [
     DiscoveryCandidate,
     ClassificationOverride,
     IngestionRun,
+    AdminPipelineState,
+    PipelineTriggerAudit,
     User,
     BidPrepDraft,
 ];

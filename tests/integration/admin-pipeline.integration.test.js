@@ -1,159 +1,126 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { asAdmin } from '../helpers/admin-route.js';
+import { beforeEach, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+import { signSession } from '@/lib/auth';
+import { readFileSync } from 'node:fs';
+import { load } from 'js-yaml';
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 
-vi.mock('@/lib/db', () => ({
-    default: vi.fn().mockResolvedValue(undefined),
-}));
+const spec = load(readFileSync(new URL('../../docs/api/openapi.yaml', import.meta.url), 'utf8'));
+const ajv = new Ajv({ strict: false }); addFormats(ajv); ajv.addSchema(spec, 'spec');
+function contract(path, method, status, value) {
+    const pointer = path.replaceAll('~', '~0').replaceAll('/', '~1');
+    const validate = ajv.compile({ $ref: `spec#/paths/${pointer}/${method}/responses/${status}/content/application~1json/schema` });
+    expect(validate(value), ajv.errorsText(validate.errors)).toBe(true);
+}
 
-vi.mock('@/models/Project', () => ({
-    default: {
-        countDocuments: vi.fn().mockResolvedValue(42),
-        findOne: vi.fn(),
-        updateOne: vi.fn(),
-    },
-}));
-
-vi.mock('@/lib/keywords', () => ({
-    loadKeywordSets: vi.fn().mockResolvedValue({
-        softwareKeywords: ['ซอฟต์แวร์', 'โปรแกรม', 'erp'],
-        nonSoftwareKeywords: ['ก่อสร้าง'],
-    }),
-}));
-
-const { GET: rawGetStatus, DELETE: rawDeleteStatus } = await import(
-    '@/app/api/admin/pipeline/status/route'
-);
-const { POST: rawPostTrigger } = await import(
-    '@/app/api/admin/pipeline/trigger/route'
-);
-const getStatusRoute = asAdmin(rawGetStatus);
-const deleteStatusRoute = asAdmin(rawDeleteStatus);
-const postTriggerRoute = asAdmin(rawPostTrigger);
-const { resetStatus, getStatus } = await import(
-    '@/lib/services/pipeline-runner'
-);
-
-describe('Admin Pipeline API Endpoints', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        resetStatus();
+const state = vi.hoisted(() => ({ tasks: [], execute: vi.fn(), store: null }));
+vi.mock('next/server', async original => ({ ...await original(), after: vi.fn(task => state.tasks.push(task)) }));
+vi.mock('@/lib/db', () => ({ default: vi.fn(async () => {}) }));
+vi.mock('@/models/Project', () => ({ default: { countDocuments: vi.fn(async () => 42) } }));
+vi.mock('@/lib/admin-pipeline-store', async () => {
+    const { createPipelineMemoryStore } = await import('../helpers/pipeline-memory-store.js');
+    state.store = createPipelineMemoryStore(); return { pipelineStore: state.store };
+});
+vi.mock('@/lib/services/pipeline-runner', async () => {
+    const { createPipelineController } = await import('@/lib/admin-pipeline-control');
+    const { pipelineStore } = await import('@/lib/admin-pipeline-store');
+    return createPipelineController({ store: pipelineStore, execute: (...args) => state.execute(...args) });
+});
+const { POST } = await import('@/app/api/admin/pipeline/trigger/route');
+const { GET, DELETE } = await import('@/app/api/admin/pipeline/status/route');
+const { proxy } = await import('@/proxy');
+beforeEach(() => {
+    state.store.clear(); state.tasks.length = 0;
+    state.execute.mockReset().mockImplementation(async (_options, report) => {
+        await report({ phase: 'discovery' });
+        await report({ phase: 'acquisition', summary: { discovered: 1 } });
+        await report({ phase: 'processing' });
+        await report({ phase: 'notification' });
     });
+});
+async function request(path = 'trigger', { role = 'admin', body = {}, method = 'POST', origin = 'http://localhost:3000' } = {}) {
+    const token = role ? await signSession({ sub: `${role}-fixture`, role }) : null;
+    return new NextRequest(`http://localhost:3000/api/admin/pipeline/${path}`, { method,
+        headers: { ...(token ? { Cookie: `mtn_session=${token}` } : {}), ...(origin ? { Origin: origin } : {}),
+            'Content-Type': 'application/json', 'x-forwarded-for': '203.0.113.5' },
+        ...(['GET', 'HEAD'].includes(method) ? {} : { body: typeof body === 'string' ? body : JSON.stringify(body) }) });
+}
 
-    it('GET /api/admin/pipeline/status returns initial idle status', async () => {
-        const res = await getStatusRoute();
-        expect(res.status).toBe(200);
+it.each([[null, 401], ['user', 403]])('rejects role %s in Proxy AND the actual trigger/status/reset handlers', async (role, status) => {
+    for (const [path, method, handler] of [['trigger', 'POST', POST], ['status', 'GET', GET], ['status', 'DELETE', DELETE]]) {
+        expect((await proxy(await request(path, { role, method }))).status).toBe(status);
+        expect((await handler(await request(path, { role, method }))).status).toBe(status);
+    }
+    expect(state.tasks).toHaveLength(0); expect(state.execute).not.toHaveBeenCalled();
+});
 
-        const data = await res.json();
-        expect(data.status).toBe('ok');
-        expect(data.run).toBeDefined();
-        expect(data.run.status).toBe('idle');
-        expect(data.run.phase).toBe('idle');
-        expect(data.dbStats).toEqual({ totalProjects: 42, withSummary: 42 });
-    });
+it('returns 202 with job ID and Started At before executing ANY pipeline work', async () => {
+    const response = await POST(await request());
+    expect(response.status).toBe(202);
+    const result = await response.json();
+    contract('/admin/pipeline/trigger', 'post', 202, result);
+    expect(result.jobId).toMatch(/^pipe_\d+_/);
+    expect(result.runId).toBe(result.jobId);
+    expect(new Date(result.startedAt).toISOString()).toBe(result.startedAt);
+    expect(result.run.startedAt).toBe(result.startedAt);
+    expect(state.execute).not.toHaveBeenCalled();
+    expect(state.tasks).toHaveLength(1);
+    expect(state.store.audits[0]).toMatchObject({ actor_id: 'admin-fixture', actor_role: 'admin', ip: '203.0.113.5', http_status: 202, run_id: result.jobId });
+    expect((await (await GET(await request('status', { method: 'GET' }))).json()).run.status).toBe('running');
+    await state.tasks[0]();
+    const completed = await (await GET(await request('status', { method: 'GET' }))).json();
+    contract('/admin/pipeline/status', 'get', 200, completed);
+    expect(completed.run.status).toBe('completed');
+    expect(completed.run.startedAt).toBe(result.startedAt);
+    expect(completed.run.summary.discovered).toBe(1);
+});
 
-    it('POST /api/admin/pipeline/trigger validates request body parameters', async () => {
-        // Invalid limit
-        const badLimitReq = new Request('http://localhost:3000/api/admin/pipeline/trigger', {
-            method: 'POST',
-            body: JSON.stringify({ limit: -1 }),
-        });
-        const badLimitRes = await postTriggerRoute(badLimitReq);
-        expect(badLimitRes.status).toBe(400);
-        const badLimitData = await badLimitRes.json();
-        expect(badLimitData.error.code).toBe('INVALID_PIPELINE_REQUEST');
+it('returns 409 for simultaneous and subsequent triggers and launches exactly one run', async () => {
+    const responses = await Promise.all([POST(await request()), POST(await request())]);
+    expect(responses.map(r => r.status).sort()).toEqual([202, 409]);
+    const conflict = await responses.find(r => r.status === 409).json();
+    contract('/admin/pipeline/trigger', 'post', 409, conflict);
+    expect(conflict.error.code).toBe('PIPELINE_ALREADY_RUNNING');
+    expect(state.tasks).toHaveLength(1);
+    expect((await POST(await request())).status).toBe(409);
+    expect((await DELETE(await request('status', { method: 'DELETE' }))).status).toBe(409);
+    await state.tasks[0]();
+    expect(state.execute).toHaveBeenCalledOnce();
+    expect(state.store.audits.map(a => a.http_status)).toEqual(expect.arrayContaining([202, 409]));
+});
 
-        // Invalid limit exceeding max
-        const overflowLimitReq = new Request('http://localhost:3000/api/admin/pipeline/trigger', {
-            method: 'POST',
-            body: JSON.stringify({ limit: 999 }),
-        });
-        const overflowLimitRes = await postTriggerRoute(overflowLimitReq);
-        expect(overflowLimitRes.status).toBe(400);
+it('reports idle, failed and completed states and keeps last start time on terminal reset', async () => {
+    expect((await (await GET(await request('status', { method: 'GET' }))).json()).run.status).toBe('idle');
+    const accepted = await (await POST(await request())).json();
+    state.execute.mockRejectedValueOnce(new Error('secret upstream detail'));
+    await state.tasks[0]();
+    const failed = await (await GET(await request('status', { method: 'GET' }))).json();
+    expect(failed.run.status).toBe('failed');
+    expect(JSON.stringify(failed)).not.toContain('secret');
+    const reset = await (await DELETE(await request('status', { method: 'DELETE' }))).json();
+    expect(reset.run.status).toBe('idle'); expect(reset.run.startedAt).toBe(accepted.startedAt);
+    expect(reset.run.progress).toMatchObject({ percent: 0, stage: 'idle' });
+    expect((await POST(await request())).status).toBe(202);
+});
 
-        // Invalid depts
-        const badDeptsReq = new Request('http://localhost:3000/api/admin/pipeline/trigger', {
-            method: 'POST',
-            body: JSON.stringify({ depts: 'not-an-array' }),
-        });
-        const badDeptsRes = await postTriggerRoute(badDeptsReq);
-        expect(badDeptsRes.status).toBe(400);
-    });
+it.each([{ limit: 0 }, { limit: 51 }, { sync: true }, { depts: ['bad'] }, { projectIds: ['not-an-id'] }, { tenders: [] }, 'bad json', 'null', '[]'])('rejects invalid input %j without scheduling work', async body => {
+    expect((await POST(await request('trigger', { body }))).status).toBe(400);
+    expect(state.tasks).toHaveLength(0); expect(state.store.audits[0].http_status).toBe(400);
+});
 
-    it('POST /api/admin/pipeline/trigger starts background run and returns 202 Accepted', async () => {
-        const req = new Request('http://localhost:3000/api/admin/pipeline/trigger', {
-            method: 'POST',
-            body: JSON.stringify({ limit: 5 }),
-        });
+it('blocks browser requests without an allowed Origin in both layers', async () => {
+    for (const origin of [null, 'https://evil.example']) {
+        expect((await proxy(await request('trigger', { origin }))).status).toBe(403);
+        expect((await POST(await request('trigger', { origin }))).status).toBe(403);
+    }
+    expect(state.tasks).toHaveLength(0);
+});
 
-        const res = await postTriggerRoute(req);
-        expect(res.status).toBe(202);
-
-        const data = await res.json();
-        expect(data.status).toBe('accepted');
-        expect(data.runId).toMatch(/^pipe_\d+/);
-        expect(data.statusUrl).toBe('/api/admin/pipeline/status');
-        expect(data.run.status).toBe('running');
-
-        // Verify status endpoint reflects running state
-        const statusCheck = getStatus();
-        expect(statusCheck.status).toBe('running');
-    });
-
-    it('POST /api/admin/pipeline/trigger returns 409 Conflict if already running', async () => {
-        // 1. First trigger starts running
-        const firstReq = new Request('http://localhost:3000/api/admin/pipeline/trigger', {
-            method: 'POST',
-            body: JSON.stringify({ limit: 5 }),
-        });
-        const firstRes = await postTriggerRoute(firstReq);
-        expect(firstRes.status).toBe(202);
-
-        // 2. Second trigger should conflict
-        const secondReq = new Request('http://localhost:3000/api/admin/pipeline/trigger', {
-            method: 'POST',
-            body: JSON.stringify({ limit: 5 }),
-        });
-        const secondRes = await postTriggerRoute(secondReq);
-        expect(secondRes.status).toBe(409);
-
-        const conflictData = await secondRes.json();
-        expect(conflictData.status).toBe('conflict');
-        expect(conflictData.error.code).toBe('PIPELINE_ALREADY_RUNNING');
-    });
-
-    it('DELETE /api/admin/pipeline/status resets state back to idle', async () => {
-        // Start a run
-        const req = new Request('http://localhost:3000/api/admin/pipeline/trigger', {
-            method: 'POST',
-            body: JSON.stringify({ limit: 5 }),
-        });
-        await postTriggerRoute(req);
-        expect(getStatus().status).toBe('running');
-
-        // Reset it
-        const delRes = await deleteStatusRoute();
-        expect(delRes.status).toBe(200);
-
-        const data = await delRes.json();
-        expect(data.status).toBe('ok');
-        expect(data.run.status).toBe('idle');
-        expect(getStatus().status).toBe('idle');
-    });
-
-    it('POST /api/admin/pipeline/trigger in sync mode returns 200 with completed results', async () => {
-        // Test with empty project list in sync mode
-        const req = new Request('http://localhost:3000/api/admin/pipeline/trigger', {
-            method: 'POST',
-            body: JSON.stringify({ limit: 1, tenders: [], sync: true }),
-        });
-
-        const res = await postTriggerRoute(req);
-        expect(res.status).toBe(200);
-
-        const data = await res.json();
-        expect(data.status).toBe('completed');
-        expect(data.summary).toBeDefined();
-        expect(data.summary.discovered).toBe(0);
-        expect(data.completedAt).toBeDefined();
-    });
+it('fails closed when the durable audit cannot be written', async () => {
+    const audit = vi.spyOn(state.store, 'audit').mockRejectedValueOnce(new Error('database secret'));
+    const response = await POST(await request());
+    expect(response.status).toBe(503); expect(state.tasks).toHaveLength(0);
+    expect(JSON.stringify(await response.json())).not.toContain('secret');
+    audit.mockRestore();
 });

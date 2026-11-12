@@ -45,6 +45,122 @@ tags:
     description: "[Current] Sourced technical proposal drafts for a processed TOR (FR-4.3). Generation is queued and the system does not submit a bid."
 
 paths:
+  /admin/pipeline/trigger:
+    servers:
+      - url: http://localhost:3000/api
+    post:
+      tags: [Admin - Ingestion]
+      summary: Start the complete admin pipeline asynchronously
+      description: >
+        Admin role and admin:write are required. Cookie mutations require an allowed Origin.
+        Returns after the MongoDB lease and audit are committed; discovery, acquisition,
+        OCR/Vertex and notifications run through Next after(). No synchronous mode.
+        A single MongoDB control record excludes concurrent runs across server instances.
+        This is the real route; /admin/ingestion/trigger is not an alias.
+      operationId: triggerAdminPipeline
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit: { type: integer, minimum: 1, maximum: 50, default: 5 }
+                depts: { type: array, maxItems: 100, items: { type: string, pattern: '^\d{4}$' } }
+                projectIds: { type: array, maxItems: 50, description: Count must not exceed limit, items: { type: string, pattern: '^\d{11}$' } }
+                allowBrowser: { type: boolean, default: true }
+                force: { type: boolean, default: false }
+                sync: { type: boolean, enum: [false], default: false, description: Retained for existing clients; true is rejected }
+      responses:
+        "202":
+          description: Run reserved and audited; background work is scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, jobId, runId, startedAt, statusUrl, run]
+                properties:
+                  status: { type: string, enum: [accepted] }
+                  jobId: { type: string }
+                  runId: { type: string, description: Backward-compatible alias for jobId }
+                  startedAt: { type: string, format: date-time }
+                  statusUrl: { type: string, enum: [/api/admin/pipeline/status] }
+                  message: { type: string }
+                  run: { $ref: '#/components/schemas/AdminPipelineRun' }
+        "400": { description: 'Invalid JSON, body over 8 KiB, invalid parameters or sync=true' }
+        "401": { description: Missing or invalid authentication }
+        "403": { description: Non-admin or insufficient scope or forbidden Origin }
+        "409":
+          description: PIPELINE_ALREADY_RUNNING; no second task is scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, error, currentRun]
+                properties:
+                  status: { type: string, enum: [conflict] }
+                  error:
+                    type: object
+                    required: [code, message]
+                    properties:
+                      code: { type: string, enum: [PIPELINE_ALREADY_RUNNING] }
+                      message: { type: string }
+                  currentRun: { $ref: '#/components/schemas/AdminPipelineRun' }
+        "503": { description: 'Database, audit or scheduling unavailable; work is not launched' }
+
+  /admin/pipeline/status:
+    servers:
+      - url: http://localhost:3000/api
+    get:
+      tags: [Admin - Ingestion]
+      summary: Read persisted admin pipeline status and last start time
+      description: An expired 90-second lease is recovered to failed/PIPELINE_INTERRUPTED. No bearer owner token or credentials are returned.
+      operationId: getAdminPipelineStatus
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      responses:
+        "200":
+          description: Current persisted run or initial idle state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, run, dbStats]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  run: { $ref: '#/components/schemas/AdminPipelineRun' }
+                  dbStats:
+                    type: object
+                    nullable: true
+                    properties:
+                      totalProjects: { type: integer }
+                      withSummary: { type: integer }
+        "401": { description: Missing or invalid authentication }
+        "403": { description: Admin role and admin:read are required }
+        "500": { description: Status database is unavailable }
+    delete:
+      tags: [Admin - Ingestion]
+      summary: Reset terminal pipeline status to idle
+      description: 'Requires admin:write and an allowed browser Origin. Cannot cancel or unlock a live run; preserves last startedAt.'
+      operationId: resetAdminPipelineStatus
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      responses:
+        "200":
+          description: Terminal status reset to idle
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, message, run]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  message: { type: string }
+                  run: { $ref: '#/components/schemas/AdminPipelineRun' }
+        "401": { description: Missing or invalid authentication }
+        "403": { description: Non-admin or insufficient scope or forbidden Origin }
+        "409": { description: PIPELINE_ALREADY_RUNNING; live run cannot be reset }
+        "500": { description: Reset database is unavailable }
+
   # ---------------------------------------------------------------------------
   # Current - build now
   # ---------------------------------------------------------------------------
@@ -1624,6 +1740,36 @@ components:
         default: 10
 
   schemas:
+    AdminPipelineRun:
+      type: object
+      required: [id, status, phase, startedAt, completedAt, progress, summary, error, errorCode]
+      properties:
+        id: { type: string, nullable: true }
+        status: { type: string, enum: [idle, running, completed, failed] }
+        phase: { type: string }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        error: { type: string, nullable: true }
+        errorCode: { type: string, nullable: true }
+        progress:
+          type: object
+          required: [current, total, percent, stage, message]
+          properties:
+            current: { type: integer }
+            total: { type: integer }
+            percent: { type: integer, minimum: 0, maximum: 100 }
+            stage: { type: string }
+            message: { type: string }
+        summary:
+          type: object
+          required: [discovered, candidates, documentsAcquired, processed, notified, errors]
+          properties:
+            discovered: { type: integer }
+            candidates: { type: integer }
+            documentsAcquired: { type: integer }
+            processed: { type: integer }
+            notified: { type: integer }
+            errors: { type: array, items: { type: object } }
     LowConfidenceReviewPage:
       type: object
       required: [items, total, page, pageSize, totalPages, threshold, confidenceType]
