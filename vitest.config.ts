@@ -32,6 +32,7 @@ export default defineConfig({
             'tests/unit/project-mapper.test.ts',
             'tests/unit/query-params.test.js',
             'tests/unit/tor-response.test.js',
+            'tests/unit/proposal-draft-route.test.js',
             'tests/unit/username.test.js',
             ...(process.env.BID_PREP_ATLAS === '1' ? ['tests/atlas/**/*.test.js'] : []),
         ],

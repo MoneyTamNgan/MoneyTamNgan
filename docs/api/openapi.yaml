@@ -41,6 +41,8 @@ tags:
     description: "[Current] Public historical search, dashboard aggregates, and export for the Analytics page."
   - name: Bid preparation
     description: "[Current] Company-data deletion, owned proposal drafts, checklist access and DOCX export. The system does not submit a bid to e-GP (FR-4.7)."
+  - name: Bid Preparation
+    description: "[Current] Sourced technical proposal drafts for a processed TOR (FR-4.3). Generation is queued and the system does not submit a bid."
 
 paths:
   # ---------------------------------------------------------------------------
@@ -199,6 +201,109 @@ paths:
                 $ref: "#/components/schemas/TorDetail"
         "404":
           description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tors/{id}/proposal-draft:
+    post:
+      summary: Queue a sourced technical proposal draft
+      description: >
+        Builds a draft from the TOR's extracted summary, scope, qualifications
+        and technology plus the signed-in user's company profile. The request
+        only enqueues a job and returns immediately. Vertex output is checked
+        against a response schema. Company facts missing from the profile stay
+        as placeholders. The result is an AI draft the user must review; this
+        endpoint does not submit a bid.
+      tags: [Bid Preparation]
+      operationId: createProposalDraft
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+      responses:
+        "202":
+          description: Draft generation was queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalDraftAccepted"
+        "400":
+          description: Invalid TOR id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: TOR not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: TOR has no extracted facts to draft from
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: This user exceeded the proposal draft limit (default 5 per hour)
+          headers:
+            Retry-After:
+              description: Seconds until the caller can queue another draft
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      summary: Read the caller's proposal draft job
+      description: >
+        Returns status for a job this signed-in user queued for this TOR.
+        Another user's job is not revealed. A completed job includes the
+        sanitized draft, the AI-draft warning, and the model and prompt version.
+      tags: [Bid Preparation]
+      operationId: getProposalDraft
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TorIdParam"
+        - name: jobId
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-fA-F0-9]{24}$"
+      responses:
+        "200":
+          description: Job status and, when finished, the sanitized draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalDraftJob"
+        "400":
+          description: Invalid TOR id or job id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: No such draft for this caller and TOR
           content:
             application/json:
               schema:
@@ -2429,6 +2534,150 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BidPrepChecklistItem"
+
+    ProposalDraftSource:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [tor_page, profile_field]
+        page:
+          type: integer
+          minimum: 1
+          nullable: true
+        field:
+          type: string
+          nullable: true
+
+    ProposalDraftStatement:
+      type: object
+      required: [text, sources]
+      properties:
+        text:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalDraftSource"
+        placeholder:
+          type: boolean
+        missing_source:
+          type: boolean
+
+    ProposalScopeResponse:
+      type: object
+      required: [scope_item, response, sources]
+      properties:
+        scope_item:
+          type: string
+        response:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalDraftSource"
+        placeholder:
+          type: boolean
+        missing_source:
+          type: boolean
+
+    ProposalPastProject:
+      type: object
+      required: [name, sources]
+      properties:
+        name:
+          type: string
+        client:
+          type: string
+          nullable: true
+        value:
+          type: number
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        relevance:
+          type: string
+          nullable: true
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalDraftSource"
+        placeholder:
+          type: boolean
+
+    ProposalDraft:
+      type: object
+      required: [warning, model, model_version, prompt_version, company_overview, project_understanding, scope_responses, past_projects]
+      properties:
+        warning:
+          type: string
+        model:
+          type: string
+        model_version:
+          type: string
+        prompt_version:
+          type: string
+        company_overview:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalDraftStatement"
+        project_understanding:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalDraftStatement"
+        scope_responses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalScopeResponse"
+        past_projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposalPastProject"
+        dropped_unsourced:
+          type: integer
+          minimum: 0
+        dropped_unsafe:
+          type: integer
+          minimum: 0
+
+    ProposalDraftAccepted:
+      type: object
+      required: [status, jobId, jobStatus, reused]
+      properties:
+        status:
+          type: string
+          enum: [accepted]
+        jobId:
+          type: string
+        jobStatus:
+          type: string
+          enum: [queued, running, completed, failed]
+        reused:
+          type: boolean
+
+    ProposalDraftJob:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed]
+        error:
+          type: string
+          nullable: true
+        warning:
+          type: string
+        model:
+          type: string
+        prompt_version:
+          type: string
+        draft:
+          $ref: "#/components/schemas/ProposalDraft"
+
     Error:
       type: object
       required: [error]

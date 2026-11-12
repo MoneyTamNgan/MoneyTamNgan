@@ -14,6 +14,7 @@ import {
 import { toExportRow, toSpendAggregates } from "@/lib/analytics";
 import { toLowConfidenceReviewItem } from "@/lib/low-confidence-review";
 import { evaluateBudgetAnomaly } from "@/lib/budget-anomaly";
+import { groundProposalDraft } from "@/lib/proposal/draft";
 
 /**
  * OpenAPI 3.0's `nullable: true` is not a JSON Schema keyword Ajv understands.
@@ -175,5 +176,29 @@ describe("TOR API responses match docs/api/openapi.yaml", () => {
                 needsReview: false,
             }],
         });
+    });
+
+    it("a sourced proposal draft and its queued job match the FR-4.3 schemas", () => {
+        const draft = groundProposalDraft({
+            company_overview: [],
+            project_understanding: [{ text: "เข้าใจขอบเขตจากเอกสาร", sources: [{ kind: "tor_page", page: 1 }] }],
+            scope_responses: [{ scope_item: "พัฒนาระบบ", response: "ดำเนินการตามขอบเขต", sources: [{ kind: "tor_page", page: 1 }] }],
+            past_projects: [],
+        }, {
+            tor: { summary: "สรุป", scope_of_work: [{ value: "พัฒนาระบบ", page: 1 }], qualifications: [], tech_stack: [] },
+            profile: { company_name: "บริษัทตัวอย่าง", skills: ["Node.js"], past_projects: [] },
+            model: "gemini-2.5-flash",
+            modelVersion: "gemini-2.5-flash",
+        });
+        expectValid(validatorFor("ProposalDraft"), draft);
+        expectValid(validatorFor("ProposalDraftAccepted"), {
+            status: "accepted", jobId: "a".repeat(24), jobStatus: "queued", reused: false,
+        });
+        expectValid(validatorFor("ProposalDraftJob"), {
+            jobId: "a".repeat(24), status: "completed", error: null,
+            warning: draft.warning, model: draft.model, prompt_version: draft.prompt_version, draft,
+        });
+        expect(draft.warning).toMatch(/AI draft/);
+        expect(draft.past_projects[0].name).toBe("[to fill in: past_projects]");
     });
 });
