@@ -1,0 +1,39 @@
+name: Semgrep SAST
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  schedule:
+    - cron: "17 2 * * 1" # weekly, Monday 02:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Semgrep (p/owasp-top-ten)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.185.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep (full report, no gate)
+        run: |
+          mkdir -p reports
+          semgrep --config p/owasp-top-ten --metrics=off --quiet \
+            --json --output reports/sast-report.json .
+
+      - name: Summarize and fail on High (ERROR) findings
+        run: python3 scripts/ci/summarize-sast.py reports/sast-report.json
+
+      - name: Upload SAST report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast-report
+          path: reports/sast-report.json
+          if-no-files-found: error

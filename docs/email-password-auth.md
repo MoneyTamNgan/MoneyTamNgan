@@ -10,8 +10,8 @@ Start with `npm run dev`, open `http://localhost:3000`, select สร้าง�
 
 ## API and storage
 
-- `POST /api/auth/register`: JSON `{email, password, name?, next?}` → 201 with `{user:{id,email,name,role}, redirectTo}` and a session cookie. Optional name remains supported for API compatibility; the page does not request it.
-- `POST /api/auth/login`: JSON `{email, password, next?}` → 200 with the same response/cookie shape.
+- `POST /api/auth/register`: JSON `{email, password, username?, name?, next?}` → 201 with `{user:{id,email,username,name,role}, redirectTo}` and a session cookie. Optional name remains supported for API compatibility; the page does not request it.
+- `POST /api/auth/login`: JSON `{identifier, password, next?}` where `identifier` is an email or a username (`email` still works as an alias) → 200 with the same response/cookie shape.
 - Both routes enforce the existing Origin whitelist in Proxy and in the handler guard. Browser fetch supplies the same-origin Origin automatically. CLI requests must provide an approved Origin.
 - Email is trimmed/lowercased; lookups also recognize older mixed-case Google emails. New writes use the existing unique email index, and duplicate-key races return 409.
 - MongoDB location: the configured database (`moneytamngan` by default), `users` collection, optional `passwordHash` field. Existing Google records need no password migration.
@@ -19,6 +19,19 @@ Start with `npm run dev`, open `http://localhost:3000`, select สร้าง�
 - Hashes are excluded from normal Mongoose queries and document JSON/object serialization. Public responses use explicit field allowlists. Plaintext passwords and hashes are never logged or added to JWTs.
 - Registration ignores client-supplied role/scopes/provider IDs and always creates role=user. Unverified password registrations are not promoted by ADMIN_EMAILS.
 - `next` destinations are restricted to same-origin paths, including in the Google callback.
+
+## Username (issue #108)
+
+`users.username` is optional, lowercase, 3–30 characters (`a-z 0-9 . _ -`, starting and ending with a letter or digit) and unique through the partial index `uniq_user_username` (only documents that have a string username are indexed). Reserved names such as `admin` and `root` are rejected. Registration stores the supplied username (400 `INVALID_USERNAME`, 409 `USERNAME_TAKEN`) or derives one from the email local part. **Login accepts either**: `identifier` containing `@` is treated as an email, anything else as a username. All failures (unknown identifier, Google-only account, wrong password) return the same 401 and run the same KDF. Attempts are limited per identifier and also per resolved account, so alternating email and username does not double the budget.
+
+Existing users need a one-off backfill. It is a dry run by default:
+
+```bash
+npm run db:migrate-users            # preview, writes nothing
+npm run db:migrate-users -- --apply # fill missing usernames and create the index
+```
+
+It only fills users that have no username, never changes or reuses an existing one, never reads password hashes, and is safe to re-run. Google sign-ups created after the migration have no username until it is run again.
 
 ## Provider safety
 

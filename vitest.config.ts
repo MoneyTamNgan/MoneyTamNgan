@@ -32,6 +32,7 @@ export default defineConfig({
             'tests/unit/project-mapper.test.ts',
             'tests/unit/query-params.test.js',
             'tests/unit/tor-response.test.js',
+            'tests/unit/username.test.js',
         ],
         // Exclude node_modules, build output, old ad-hoc test locations (now canonical
         // copies live under tests/), and node:test–based pipeline tests in tests/unit/.
