@@ -1,5 +1,47 @@
 # MoneyTamNgan
 
+## Project documents
+
+This inventory is current as of 12 November 2026 (Asia/Bangkok).
+
+- [MoneyTamNgan_SRS](https://docs.google.com/document/d/1_o6RmB_G54MWgXHGiePvBzy-vLkhECAzDnhtU15rz0A/edit?usp=sharing).
+  The official SRS (the use case diagram lives here): scope, use cases, and
+  the original functional requirements for TOR aggregation, matching, and
+  analytics. Last updated 17 September 2026; BidPrep requirements are in the
+  newer short SRS below and are not fully folded into this document yet.
+- [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing).
+  Short English SRS for the Bid Preparation Assistant (epic #135): company
+  profile, compliance checklist, sourced proposal draft, DOCX export, and
+  FR-4.7 security/privacy; the system prepares documents only and never
+  submits to e-GP. Version 0.1 draft dated 12 November 2026, waiting for
+  customer confirmation (#143).
+- [MoneyTamNgan Testcase doc](https://docs.google.com/spreadsheets/d/1R6gXlBh75GxtKXlraxE6N0eJU5URTa0pgbbUvg4j3GE/edit?usp=sharing).
+  Maps automated test cases (TC-001 onward) to modules, source files, and
+  Pass/Fail status, covering security, auth, analytics, skill matching, and
+  OpenAPI contract tests. Last updated 19 October 2026; may not yet include
+  BidPrep tests added in PRs #148 and #149.
+- [Sprint api planing](https://docs.google.com/spreadsheets/d/1aXUlWRg__PmH6LtbzPxBnOCS7z7v9pk-xxEpwySVCU0/edit?usp=sharing).
+  Sprint API plan: ticket, endpoint, expected response, and implementation
+  status for the TOR, profile, and related APIs. Last updated 16 September
+  2026; several Status cells still say To Do or In Progress even though that
+  work has landed in the repo (for example session/auth and embeddings), and
+  issue #17 (Atlas Search index) is still open because live Atlas verification
+  remains.
+- [MoneyTamNgan_Assignment 1](https://docs.google.com/spreadsheets/d/1mZCqus4RaeYQnVjN70ffu9_TbxBNA1OslLpimWm1YYU/edit?gid=1505854712#gid=1505854712).
+  STRIDE threat catalog (TH-01 onward) with mitigation status, plus the ASVS
+  Level 1 traceability sheet. Last updated 5 November 2026; newer notes are
+  in [docs/security/](docs/security/) (TH-11 through TH-18 from PR #149, and
+  refreshed SAST/ZAP reports from PR #152).
+- [MoneyTamNgan TOR Discovery, Extraction, and Display](docs/diagrams/tor-discovery-extraction-display.png).
+  Sequence diagram of the current pipeline: e-GP discovery and classification,
+  official ZIP/PDF download, text/OCR/Vertex extraction, and dashboard display.
+
+![MoneyTamNgan TOR Discovery, Extraction, and Display](docs/diagrams/tor-discovery-extraction-display.png)
+
+*Sequence diagram: e-GP discovery and classification, official ZIP/PDF download, text/OCR/Vertex extraction, and dashboard display.*
+
+In-repo docs: [docs/security/](docs/security/) and the API contract at [docs/api/openapi.yaml](docs/api/openapi.yaml).
+
 ## TOR processing pipeline
 
 MoneyTamNgan uses an API-first pipeline:
