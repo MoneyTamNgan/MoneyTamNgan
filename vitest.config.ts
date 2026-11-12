@@ -33,6 +33,7 @@ export default defineConfig({
             'tests/unit/query-params.test.js',
             'tests/unit/tor-response.test.js',
             'tests/unit/username.test.js',
+            ...(process.env.BID_PREP_ATLAS === '1' ? ['tests/atlas/**/*.test.js'] : []),
         ],
         // Exclude node_modules, build output, old ad-hoc test locations (now canonical
         // copies live under tests/), and node:test–based pipeline tests in tests/unit/.
@@ -62,10 +63,13 @@ export default defineConfig({
         ],
         env: {
             // Dummy values so importing route modules never throws on a missing
-            // env var — nothing in the test suite opens a real network connection.
-            MONGODB_URI: 'mongodb://localhost:27017/ci',
-            JWT_SECRET: 'ci-placeholder-secret',
-            NEXT_PUBLIC_REDIRECT_URI: 'http://localhost:3000/api/auth/google/callback',
+            // env var. An already-provided URI is kept so the Atlas script can
+            // pass the real cluster through; the default suite does not connect.
+            MONGODB_URI: process.env.BID_PREP_ATLAS === '1' && process.env.MONGODB_URI
+                ? process.env.MONGODB_URI
+                : 'mongodb://localhost:27017/ci',
+            JWT_SECRET: process.env.JWT_SECRET || 'ci-placeholder-secret',
+            NEXT_PUBLIC_REDIRECT_URI: process.env.NEXT_PUBLIC_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback',
         },
     },
     resolve: {
