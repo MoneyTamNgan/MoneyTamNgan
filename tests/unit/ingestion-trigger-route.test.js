@@ -14,6 +14,19 @@ const { verifyProcurementEligibility } = await import('@/lib/procurement-eligibi
 const { enqueueProject } = await import('@/lib/job-queue');
 const { default: Project } = await import('@/models/Project');
 beforeEach(() => vi.clearAllMocks());
+it('rejects anonymous ingestion before requesting government data', async () => {
+    const response = await securedHandler(new Request('http://localhost:3000/api/ingestion/trigger', { method: 'POST' }));
+    expect(response.status).toBe(401);
+    expect(fetchAllFromEGP).not.toHaveBeenCalled();
+});
+it('rejects a normal user without pipeline permission', async () => {
+    const { signSession } = await import('@/lib/auth');
+    const token = await signSession({ sub: 'user-fixture', role: 'user' });
+    const response = await securedHandler(new Request('http://localhost:3000/api/ingestion/trigger', { method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, Origin: 'http://localhost:3000' } }));
+    expect(response.status).toBe(403);
+    expect(fetchAllFromEGP).not.toHaveBeenCalled();
+});
 it('preserves a manual not-software override on metadata refresh', async () => {
     fetchAllFromEGP.mockResolvedValue([{ project_id: 'manual', project_name: 'พัฒนาระบบสารสนเทศ', dept_name: 'fixture' }]);
     verifyProcurementEligibility.mockResolvedValueOnce({ status: 'open' });
