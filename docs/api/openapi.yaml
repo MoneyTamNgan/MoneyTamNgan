@@ -576,8 +576,8 @@ paths:
 
   /auth/login:
     post:
-      summary: Log in with email + password
-      description: Requires an approved Origin. Email is normalized; missing, Google-only and wrong-password accounts receive the same 401 response. Rate limits are shared with registration.
+      summary: Log in with email or username + password
+      description: Requires an approved Origin. `identifier` is an email (contains @) or a username; both are normalized. Missing, Google-only and wrong-password accounts receive the same 401 response. Rate limits are shared with registration, plus one attempt budget per account regardless of which identifier is used.
       tags: [Auth]
       operationId: login
       requestBody:
@@ -586,11 +586,19 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password]
+              required: [password]
+              anyOf:
+                - required: [identifier]
+                - required: [email]
               properties:
+                identifier:
+                  type: string
+                  maxLength: 254
+                  description: Email address or username
                 email:
                   type: string
                   format: email
+                  description: Older alias of `identifier`; accepts the same values
                 password:
                   type: string
                   format: password
