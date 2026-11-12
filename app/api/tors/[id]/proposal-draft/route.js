@@ -9,6 +9,7 @@ import { requestPrincipal } from '@/lib/request-authorization';
 import { rateLimitHeaders } from '@/lib/rate-limit';
 import { normalizeTor, presentProposalDraft, logProposalEvent, proposalDraftJobFilter } from '@/lib/proposal/draft';
 import { takeProposalDraftSlot } from '@/lib/proposal/limit';
+import { consumeBidPrepLimit } from '@/lib/bid-prep/security';
 
 export const runtime = 'nodejs';
 
@@ -40,7 +41,11 @@ async function handlePOST(request, { params }) {
         if (!hasExtractedFacts(tor)) {
             return error(409, 'TOR_NOT_EXTRACTED', 'This TOR has no extracted summary, scope, qualifications, or technology yet.');
         }
-        const hit = takeProposalDraftSlot(userId);
+        // FR-4.3 keeps its own window. A generation also spends the FR-4.7
+        // draft-create bucket, so queued drafts and stored drafts share that cap.
+        const own = takeProposalDraftSlot(userId);
+        const shared = own.allowed ? consumeBidPrepLimit('draft-create', userId) : own;
+        const hit = own.allowed ? shared : own;
         if (!hit.allowed) {
             return error(429, 'PROPOSAL_DRAFT_RATE_LIMITED',
                 `Proposal draft limit reached. Try again in ${hit.retryAfterSeconds} seconds.`,

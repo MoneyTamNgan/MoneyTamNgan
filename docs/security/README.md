@@ -1,5 +1,7 @@
 # Security audit: SAST (Semgrep) and DAST (OWASP ZAP baseline)
 
+BidPrep FR-4.7 (issue #142) is recorded in [bid-prep-fr-4.7.md](bid-prep-fr-4.7.md), [THREAT_MODEL.md](THREAT_MODEL.md) and [ASVS_CHECKLIST.md](ASVS_CHECKLIST.md). TH-11 onward cover prompt injection, BOLA, Vertex cost, company-data leakage and AI-draft accuracy.
+
 ## Automated in CI (issue #106)
 
 | Workflow | Runs | What it does | Fails the build when |
