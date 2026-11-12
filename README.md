@@ -36,11 +36,6 @@ This inventory matches the Google documents as they stand on 12 November 2026
   updated (headers, email/password V6.2, scanners in CI). It also has a
   Project status tab reflecting open GitHub issues the same day. Status cells
   are color-coded.
-- [MoneyTamNgan_Assignment 1](https://docs.google.com/spreadsheets/d/1mZCqus4RaeYQnVjN70ffu9_TbxBNA1OslLpimWm1YYU/edit?gid=1505854712#gid=1505854712)
-  is the original assignment workbook (owner usa.sa@ku.th). It could not be
-  edited from the connected account, so the working copy above is the one to
-  maintain. Do not confuse assignment TH-01–TH-10 with the later in-repo
-  TH-1–TH-10 numbering in docs/security/.
 - [MoneyTamNgan TOR Discovery, Extraction, and Display](docs/diagrams/tor-discovery-extraction-display.png).
   Sequence diagram of the current pipeline: e-GP discovery and classification,
   official ZIP/PDF download, text/OCR/Vertex extraction, and dashboard display.
