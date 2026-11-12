@@ -11,6 +11,7 @@
     "backfill:history": "node scripts/backfill-history.js",
     "schedule:extract": "node scripts/extract-announcement-schedule.js",
     "test:schedule-atlas": "node scripts/test-announcement-schedule-atlas.js",
+    "test:bid-prep-atlas": "node scripts/test-bid-prep-atlas.js",
     "test:proposal-draft-atlas": "node scripts/test-proposal-draft-atlas.js",
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",

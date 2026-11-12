@@ -6,6 +6,7 @@ import BidderQualificationCard from "@/components/ui/BidderQualificationCard";
 import DocumentObservationsCard from "@/components/ui/DocumentObservationsCard";
 import ProjectSummaryCard from "@/components/ui/ProjectSummaryCard";
 import TechStackComparisonCard from "@/components/ui/TechStackComparisonCard";
+import NoEgpSubmissionNotice from "@/components/ui/NoEgpSubmissionNotice";
 import { getTorDetail } from "@/lib/services/tor-service";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 
@@ -205,6 +206,7 @@ export default async function TorOverviewPage({ params }) {
         </Link>
       </aside>
     )}
+    <NoEgpSubmissionNotice />
     <header className="tor-overview-header"><div><p className="tor-overview-id">รหัสโครงการ {project.project_id}</p><h1>{project.project_name}</h1><p className="tor-overview-agency">{project.dept_name}{project.dept_sub_name ? ` · ${project.dept_sub_name}` : ""}</p><div className="tor-overview-actions tor-priority-actions"><span className={`tor-document-version ${versionInfo.is_latest ? "is-latest" : "is-superseded"}`}>{versionStatus}</span>{torPdfUrl && <a className="tor-detail-pdf-button" href={torPdfUrl} target="_blank" rel="noreferrer">เปิด TOR PDF ↗</a>}{announcementDocument?.sourceUrl && <a className="tor-detail-pdf-button" href={announcementDocument.sourceUrl} target="_blank" rel="noreferrer">ประกาศเชิญชวน ↗</a>}</div></div></header>
     {!versionInfo.is_latest && <section className="tor-obsolete-banner" role="alert"><strong>TOR ฉบับนี้ถูกแทนที่แล้ว</strong><p>หน่วยงานประกาศโครงการนี้ใหม่{versionInfo.superseded_by ? ` (รหัส ${versionInfo.superseded_by})` : ""} ข้อมูลในหน้านี้อาจไม่เป็นปัจจุบัน กรุณาตรวจสอบเงื่อนไขจากฉบับล่าสุดก่อนยื่นข้อเสนอ</p>{versionInfo.superseded_by && <Link href={`/tors/${versionInfo.superseded_by}`}>ไปยังฉบับล่าสุด →</Link>}</section>}
     <section className="tor-metrics tor-priority-metrics" aria-label="ข้อมูลสำคัญสำหรับการยื่นข้อเสนอ"><article className="tor-budget-metric"><span>งบประมาณ / ราคากลาง</span><strong>{formatBudget(project.budget)}</strong></article><article><span>ปีงบประมาณ</span><strong>{fiscalYearForBidClose(project.bidding.closesAt, project.fiscal_budget)}</strong></article><article><span>วันปิดรับข้อเสนอ</span><strong>{bidDate}</strong></article><article><span>ช่วงเวลารับข้อเสนอ</span><strong>{submissionTimeRange(bidStartTime, bidEndTime)}</strong></article></section>
