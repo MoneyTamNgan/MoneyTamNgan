@@ -1,3 +1,4 @@
+import { publicContractorProfile } from "@/lib/profile-validation";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -143,6 +144,16 @@ describe("TOR API responses match docs/api/openapi.yaml", () => {
     it("the error envelope shape ({error:{code,message}}) satisfies the Error schema", () => {
         const validate = validatorFor("Error");
         expectValid(validate, { error: { code: "TOR_NOT_FOUND", message: "No TOR exists with id: x" } });
+    });
+
+    it("company profile responses and validation errors match the implemented #136 contract", () => {
+        const data = publicContractorProfile({ _id: "fixture", email: "owner@example.test", updatedAt: new Date("2026-11-15T00:00:00Z"),
+            registration_number: "0105555555555", address: "Example address", authorized_signatory: "Example signer",
+            past_projects: [{ name: "System", client: "Agency", value: 0, year: 2569 }] });
+        expectValid(validatorFor("CompanyProfileResponse"), JSON.parse(JSON.stringify({ status: "success", data })));
+        expectValid(validatorFor("ProfileValidationError"), { error: { code: "INVALID_PROFILE", message: "Correct fields", fields: { "past_projects.0.value": "Must be nonnegative" } } });
+        const update = validatorFor("CompanyProfileUpdate");
+        expect(update({ past_projects: [{ name: "System", client: "Agency", value: -1, year: 2569 }] })).toBe(false);
     });
 
     it("BidPrep draft and checklist responses match the FR-4.7 schemas", () => {
