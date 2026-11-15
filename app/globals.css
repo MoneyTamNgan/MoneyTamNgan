@@ -8768,3 +8768,40 @@ body {
   margin: 14px 0 0;
   color: #9fb9af
 }
+
+/* Personal proposal draft workspace and editor (#140/#141). */
+.bid-workspace { max-width: 1100px; margin: 0 auto; padding-bottom: 40px; color: var(--ink); }
+.bid-workspace h1 { font-size: clamp(1.8rem, 4vw, 2.7rem); }
+.bid-card { min-width: 0; padding: 24px; margin: 20px 0; background: var(--paper); border: 1px solid var(--orange-border); border-radius: 16px; }
+.bid-workspace label { display: block; margin: 16px 0 8px; font-weight: 700; }
+.bid-workspace input, .bid-workspace textarea { width: 100%; box-sizing: border-box; min-width: 0; padding: 12px; border: 1px solid var(--orange-border); border-radius: 8px; background: var(--cream-input); color: var(--ink); font: inherit; }
+.bid-workspace textarea { resize: vertical; }
+.bid-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
+.bid-workspace button { padding: 10px 16px; border: 1px solid var(--orange-border); border-radius: 9px; background: var(--orange-primary); color: #fff; font: inherit; cursor: pointer; }
+.bid-workspace button:disabled { opacity: .5; cursor: default; }
+.bid-workspace .bid-secondary { background: var(--cream-input); color: var(--ink); }
+.bid-workspace .bid-danger { background: #b42318; }
+.bid-notice { padding: 16px; border: 1px solid var(--orange-border); background: var(--cream-soft); border-radius: 12px; margin: 16px 0; }
+.bid-notice p { margin-bottom: 0; }
+.bid-sticky-notice { position: sticky; top: 8px; z-index: 5; }
+.bid-preview { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bid-workspace mark { background: #ffed99; color: #713600; padding: 1px 3px; }
+.bid-error { color: #b42318; overflow-wrap: anywhere; }
+.bid-incomplete { color: #875100; font-weight: 600; }
+.bid-draft-list { padding-left: 20px; }
+.bid-draft-list li { margin: 15px 0; }
+.bid-draft-list span { display: block; font-size: .88rem; margin-top: 5px; }
+.bid-sources { overflow-wrap: anywhere; }
+.bid-table-scroll { overflow-x: auto; }
+.bid-workspace table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.bid-workspace th, .bid-workspace td { border: 1px solid var(--orange-border); text-align: left; padding: 10px; vertical-align: top; overflow-wrap: anywhere; }
+.bid-modal-backdrop { position: fixed; inset: 0; z-index: 50; background: #0008; display: grid; place-items: center; padding: 18px; }
+.bid-modal { max-width: 520px; max-height: 85vh; overflow: auto; }
+.tor-bid-prep-entry { padding: 14px 0; font-weight: 700; }
+@media(max-width:760px) {
+  .sidebar-layout:has(.bid-workspace) .sidebar-page { margin-left: 82px; }
+  .app-shell:has(.bid-workspace) .page-container { padding-inline: 12px; }
+  .bid-card { padding: 16px; }
+  .bid-actions { flex-direction: column; }
+  .bid-workspace table { min-width: 550px; }
+}
