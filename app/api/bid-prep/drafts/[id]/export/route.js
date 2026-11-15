@@ -8,7 +8,8 @@ export const runtime = 'nodejs';
 async function handlePOST(request, context, { userId }) {
     await connectDB();
     const params = await context?.params;
-    const result = await exportDraft(userId, params?.id);
+    const version = new URL(request.url).searchParams.get('version');
+    const result = await exportDraft(userId, params?.id, version === null ? {} : { version: Number(version) });
     if (result.code) return bidPrepError(result.code, result.message, result.status);
     logBidPrepAudit(request, result.audit.event, { userId, draftId: result.audit.draftId, projectId: result.audit.projectId });
     return new NextResponse(result.file, {
