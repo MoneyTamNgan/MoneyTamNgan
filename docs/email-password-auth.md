@@ -33,6 +33,24 @@ npm run db:migrate-users -- --apply # fill missing usernames and create the inde
 
 It only fills users that have no username, never changes or reuses an existing one, never reads password hashes, and is safe to re-run. Google sign-ups created after the migration have no username until it is run again.
 
+### Rollback
+
+The change is additive (one optional field and one partial index), so nothing else needs reverting. Take a backup or note the dry-run output first. In `mongosh`, connected to the same database:
+
+```js
+// 1. Drop the unique index so the field can be removed without constraint errors
+db.users.dropIndex('uniq_user_username')
+
+// 2. Remove the field from every user (password hashes and emails are untouched)
+db.users.updateMany({ username: { $exists: true } }, { $unset: { username: '' } })
+
+// 3. Confirm nothing is left (both should be 0 / absent)
+db.users.countDocuments({ username: { $exists: true } })
+db.users.getIndexes().filter(i => i.name === 'uniq_user_username')
+```
+
+After rolling back, also revert the application code to a version before PR #134. Otherwise `npm run db:ensure-indexes` or the next app start recreates the index, and login by username keeps working only for users that still have the field. To undo only some users, `$unset` just those documents (filter by `_id`).
+
 ## Provider safety
 
 An email already registered through Google cannot acquire a password through the public registration endpoint. The Google callback requires Google's verified_email=true and refuses to link a password account merely because the email matches. Its upsert also excludes password accounts to guard races. Existing Google admin allowlist behavior remains available for verified Google users.
