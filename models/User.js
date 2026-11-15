@@ -1,7 +1,15 @@
 import mongoose from 'mongoose';
+import { PROFILE_LIMITS as LIMITS } from '../lib/profile-validation.js';
 import { USERNAME_MIN, USERNAME_MAX, USERNAME_PATTERN } from '../lib/username.js';
 
 const { Schema, model, models } = mongoose;
+
+const PastProjectSchema = new Schema({
+    name: { type: String, required: true, trim: true, maxlength: LIMITS.projectText },
+    client: { type: String, required: true, trim: true, maxlength: LIMITS.projectText },
+    value: { type: Number, required: true, min: 0, max: LIMITS.maxMoney },
+    year: { type: Number, required: true, min: LIMITS.minYear, max: LIMITS.maxYear, validate: Number.isInteger },
+}, { _id: false });
 
 const UserSchema = new Schema({
     email: { type: String, required: true, unique: true },
@@ -20,7 +28,11 @@ const UserSchema = new Schema({
     picture: String,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     techStack: { type: [String], default: [] },
-    company_name: { type: String, default: '' },
+    company_name: { type: String, default: '', trim: true, maxlength: LIMITS.company_name },
+    registration_number: { type: String, default: '', trim: true, maxlength: LIMITS.registration_number },
+    address: { type: String, default: '', trim: true, maxlength: LIMITS.address },
+    authorized_signatory: { type: String, default: '', trim: true, maxlength: LIMITS.authorized_signatory },
+    past_projects: { type: [PastProjectSchema], default: [], validate: value => value.length <= LIMITS.maxProjects },
     skills: { type: [String], default: [] },
     registered_capital: { type: Number, default: null },
     highest_past_project_value: { type: Number, default: null },
