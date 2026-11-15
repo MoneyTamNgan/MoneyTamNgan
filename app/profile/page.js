@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import CompanyBidFields from '@/components/profile/CompanyBidFields';
+import { validateProfileUpdates, PROFILE_LIMITS } from '@/lib/profile-validation';
 import AppShell from "@/components/ui/AppShell";
 import NoEgpSubmissionNotice from "@/components/ui/NoEgpSubmissionNotice";
 import {
@@ -12,7 +14,7 @@ import {
 
 const skills = ["React", "Node.js", "Python", "PostgreSQL", "Cloud", "TypeScript", "Docker", "UX/UI", "Data analysis", "Security", "Service Virtualization", "Integration Platforms as a Service (iPaaS)", "MS Project", "MS Excel", "Utility Platform (UTP)", "Enterprise Resource Planning (ERP)", "ระบบคอมพิวเตอร์"];
 const certifications = ["ISO 27001", "ISO 29110", "CMMI", "Cloud certification"];
-const emptyProfile = { company_name: "", skills: [], registered_capital: null, highest_past_project_value: null, concurrent_project_capacity: null, certifications: [], email_notifications_enabled: false, match_score_threshold: 70, notification_frequency: 'IMMEDIATE' };
+const emptyProfile = { company_name: "", registration_number: "", address: "", authorized_signatory: "", past_projects: [], skills: [], registered_capital: null, highest_past_project_value: null, concurrent_project_capacity: null, certifications: [], email_notifications_enabled: false, match_score_threshold: 70, notification_frequency: 'IMMEDIATE' };
 
 function toggleItem(items, item) {
   return items.includes(item) ? items.filter((value) => value !== item) : [...items, item];
@@ -20,6 +22,8 @@ function toggleItem(items, item) {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(emptyProfile);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
   const [isRemoteSaved, setIsRemoteSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -57,18 +61,31 @@ export default function ProfilePage() {
   }, [profile]);
 
   function updateNumber(field, value) {
-    setSaved(false);
-    setProfile((current) => ({ ...current, [field]: value === "" ? null : Number(value) }));
+    updateField(field, value === "" ? null : Number(value));
+  }
+
+  function updateField(field, value) {
+    setSaved(false); setSaveError("");
+    setFieldErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== field && !key.startsWith(`${field}.`))));
+    setProfile(current => ({ ...current, [field]: value }));
   }
 
   async function handleSaveProfile() {
+    setSaveError(""); setSaved(false);
+    const validated = validateProfileUpdates(profile);
+    setFieldErrors(validated.errors);
+    if (Object.keys(validated.errors).length) {
+      setSaveError("กรุณาตรวจสอบข้อมูลที่ระบุไว้ด้านล่าง");
+      return;
+    }
     setIsSaving(true);
-    setSaved(false);
-    const { profile: updatedProfile, isRemote } = await saveContractorProfile(profile);
-    setProfile(updatedProfile);
-    setIsRemoteSaved(isRemote);
-    setSaved(true);
-    setIsSaving(false);
+    try {
+      const { profile: updatedProfile, isRemote } = await saveContractorProfile({ ...profile, ...validated.updates });
+      setProfile(updatedProfile); setIsRemoteSaved(isRemote); setSaved(true);
+    } catch (error) {
+      setSaveError(error.message || "บันทึกข้อมูลไม่สำเร็จ");
+      setFieldErrors(error.fields || {});
+    } finally { setIsSaving(false); }
   }
 
   async function handleDeleteCompanyData() {
@@ -78,14 +95,14 @@ export default function ProfilePage() {
     if (success) {
       setProfile((current) => ({
         ...current,
-        company_name: "",
+        company_name: "", registration_number: "", address: "", authorized_signatory: "", past_projects: [],
         skills: [],
         registered_capital: null,
         highest_past_project_value: null,
         concurrent_project_capacity: null,
         certifications: [],
       }));
-      setSaved(false);
+      setSaved(false); setFieldErrors({}); setSaveError("");
       setCompanyDeleteMessage("ลบข้อมูลบริษัทและฉบับร่างออกจากระบบแล้ว");
       setShowCompanyDeleteModal(false);
     } else {
@@ -159,6 +176,8 @@ export default function ProfilePage() {
             <label>
               ชื่อบริษัท
               <input
+                maxLength={PROFILE_LIMITS.company_name}
+                aria-invalid={Boolean(fieldErrors.company_name)}
                 value={profile.company_name}
                 onChange={(event) => {
                   setSaved(false);
@@ -166,6 +185,7 @@ export default function ProfilePage() {
                 }}
                 placeholder="ชื่อบริษัทของคุณ"
               />
+              {fieldErrors.company_name && <span className="profile-field-error" role="alert">{fieldErrors.company_name}</span>}
             </label>
             <label>
               ทุนจดทะเบียน (บาท)
@@ -173,9 +193,11 @@ export default function ProfilePage() {
                 type="number"
                 min="0"
                 value={profile.registered_capital ?? ""}
+                aria-invalid={Boolean(fieldErrors.registered_capital)}
                 onChange={(event) => updateNumber("registered_capital", event.target.value)}
                 placeholder="0"
               />
+              {fieldErrors.registered_capital && <span className="profile-field-error" role="alert">{fieldErrors.registered_capital}</span>}
             </label>
             <label>
               มูลค่างานสูงสุดที่ผ่านมา (บาท)
@@ -183,9 +205,11 @@ export default function ProfilePage() {
                 type="number"
                 min="0"
                 value={profile.highest_past_project_value ?? ""}
+                aria-invalid={Boolean(fieldErrors.highest_past_project_value)}
                 onChange={(event) => updateNumber("highest_past_project_value", event.target.value)}
                 placeholder="0"
               />
+              {fieldErrors.highest_past_project_value && <span className="profile-field-error" role="alert">{fieldErrors.highest_past_project_value}</span>}
             </label>
             <label>
               จำนวนโครงการที่รับพร้อมกันได้
@@ -193,12 +217,16 @@ export default function ProfilePage() {
                 type="number"
                 min="0"
                 value={profile.concurrent_project_capacity ?? ""}
+                aria-invalid={Boolean(fieldErrors.concurrent_project_capacity)}
                 onChange={(event) => updateNumber("concurrent_project_capacity", event.target.value)}
                 placeholder="0"
               />
+              {fieldErrors.concurrent_project_capacity && <span className="profile-field-error" role="alert">{fieldErrors.concurrent_project_capacity}</span>}
             </label>
           </div>
         </section>
+
+        <CompanyBidFields profile={profile} onChange={updateField} errors={fieldErrors} disabled={isLoading || isSaving} />
 
         <section className="profile-card">
           <div className="profile-section-heading">
@@ -321,9 +349,10 @@ export default function ProfilePage() {
           </div>
         </section>
 
+        {saveError && <p className="profile-field-error" role="alert">{saveError}</p>}
         <div className="profile-save-row">
           <p role="status">{saveStatusMessage}</p>
-          <button className="profile-save-button" type="button" onClick={handleSaveProfile} disabled={isSaving}>
+          <button id="save-company-profile" className="profile-save-button" type="button" onClick={handleSaveProfile} disabled={isSaving || isLoading}>
             {isSaving ? "กำลังบันทึก..." : "บันทึกข้อมูลโปรไฟล์"}
           </button>
         </div>

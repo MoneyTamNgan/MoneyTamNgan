@@ -8804,4 +8804,20 @@ body {
   .bid-card { padding: 16px; }
   .bid-actions { flex-direction: column; }
   .bid-workspace table { min-width: 550px; }
+/* Company bid identity and editable project history (#136). */
+.profile-field-wide { grid-column: 1 / -1; }
+.profile-fields textarea { width: 100%; min-width: 0; padding: 12px 14px; border: 1px solid var(--orange-border); border-radius: 11px; background: var(--cream-input); color: var(--ink); font: inherit; resize: vertical; }
+.profile-fields input, .profile-fields textarea { box-sizing: border-box; max-width: 100%; min-width: 0; }
+.profile-fields [aria-invalid="true"] { border-color: #b42318; }
+.profile-field-error { color: #b42318; font-size: .88rem; font-weight: 600; overflow-wrap: anywhere; }
+.profile-past-project { min-width: 0; margin: 18px 0; padding: 18px; border: 1px solid var(--orange-border); border-radius: 12px; }
+.profile-past-project legend { font-weight: 700; padding: 0 6px; }
+.profile-project-button { margin-top: 12px; padding: 10px 14px; border: 1px solid var(--orange-border); border-radius: 9px; background: var(--cream-input); color: var(--ink); cursor: pointer; font: inherit; }
+.profile-project-button:disabled { opacity: .55; cursor: default; }
+@media (max-width: 760px) {
+  /* Keep the profile form clear of the existing fixed navigation rail. */
+  .sidebar-layout:has(.profile-setup) .sidebar-page { margin-left: 82px; }
+  .app-shell:has(.profile-setup) .page-container { padding-inline: 14px; }
+  .profile-setup .profile-card { padding: 18px; }
+  .profile-setup .profile-hero { padding: 20px; }
 }

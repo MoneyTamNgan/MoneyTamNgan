@@ -958,6 +958,80 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /profiles:
+    get:
+      summary: Read the authenticated user's company profile
+      description: Identity is session.sub (cookie or scoped Bearer); query user IDs are ignored. Legacy bid fields default to empty strings and an empty history.
+      tags: [Contractor Profile]
+      operationId: getCompanyProfile
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      responses:
+        "200":
+          description: Current profile with no googleId or passwordHash
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
+        "401": { description: Authentication required }
+        "403": { description: Missing profile read permission }
+        "404": { description: User not found }
+        "429": { description: Profile rate limit exceeded }
+    put:
+      summary: Update the authenticated user's company profile
+      description: Partial updates. Unknown fields including role, passwordHash and user IDs are ignored. Strings are trimmed. Replace past_projects with the edited array to remove rows; an empty array clears it. Years are Buddhist Era 2400–2700. Maximum JSON body is 128 KiB. Cookie writes require an approved Origin.
+      tags: [Contractor Profile]
+      operationId: putCompanyProfile
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyProfileUpdate" }
+      responses:
+        "200":
+          description: Saved profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
+        "400":
+          description: Invalid JSON or profile values
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfileValidationError" }
+        "401": { description: Authentication required }
+        "403": { description: Missing profile write permission or invalid Origin }
+        "404": { description: User not found }
+        "413": { description: JSON body exceeds 128 KiB }
+        "415": { description: Content-Type must be application/json }
+        "429": { description: Profile rate limit exceeded }
+    patch:
+      summary: Partially update the authenticated user's company profile
+      description: Same update allowlist, validation, response and ownership rules as PUT /profiles.
+      tags: [Contractor Profile]
+      operationId: patchCompanyProfile
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyProfileUpdate" }
+      responses:
+        "200":
+          description: Saved profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
+        "400":
+          description: Invalid JSON or profile values
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfileValidationError" }
+        "401": { description: Authentication required }
+        "403": { description: Missing profile write permission or invalid Origin }
+        "404": { description: User not found }
+        "413": { description: JSON body exceeds 128 KiB }
+        "415": { description: Content-Type must be application/json }
+        "429": { description: Profile rate limit exceeded }
+
   # ---------------------------------------------------------------------------
   # Planned - Matching (FR-2.3)
   # ---------------------------------------------------------------------------
@@ -2294,6 +2368,73 @@ components:
         role:
           type: string
           enum: [user, admin]
+
+    CompanyPastProject:
+      type: object
+      required: [name, client, value, year]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        client: { type: string, minLength: 1, maxLength: 200 }
+        value: { type: number, minimum: 0, maximum: 1000000000000000 }
+        year: { type: integer, minimum: 2400, maximum: 2700, description: Buddhist Era year; preserved without conversion. }
+    CompanyProfileUpdate:
+      type: object
+      description: All fields are optional. Unknown keys are ignored. Empty bid strings and past_projects=[] clear those fields.
+      properties:
+        name: { type: string, maxLength: 200 }
+        company_name: { type: string, maxLength: 200 }
+        registration_number: { type: string, maxLength: 100 }
+        address: { type: string, maxLength: 2000 }
+        authorized_signatory: { type: string, maxLength: 200 }
+        past_projects:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/CompanyPastProject" }
+        skills:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+        techStack:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+        certifications:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+        registered_capital: { type: number, nullable: true, minimum: 0, maximum: 1000000000000000 }
+        highest_past_project_value: { type: number, nullable: true, minimum: 0, maximum: 1000000000000000 }
+        concurrent_project_capacity: { type: integer, nullable: true, minimum: 0, maximum: 10000 }
+        email_notifications_enabled: { type: boolean }
+        match_score_threshold: { type: number, minimum: 0, maximum: 100 }
+        notification_frequency: { type: string, enum: [IMMEDIATE, DAILY_DIGEST] }
+    CompanyProfileResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: { type: string, enum: [success] }
+        data:
+          allOf:
+            - $ref: "#/components/schemas/CompanyProfileUpdate"
+            - type: object
+              required: [_id, email, registration_number, address, authorized_signatory, past_projects]
+              properties:
+                _id: { type: string }
+                email: { type: string, format: email }
+                updatedAt: { type: string, format: date-time }
+    ProfileValidationError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            fields:
+              type: object
+              additionalProperties: { type: string }
 
     ContractorProfileInput:
       type: object

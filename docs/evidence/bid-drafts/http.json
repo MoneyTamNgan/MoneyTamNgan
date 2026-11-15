@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-11-15T13:44:15.842Z",
+  "checked_at": "2026-11-15T13:50:46.439Z",
   "fixtureOnly": true,
   "generator": "simulated at existing proposal API boundary; no Vertex call",
   "checks": [
@@ -16,8 +16,8 @@
     {
       "event": "bid_prep_draft_exported",
       "userId": "[fixture-owner]",
-      "timestamp": "2026-11-15T13:44:22.718Z",
-      "path": "/api/bid-prep/drafts/6af9b734e040e4bbc4bb3cb1/export",
+      "timestamp": "2026-11-15T13:50:53.320Z",
+      "path": "/api/bid-prep/drafts/6af9b8bbfcf344f55df8a8a4/export",
       "clientAddress": "203.0.113.39",
       "draftId": "[fixture-draft]",
       "projectId": "BIDPREP-E2E"
@@ -25,8 +25,8 @@
     {
       "event": "bid_prep_draft_exported",
       "userId": "[fixture-owner]",
-      "timestamp": "2026-11-15T13:44:24.456Z",
-      "path": "/api/bid-prep/drafts/6af9b734e040e4bbc4bb3cb1/export",
+      "timestamp": "2026-11-15T13:50:54.566Z",
+      "path": "/api/bid-prep/drafts/6af9b8bbfcf344f55df8a8a4/export",
       "clientAddress": "127.0.0.1",
       "draftId": "[fixture-draft]",
       "projectId": "BIDPREP-E2E"
