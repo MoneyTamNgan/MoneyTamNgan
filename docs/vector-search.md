@@ -33,5 +33,11 @@ db.projects.aggregate([{ $vectorSearch: {
   numCandidates: 100, limit: 10, filter: { is_software: true } } }])
 ```
 
+### Checking the index
+
+1. `npm run db:ensure-indexes` should print `Vector Search index project_vector_index (768 dims): created | updated | unchanged`. A "Skipped Vector Search index" warning means the target is not Atlas.
+2. In the Atlas UI (Search & Vector Search, collection `projects`) the index status must be **READY** and show 768 dimensions, cosine. It can take a minute after `created`/`updated`.
+3. Run the example query above with a real embedding; it should return ranked, non-empty results.
+
 Changing `VERTEX_EMBEDDING_MODEL` or `VERTEX_EMBEDDING_DIMENSIONS` changes `source_hash`, so every project is
 re-embedded by the sweep; run `db:ensure-indexes` first so the index dimensions match.
