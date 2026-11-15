@@ -13,6 +13,15 @@ const state = vi.hoisted(() => ({
     seq: 0,
 }));
 
+vi.mock('@/lib/bid-prep/draft-store', () => ({
+    createOwnedDraft: async (userId, data, max) => {
+        if (state.drafts.filter(row => row.userId === String(userId)).length >= max) throw Object.assign(new Error('Draft limit reached.'), { code: 'DRAFT_LIMIT', status: 400 });
+        state.seq += 1;
+        const row = { ...data, userId: String(userId), _id: state.seq.toString(16).padStart(24, 'a') };
+        state.drafts.push(row); return row;
+    },
+}));
+
 vi.mock('@/lib/db', () => ({ default: vi.fn(async () => undefined) }));
 vi.mock('@/models/Project', () => ({
     default: {

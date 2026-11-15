@@ -1650,16 +1650,25 @@ paths:
 
   /bid-prep/drafts/{id}/export:
     post:
-      summary: Download the caller's draft as DOCX
+      summary: Download the caller's draft and checklist as one DOCX
       description: >
-        Plain-text DOCX. The file says it is an AI draft and that the seller
-        submits to e-GP. Another user's draft returns 404. The audit record
-        stores the user id, time and client address, not the draft text.
+        One plain-text DOCX contains the saved proposal sections and sources plus
+        the current caller-specific checklist (status, reason and TOR page).
+        Missing checklist data is explicitly manual with visible placeholders.
+        The file states it is an AI draft, does not submit to e-GP, and shows created,
+        modified and exported dates. A4 fixed-width tables and Thai-capable fonts
+        are used. Maximum size is 2 MiB. PDF is outside this release (#145).
+        Another user's draft returns 404. Each successful export audits only user,
+        time, IP and draft/project identifiers. Raw HTML, fields and macros are absent.
       operationId: exportBidPrepDraft
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/BidPrepDraftIdParam"
+        - name: version
+          in: query
+          description: Optional saved draft version. A stale version returns 409; the editor supplies it.
+          schema: { type: integer, minimum: 1 }
       responses:
         "200":
           description: DOCX file
@@ -1669,7 +1678,7 @@ paths:
                 type: string
                 format: binary
         "400":
-          description: Draft is empty
+          description: Draft is empty, corrupt, or version is invalid
           content:
             application/json:
               schema:
@@ -1686,6 +1695,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "409":
+          description: Saved draft version changed; reload before exporting
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "413":
+          description: Export exceeds 2 MiB
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "429":
           description: Rate limit exceeded
           content:
@@ -2735,18 +2754,28 @@ components:
       type: object
       required: [heading, body, sources]
       properties:
-        heading: { type: string }
-        body: { type: string }
+        heading: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 8000 }
         sources:
           type: array
-          items: { type: string }
+          maxItems: 20
+          items: { type: string, maxLength: 200 }
+    BidPrepDraftSectionInput:
+      type: object
+      properties:
+        heading: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 8000 }
+        sources:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 200 }
     BidPrepDraftSummary:
       type: object
       required: [id, projectId, title, version, createdAt, updatedAt, notices]
       properties:
         id: { type: string }
-        projectId: { type: string }
-        title: { type: string }
+        projectId: { type: string, maxLength: 64 }
+        title: { type: string, maxLength: 200 }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -2760,28 +2789,32 @@ components:
           properties:
             sections:
               type: array
+              maxItems: 40
               items:
                 $ref: "#/components/schemas/BidPrepDraftSection"
     BidPrepDraftInput:
       type: object
+      description: Owner comes from session.sub. Unknown fields are ignored. Maximum 40 sections and 100000 total text characters including sources. Overlong fields are rejected, not truncated. At most 50 drafts per user (or a lower configured cap); concurrent creation is serialized transactionally.
       required: [projectId]
       properties:
-        projectId: { type: string }
-        title: { type: string }
+        projectId: { type: string, maxLength: 64 }
+        title: { type: string, maxLength: 200 }
         sections:
           type: array
+          maxItems: 40
           items:
-            $ref: "#/components/schemas/BidPrepDraftSection"
+            $ref: "#/components/schemas/BidPrepDraftSectionInput"
     BidPrepDraftPatch:
       type: object
       required: [version]
       properties:
         version: { type: integer, minimum: 1 }
-        title: { type: string }
+        title: { type: string, maxLength: 200 }
         sections:
           type: array
+          maxItems: 40
           items:
-            $ref: "#/components/schemas/BidPrepDraftSection"
+            $ref: "#/components/schemas/BidPrepDraftSectionInput"
     BidPrepDeletion:
       type: object
       required: [status, draftsDeleted]
