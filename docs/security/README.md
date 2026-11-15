@@ -85,3 +85,23 @@ Target: the production Docker image on a throwaway MongoDB (Atlas was not touche
 - **Fixed in `next.config.js`:** `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, and the `X-Powered-By` header is removed.
 - **Accepted / follow-up:** no Content-Security-Policy. A `frame-ancestors`-only policy was tried and made ZAP raise four CSP-quality alerts (no fallback directive, wildcard, `unsafe-inline` for scripts and styles), so it was dropped. A real policy needs per-request nonces for Next.js inline scripts. COEP/COOP/CORP are left off because they can break the Google OAuth redirect and third-party images.
 - The baseline scan is passive and unauthenticated; it does not exercise the admin pages or any state-changing API.
+
+## Final scan summary (15 November 2026)
+
+Taken from the green runs on `develop` at commit `d35f2bf` and its follow-up: Semgrep SAST (run 43732130514) and ZAP DAST baseline (run 43732054956). The files in `docs/security/reports/` were compared with these artifacts and match them.
+
+| Scanner | High / Critical | Medium | Low | Info | Notes |
+|---|---|---|---|---|---|
+| Semgrep `p/owasp-top-ten` | 0 | 47 warnings in total | | | 25 `plaintext-http-link`, 17 `github-actions-mutable-action-tag`, 4 `gha-workflow-env-secret`, 1 `raw-html-format` |
+| OWASP ZAP baseline | 0 | 1 | 3 | 4 | Medium is `style-src 'unsafe-inline'` (accepted, see above) |
+
+What was fixed earlier: the findings in `sast-report.before-fix.json` and `zap-dast-report.before-fix.json` (the 3 November snapshot) were resolved by PRs #112 and #134 (non-root container, hardening headers, scoped authorisation, rate limits). The reports now cover the code after #105 and #108.
+
+Remaining Semgrep warnings and why they are accepted or planned:
+
+- `plaintext-http-link` (25): all are inside the generated `zap-dast-report.html`, where ZAP links to its own documentation. No application code is affected.
+- `github-actions-mutable-action-tag` (17): actions are pinned by version tag, not by commit SHA. Follow-up: pin by SHA.
+- `gha-workflow-env-secret` (4): `.github/workflows/ingestion-schedule.yml` declares `MONGODB_URI`, `EGP_API_KEY`, `JWT_SECRET` and `PIPELINE_ADMIN_TOKEN` in the workflow-level `env`, so every step can read them. Follow-up: move them to the steps that need them. Workflow permissions are already limited to `contents: read`.
+- `raw-html-format` (1): `lib/oauth-security.js` builds the 429 page with a redirect target made from `result.resetAt`, a number the server computes, not user input. Accepted.
+
+Semgrep also logs two parse warnings (`docs/api/openapi.yaml`, `.github/workflows/ci.yml` line 108) that do not fail the scan.
