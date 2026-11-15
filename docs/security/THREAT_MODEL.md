@@ -24,3 +24,12 @@ Issue #103 asked for this file. It was not on `develop` when FR-4.7 started, so 
 | TH-18 | Elevation of privilege | A BidPrep route submits to e-GP | No e-GP client is imported. The file and the pages tell the user to submit | Mitigated | privacy test `does not submit a bid` |
 
 Residual: rate-limit counters are in memory, and the customer has not set a retention period.
+
+## Admin pipeline control evidence — #78
+
+| Id | STRIDE | Threat | Mitigation | Evidence |
+|---|---|---|---|---|
+| TH-19 | Denial of service / tampering | Parallel manual pipelines or a restart leaving a permanent running flag | Atomic singleton MongoDB lease, heartbeat, expiry recovery, owner fencing; active reset returns 409 | `lib/admin-pipeline-control.js`, `lib/admin-pipeline-store.js`, `tests/integration/admin-pipeline-recovery.test.js` |
+| TH-20 | Repudiation / elevation of privilege | Unattributed or unauthorized pipeline triggers | Independent Proxy/handler admin scopes, durable allowed-attempt audit and bounded denial logs | `lib/admin-pipeline-audit.js`, `models/PipelineTriggerAudit.js`, `tests/integration/admin-pipeline.integration.test.js` |
+
+The supplied [STRIDE sheet](https://docs.google.com/spreadsheets/d/1mZCqus4RaeYQnVjN70ffu9_TbxBNA1OslLpimWm1YYU/edit?gid=1505854712#gid=1505854712) was inspected. Its **TH-02 (row 3)** is admin elevation of privilege and maps to repository TH-8 + TH-20. Its **TH-06 (row 7)** is pipeline/public API denial of service and maps to TH-19. Both can reference [the #78 runbook and saved F3/F7 updates](../admin-pipeline-control.md) and [sanitized live response evidence](../evidence/admin-pipeline-http.json). The original sheet opens View only; F3/F7 were saved and verified on 2026-11-13 in the [owner-created editable copy](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?gid=1505854712#gid=1505854712). Existing repository TH-2 (OAuth abuse) and TH-6 (login disclosure) retain their original meanings.

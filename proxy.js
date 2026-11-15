@@ -4,6 +4,7 @@ import { authorizeScopeRequest, permissionFor } from '@/lib/request-authorizatio
 import { applyCors, contentSecurityPolicy, originError, securityHeaders } from '@/lib/security-policy';
 import { randomBytes } from 'node:crypto';
 import { isGoogleOAuthPath } from '@/lib/oauth-security';
+import { isPipelineTrigger, pipelineAuditContext, logPipelineAudit } from '@/lib/admin-pipeline-audit';
 import {
     clientAddress,
     createRateLimiter,
@@ -70,6 +71,10 @@ export async function proxy(request) {
                 response = error ? NextResponse.json({ error: { code: 'FORBIDDEN_ORIGIN', message: error } }, { status: 403 })
                     : permission.public && READ_METHODS.has(request.method) && !isGoogleOAuthPath(pathname) ? rateLimit(request, auth.principal?.session) : next();
             }
+        }
+        if ([401, 403].includes(response.status) && isPipelineTrigger(pathname, request.method)) {
+            const principal = request.method === 'OPTIONS' ? null : await authorizeScopeRequest(request, permissionFor(pathname, request.method));
+            logPipelineAudit({ ...pipelineAuditContext(request, principal?.principal), outcome: 'denied', http_status: response.status });
         }
         try { applyCors(response, request); } catch { /* configuration errors already fail closed */ }
     } else {
