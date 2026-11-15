@@ -1,18 +1,19 @@
 import mongoose from 'mongoose';
+import { DRAFT_LIMITS } from '../lib/bid-prep/draft-content.js';
 
 const { Schema, model, models } = mongoose;
 
 const SectionSchema = new Schema({
     heading: { type: String, maxlength: 200, default: '' },
     body: { type: String, maxlength: 8000, default: '' },
-    sources: { type: [String], default: [] },
+    sources: { type: [{ type: String, maxlength: 200 }], default: [], validate: value => value.length <= DRAFT_LIMITS.sources },
 }, { _id: false });
 
 const BidPrepDraftSchema = new Schema({
     userId: { type: String, required: true },
     projectId: { type: String, required: true, maxlength: 64 },
     title: { type: String, default: '', maxlength: 200 },
-    sections: { type: [SectionSchema], default: [] },
+    sections: { type: [SectionSchema], default: [], validate: value => value.length <= DRAFT_LIMITS.sections },
     version: { type: Number, default: 1, min: 1 },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

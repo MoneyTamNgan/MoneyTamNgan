@@ -1,0 +1,53 @@
+{
+  "checked_at": "2026-11-15T13:50:41.005Z",
+  "checks": [
+    "Real HTTP 401, legacy defaults, PUT/GET persistence, trim, protected fields and cross-user isolation",
+    "Headless form add/remove/save/reload round trip against Atlas; mobile 390px has no horizontal overflow",
+    "Existing FR-4.7 company deletion clears all bid fields and retains the other user"
+  ],
+  "responses": {
+    "profile": {
+      "_id": "[fixture-owner]",
+      "email": "owner-a@example.test",
+      "name": "",
+      "company_name": "บริษัท ตัวอย่าง จำกัด",
+      "registration_number": "0105555555555",
+      "address": "99 ถนนตัวอย่าง กรุงเทพฯ",
+      "authorized_signatory": "ผู้ลงนามตัวอย่าง",
+      "past_projects": [
+        {
+          "name": "ระบบคลังข้อมูล",
+          "client": "หน่วยงานตัวอย่าง",
+          "value": 1500000,
+          "year": 2568
+        },
+        {
+          "name": "ระบบบริการออนไลน์",
+          "client": "หน่วยงานตัวอย่าง 2",
+          "value": 2500000,
+          "year": 2569
+        }
+      ],
+      "skills": [],
+      "techStack": [],
+      "registered_capital": null,
+      "highest_past_project_value": null,
+      "concurrent_project_capacity": null,
+      "certifications": [],
+      "email_notifications_enabled": false,
+      "match_score_threshold": 70,
+      "notification_frequency": "IMMEDIATE",
+      "updatedAt": "[timestamp]"
+    },
+    "invalid": {
+      "error": {
+        "code": "INVALID_PROFILE",
+        "message": "Please correct the highlighted profile fields.",
+        "fields": {
+          "past_projects.0.value": "Must be a number between 0 and 1000000000000000."
+        }
+      }
+    }
+  },
+  "fixtureOnly": true
+}
