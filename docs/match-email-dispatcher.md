@@ -46,7 +46,7 @@ npm run test:vitest
 npm run build
 ```
 
-The Atlas command creates and removes only its own random `mtn_notification_test_*` database. It uses the real normalized-summary mapper, ledger, batches, transactions and concurrent claim operations, but mocks email transport and makes no government or Vertex requests. It verifies rollback and stale-owner fencing. It does not send to any real user.
+The Atlas command creates and removes only its own random `mtn_notify_test_*` database. It uses the real normalized-summary mapper, ledger, batches, transactions and concurrent claim operations, but mocks email transport and makes no government or Vertex requests. It verifies rollback and stale-owner fencing. It does not send to any real user.
 
 For a real inbox test, sign in to the intended test account, open `/profile` and use its test-email action (POST `/api/notifications/test`). It sends only to the authenticated account, not a body-supplied recipient. Confirm the name, score, TOR link and notification settings link, and attach a received-email screenshot without exposing secrets. Template tests bypass the production delivery ledger intentionally. Test API success proves provider acceptance, not inbox delivery. A received-email screenshot and teammate approval remain separate acceptance evidence.
 
@@ -58,5 +58,5 @@ The implementation preserves the existing match-score API, worker processing and
 
 - 280 Node tests and 312 Vitest tests passed locally (592 total).
 - Production build passed; focused Resend tests use a mocked SDK and verify escaping, provider idempotency options and sanitized failure logs.
-- Live Atlas fixture was attempted twice and stopped at the connection stage with `MongooseServerSelectionError`; it wrote no test records. Atlas Network Access confirmation is pending.
+- After the owner enabled Atlas access, the isolated live fixture passed: normalized hydration, five concurrent hooks with one immediate send, queued digest, repeat-send deduplication, transaction rollback and stale-owner fencing. The test database name was shortened to fit Atlas limits. Evidence: [notification-atlas.json](evidence/notification-atlas.json). Transport was mocked; the disposable test database was removed.
 - No real email was sent: `RESEND_API_KEY` and `EMAIL_FROM` were absent locally. The owner authorized one test inbox; credentials must be configured before sending. A received-email screenshot remains pending.

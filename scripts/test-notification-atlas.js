@@ -18,7 +18,7 @@ const { default: Project } = await import('../models/Project.js');
 const { default: Document } = await import('../models/Document.js');
 const { default: Run } = await import('../models/ExtractionRun.js');
 const { default: Summary } = await import('../models/DocumentSummary.js');
-const database = `mtn_notification_test_${Date.now()}_${randomBytes(4).toString('hex')}`;
+const database = `mtn_notify_test_${Date.now().toString(36)}_${randomBytes(3).toString('hex')}`;
 process.env.MONGODB_DB_NAME = database;
 const evidence = { checked_at: new Date().toISOString(), transport: 'mocked; no emails sent', checks: [] };
 let connected = false;
@@ -78,6 +78,9 @@ try {
     console.error('Notification Atlas fixture failed. Check Atlas IP allowlist and rerun; no credentials logged.');
     process.exitCode = 1;
 } finally {
-    if (connected) await mongoose.connection.dropDatabase();
+    if (connected) await mongoose.connection.dropDatabase().catch(() => {
+        console.error("Own fixture database cleanup failed; no application database was targeted.");
+        process.exitCode = 1;
+    });
     await mongoose.disconnect();
 }
