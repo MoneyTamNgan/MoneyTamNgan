@@ -3,11 +3,21 @@ import { DELETE_COMPANY_DATA_CONFIRMATION } from "@/lib/bid-prep/notices";
 
 const storageKey = "moneytamngan.contractor-profile";
 
+export class ProfileSaveError extends Error {
+  fields: Record<string, string>;
+  constructor(message: string, fields: Record<string, string> = {}) {
+    super(message);
+    this.fields = fields;
+  }
+}
+
 export function loadLocalContractorProfile(): ContractorProfileRecord | null {
   if (typeof window === "undefined") return null;
   try {
     const stored = window.localStorage.getItem(storageKey);
-    return stored ? (JSON.parse(stored) as ContractorProfileRecord) : null;
+    if (!stored) return null;
+    // Bid identity details are read from the authenticated API, never shared browser cache.
+    return { ...JSON.parse(stored), registration_number: '', address: '', authorized_signatory: '', past_projects: [] } as ContractorProfileRecord;
   } catch {
     return null;
   }
@@ -16,7 +26,8 @@ export function loadLocalContractorProfile(): ContractorProfileRecord | null {
 export function saveLocalContractorProfile(profile: ContractorProfileRecord): ContractorProfileRecord {
   const saved = { ...profile, updated_at: new Date().toISOString() };
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(storageKey, JSON.stringify(saved));
+    const { registration_number, address, authorized_signatory, past_projects, ...cache } = saved;
+    window.localStorage.setItem(storageKey, JSON.stringify(cache));
   }
   return saved;
 }
@@ -33,6 +44,10 @@ export async function getContractorProfile(): Promise<{ profile: ContractorProfi
       const data = json.data || json;
       const remoteProfile: ContractorProfileRecord = {
         company_name: data.company_name ?? "",
+        registration_number: data.registration_number ?? "",
+        address: data.address ?? "",
+        authorized_signatory: data.authorized_signatory ?? "",
+        past_projects: data.past_projects ?? [],
         skills: data.skills ?? data.techStack ?? [],
         registered_capital: data.registered_capital ?? null,
         highest_past_project_value: data.highest_past_project_value ?? null,
@@ -54,6 +69,7 @@ export async function getContractorProfile(): Promise<{ profile: ContractorProfi
   return {
     profile: local || {
       company_name: "",
+      registration_number: "", address: "", authorized_signatory: "", past_projects: [],
       skills: [],
       registered_capital: null,
       highest_past_project_value: null,
@@ -70,9 +86,6 @@ export async function getContractorProfile(): Promise<{ profile: ContractorProfi
 export async function saveContractorProfile(
   profile: ContractorProfileRecord
 ): Promise<{ profile: ContractorProfileRecord; isRemote: boolean }> {
-  // Always save locally first for fast UI feedback & offline backup
-  saveLocalContractorProfile(profile);
-
   try {
     const res = await fetch("/api/profiles", {
       method: "PATCH",
@@ -85,10 +98,14 @@ export async function saveContractorProfile(
       const data = json.data || json;
       const savedRemote: ContractorProfileRecord = {
         company_name: data.company_name ?? profile.company_name,
+        registration_number: data.registration_number ?? "",
+        address: data.address ?? "",
+        authorized_signatory: data.authorized_signatory ?? "",
+        past_projects: data.past_projects ?? [],
         skills: data.skills ?? data.techStack ?? profile.skills,
-        registered_capital: data.registered_capital ?? profile.registered_capital,
-        highest_past_project_value: data.highest_past_project_value ?? profile.highest_past_project_value,
-        concurrent_project_capacity: data.concurrent_project_capacity ?? profile.concurrent_project_capacity,
+        registered_capital: data.registered_capital ?? null,
+        highest_past_project_value: data.highest_past_project_value ?? null,
+        concurrent_project_capacity: data.concurrent_project_capacity ?? null,
         certifications: data.certifications ?? profile.certifications,
         email_notifications_enabled: data.email_notifications_enabled ?? profile.email_notifications_enabled,
         match_score_threshold: data.match_score_threshold ?? profile.match_score_threshold,
@@ -98,11 +115,12 @@ export async function saveContractorProfile(
       saveLocalContractorProfile(savedRemote);
       return { profile: savedRemote, isRemote: true };
     }
+    const errorBody = await res.json().catch(() => ({}));
+    throw new ProfileSaveError(errorBody.error?.message || (res.status === 401 ? "Please sign in to save your profile." : "Unable to save profile."), errorBody.error?.fields || {});
   } catch (error) {
-    console.warn("Failed to save profile to API:", error);
+    if (error instanceof ProfileSaveError) throw error;
+    throw new ProfileSaveError("Unable to connect. Your changes have not been saved to the database.");
   }
-
-  return { profile, isRemote: false };
 }
 
 export async function deleteCompanyBidData(): Promise<boolean> {
@@ -118,6 +136,7 @@ export async function deleteCompanyBidData(): Promise<boolean> {
       saveLocalContractorProfile({
         ...local,
         company_name: "",
+        registration_number: "", address: "", authorized_signatory: "", past_projects: [],
         skills: [],
         registered_capital: null,
         highest_past_project_value: null,

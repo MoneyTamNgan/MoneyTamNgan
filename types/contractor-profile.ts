@@ -3,9 +3,20 @@ export type ContractorCertification = "ISO 27001" | "ISO 29110" | "CMMI" | "Clou
 export type MatchScoreThreshold = 50 | 60 | 70 | 80 | 90;
 export type NotificationFrequency = 'IMMEDIATE' | 'DAILY_DIGEST';
 
+export interface PastCompanyProject {
+  name: string;
+  client: string;
+  value: number;
+  year: number;
+}
+
 // Mirrors the document that will later be persisted for a contractor in MongoDB.
 export interface ContractorProfileRecord {
   company_name: string;
+  registration_number: string;
+  address: string;
+  authorized_signatory: string;
+  past_projects: PastCompanyProject[];
   skills: ContractorSkill[];
   registered_capital: number | null;
   highest_past_project_value: number | null;
