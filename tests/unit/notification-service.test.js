@@ -42,10 +42,11 @@ function fixture(overrides = {}) {
     };
     const send = vi.fn(async () => ({ id: 'provider-1' }));
     const log = vi.fn();
+    const build = options => ({ ...buildMatchNotificationEmail(options), transport: overrides.transport || 'resend' });
     const users = { find: vi.fn(() => ({ lean: async () => [user] })),
         findById: vi.fn(() => ({ lean: async () => user })) };
     const hydrate = vi.fn(async p => p);
-    const service = createNotificationService({ connect: async () => {}, users, store, hydrate, send,
+    const service = createNotificationService({ connect: async () => {}, users, store, hydrate, send, build,
         now: () => time, log });
     return { ...service, user, rows, batches, store, send, log, users, hydrate,
         advance: ms => { time = new Date(time.getTime() + ms); } };
@@ -65,7 +66,7 @@ describe('#39 threshold dispatch', () => {
         await f.notifyUsersOfMatchingTors([p, p]);
         expect(f.send).toHaveBeenCalledTimes(1);
         expect([...f.rows.values()][0].version).toBe('skill-v1');
-        expect(f.send.mock.calls[0][0]).toMatchObject({ idempotencyKey: 'tor-match/b0', requireResend: true });
+        expect(f.send.mock.calls[0][0]).toMatchObject({ idempotencyKey: 'tor-match/b0'});
         expect(f.send.mock.calls[0][0].rendered.html).toContain('70%');
     });
     it('skips below threshold, disabled, unusable email, and unprocessed documents', async () => {
@@ -135,6 +136,20 @@ describe('#39 threshold dispatch', () => {
         f.users.findById.mockReturnValue({ lean: async () => ({ ...f.user, email_notifications_enabled: false }) });
         await f.sendDailyDigest();
         expect(f.send).not.toHaveBeenCalled(); expect(f.batches[0].status).toBe('cancelled');
+    });
+    it('stops after a failed SMTP send rather than risking duplicate delivery', async () => {
+        const f = fixture({ transport: 'smtp' }); f.send.mockResolvedValue(null);
+        await f.notifyUsersOfMatchingTors([project]);
+        f.advance(60001); await f.retryPendingNotifications();
+        expect(f.send).toHaveBeenCalledOnce(); expect(f.batches[0].status).toBe('failed');
+    });
+    it('never replays an interrupted SMTP attempt after lease recovery', async () => {
+        const f = fixture();
+        await f.notifyUsersOfMatchingTors([project]);
+        const b = f.batches[0]; b.status = 'pending'; b.attempts = 1; b.payload.transport = 'smtp';
+        await f.retryPendingNotifications();
+        expect(f.send).toHaveBeenCalledOnce();
+        expect(b.status).toBe('failed');
     });
     it('database failure never rejects the ingestion hook', async () => {
         const f = fixture(); f.store.enqueue.mockRejectedValue(new Error('db'));
