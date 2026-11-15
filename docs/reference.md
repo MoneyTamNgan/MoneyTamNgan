@@ -36,11 +36,11 @@ This inventory matches the Google documents as they stand on 12 November 2026
   updated (headers, email/password V6.2, scanners in CI). It also has a
   Project status tab reflecting open GitHub issues the same day. Status cells
   are color-coded.
-- [MoneyTamNgan TOR Discovery, Extraction, and Display](diagrams/tor-discovery-extraction-display.png).
+- [MoneyTamNgan TOR Discovery, Extraction, and Display](diagrams/tor-discovery-extraction-display.mmd).
   Sequence diagram of the current pipeline: e-GP discovery and classification,
   official ZIP/PDF download, text/OCR/Vertex extraction, and dashboard display.
 
-![MoneyTamNgan TOR Discovery, Extraction, and Display](diagrams/tor-discovery-extraction-display.png)
+![MoneyTamNgan TOR Discovery, Extraction, and Display](diagrams/tor-discovery-extraction-display.mmd)
 
 *Sequence diagram: e-GP discovery and classification, official ZIP/PDF download, text/OCR/Vertex extraction, and dashboard display.*
 
