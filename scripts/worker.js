@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import 'dotenv/config';
+import '../lib/load-local-env.js';
 import mongoose from 'mongoose';
 import {
     claimNextJob,
@@ -70,8 +70,8 @@ async function runOne() {
             }
         }
 
-        // Immediate email notifications for users whose skills match this newly completed project
-        if (job.type !== 'verify_candidate' && result.status === 'completed') {
+        // Queue daily matches and dispatch immediate matches after usable OCR/summary processing.
+        if (job.type !== 'verify_candidate' && ['completed', 'review_required'].includes(result.status)) {
             try {
                 const freshProject = await Project.findOne({ project_id: job.project_id }).lean();
                 if (freshProject) {
@@ -81,7 +81,7 @@ async function runOne() {
                     }
                 }
             } catch (notifyErr) {
-                console.error(`⚠️ Notification warning for ${job.project_id}: ${notifyErr.message}`);
+                console.error(`⚠️ Notification unavailable for project ${job.project_id}; processing remains complete.`);
             }
         }
     } catch (error) {
