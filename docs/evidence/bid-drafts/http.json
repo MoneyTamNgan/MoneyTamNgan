@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-11-15T13:44:15.842Z",
+  "fixtureOnly": true,
+  "generator": "simulated at existing proposal API boundary; no Vertex call",
+  "checks": [
+    "Atomic Atlas per-user quota: eight simultaneous creates yield exactly five drafts",
+    "HTTP BOLA: foreign read, update, delete and export are 404; every anonymous draft route is 401",
+    "HTTP content limits, stale export and empty draft errors; simultaneous saves yield one 200 and one 409",
+    "Headless editor add/edit/save/reload, visible sources/placeholders and mobile navigation separation pass",
+    "Browser confirmation downloads a valid DOCX containing Thai checklist, reasoning, pages, draft sources and highlighted placeholders",
+    "Generator output fixture imports through the existing job API shape into real owned draft storage with sources retained",
+    "FR-4.7 delete-all removes owner drafts and preserves another user’s draft",
+    "Export audit includes owner, timestamp and IP without draft content"
+  ],
+  "audit": [
+    {
+      "event": "bid_prep_draft_exported",
+      "userId": "[fixture-owner]",
+      "timestamp": "2026-11-15T13:44:22.718Z",
+      "path": "/api/bid-prep/drafts/6af9b734e040e4bbc4bb3cb1/export",
+      "clientAddress": "203.0.113.39",
+      "draftId": "[fixture-draft]",
+      "projectId": "BIDPREP-E2E"
+    },
+    {
+      "event": "bid_prep_draft_exported",
+      "userId": "[fixture-owner]",
+      "timestamp": "2026-11-15T13:44:24.456Z",
+      "path": "/api/bid-prep/drafts/6af9b734e040e4bbc4bb3cb1/export",
+      "clientAddress": "127.0.0.1",
+      "draftId": "[fixture-draft]",
+      "projectId": "BIDPREP-E2E"
+    }
+  ]
+}
