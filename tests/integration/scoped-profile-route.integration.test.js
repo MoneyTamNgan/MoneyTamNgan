@@ -13,7 +13,7 @@ beforeEach(() => {
     User.findByIdAndUpdate.mockReturnValue({ select: () => ({ lean: async () => fixture }) });
 });
 const patch = (headers, body = {}) => PATCH(new Request('http://localhost:3000/api/profiles', {
-    method: 'PATCH', headers: { Origin: 'http://localhost:3000', ...headers }, body: JSON.stringify(body),
+    method: 'PATCH', headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body),
 }));
 it('validates real JWT profile:write and only updates its owner despite injected IDs/roles', async () => {
     const Authorization = `Bearer ${await signSession({ sub: 'owner', role: 'user' })}`;
