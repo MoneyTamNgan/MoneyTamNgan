@@ -57,6 +57,6 @@ The implementation preserves the existing match-score API, worker processing and
 ### Verification recorded during implementation
 
 - 280 Node tests and 312 Vitest tests passed locally (592 total).
-- Production build passed; focused Resend tests use a mocked SDK and verify escaping, provider idempotency options and sanitized failure logs.
+- Production build passed; focused Resend tests use a mocked HTTP transport and verify escaping, provider idempotency options and sanitized failure logs.
 - After the owner enabled Atlas access, the isolated live fixture passed: normalized hydration, five concurrent hooks with one immediate send, queued digest, repeat-send deduplication, transaction rollback and stale-owner fencing. The test database name was shortened to fit Atlas limits. Evidence: [notification-atlas.json](evidence/notification-atlas.json). Transport was mocked; the disposable test database was removed.
 - No real email was sent: `RESEND_API_KEY` and `EMAIL_FROM` were absent locally. The owner authorized one test inbox; credentials must be configured before sending. A received-email screenshot remains pending.
