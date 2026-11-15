@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-import 'dotenv/config';
+import '../lib/load-local-env.js';
 import mongoose from 'mongoose';
 import { connectMongoWithDnsFallback } from '../lib/mongo-network.js';
+import NotificationDelivery from '../models/NotificationDelivery.js';
+import NotificationBatch from '../models/NotificationBatch.js';
 import Document from '../models/Document.js';
 import DocumentPage from '../models/DocumentPage.js';
 import DocumentSummary from '../models/DocumentSummary.js';
@@ -21,6 +23,8 @@ import { embeddingConfig } from '../lib/embedding-config.js';
 import { ensureVectorSearchIndex, VECTOR_INDEX_NAME } from '../lib/vector-index.js';
 
 const MODELS = [
+    NotificationDelivery,
+    NotificationBatch,
     Project,
     Document,
     ExtractionRun,
