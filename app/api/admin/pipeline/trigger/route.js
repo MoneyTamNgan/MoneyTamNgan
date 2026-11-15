@@ -1,134 +1,51 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { withRouteSecurity } from '@/lib/route-security';
+import { requestPrincipal } from '@/lib/request-authorization';
+import { pipelineAuditContext, logPipelineAudit } from '@/lib/admin-pipeline-audit';
+import { pipelineStore } from '@/lib/admin-pipeline-store';
 import connectDB from '@/lib/db';
-import { getStatus, triggerPipeline } from '@/lib/services/pipeline-runner';
+import { triggerPipeline } from '@/lib/services/pipeline-runner';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-function badRequest(message) {
-    return NextResponse.json({
-        status: 'failed',
-        error: { code: 'INVALID_PIPELINE_REQUEST', message },
-    }, { status: 400 });
-}
-
-/**
- * POST /api/admin/pipeline/trigger
- *
- * Triggers the full end-to-end data pipeline from start to finish:
- * 1. Open tender RSS discovery & software keyword classification
- * 2. TOR & Announcement dual-document acquisition (Hybrid P5)
- * 3. Text extraction, Thai OCR & Vertex AI summarization & risk scoring
- * 4. Contractor skill matching & notification dispatch
- *
- * Body (optional):
- *   {
- *     limit?: number,         // Max tenders to process (default: 5, max: 50)
- *     depts?: string[],       // Array of 4-digit RSS department IDs
- *     projectIds?: string[],  // Specific project IDs to process
- *     allowBrowser?: boolean, // Enable Puppeteer fallback (default: true)
- *     sync?: boolean          // Wait for pipeline completion (default: false)
- *   }
- */
 async function handlePOST(request) {
-    try {
+    const actor = pipelineAuditContext(request, await requestPrincipal(request));
+    const invalid = async message => {
         await connectDB();
-
-        let body = {};
-        try {
-            body = await request.json();
-        } catch {
-            // Empty body is valid, defaults used
+        await pipelineStore.audit({ ...actor, outcome: 'invalid_request', http_status: 400 });
+        return NextResponse.json({ status: 'failed', error: { code: 'INVALID_PIPELINE_REQUEST', message } }, { status: 400 });
+    };
+    try {
+        const reader = request.body?.getReader();
+        const chunks = []; let size = 0;
+        if (reader) while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            size += value.byteLength;
+            if (size > 8192) { await reader.cancel(); return await invalid('Request body must not exceed 8 KiB'); }
+            chunks.push(Buffer.from(value));
         }
-
-        const { limit = 5, depts, projectIds, allowBrowser = true, sync = false, force = false, tenders } = body;
-
-        if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
-            return badRequest('limit must be an integer between 1 and 50');
-        }
-
-        if (depts !== undefined && (!Array.isArray(depts) || depts.some(d => typeof d !== 'string'))) {
-            return badRequest('depts must be an array of department ID strings');
-        }
-
-        if (projectIds !== undefined && (!Array.isArray(projectIds) || projectIds.some(id => typeof id !== 'string'))) {
-            return badRequest('projectIds must be an array of project ID strings');
-        }
-
-        if (typeof allowBrowser !== 'boolean' || typeof sync !== 'boolean' || typeof force !== 'boolean') {
-            return badRequest('allowBrowser, sync, and force must be booleans');
-        }
-
-        const currentStatus = getStatus();
-        if (currentStatus.status === 'running') {
-            return NextResponse.json({
-                status: 'conflict',
-                error: {
-                    code: 'PIPELINE_ALREADY_RUNNING',
-                    message: 'A data pipeline run is already in progress',
-                },
-                currentRun: currentStatus,
-            }, { status: 409 });
-        }
-
-        if (sync) {
-            const result = await triggerPipeline({
-                limit,
-                depts,
-                projectIds,
-                tenders,
-                allowBrowser,
-                sync: true,
-                force,
-            });
-
-            return NextResponse.json({
-                status: 'completed',
-                runId: result.id,
-                summary: result.summary,
-                completedAt: result.completedAt,
-                run: result,
-            }, { status: 200 });
-        }
-
-        const run = triggerPipeline({
-            limit,
-            depts,
-            projectIds,
-            tenders,
-            allowBrowser,
-            sync: false,
-            force,
-        });
-
-        return NextResponse.json({
-            status: 'accepted',
-            runId: run.id,
-            message: 'Data pipeline run started in background',
-            statusUrl: '/api/admin/pipeline/status',
-            run,
-        }, { status: 202 });
+        const text = Buffer.concat(chunks).toString('utf8');
+        let body;
+        try { body = text.trim() ? JSON.parse(text) : {}; }
+        catch { return await invalid('Request body must be valid JSON'); }
+        if (!body || typeof body !== 'object' || Array.isArray(body)) return await invalid('Request body must be an object');
+        const { limit = 5, depts, projectIds, allowBrowser = true, sync = false, force = false } = body;
+        if (!Number.isInteger(limit) || limit < 1 || limit > 50) return await invalid('limit must be an integer between 1 and 50');
+        if (depts !== undefined && (!Array.isArray(depts) || depts.length > 100 || depts.some(id => typeof id !== 'string' || !/^\d{4}$/.test(id)))) return await invalid('depts must contain at most 100 four-digit department IDs');
+        if (projectIds !== undefined && (!Array.isArray(projectIds) || projectIds.length > limit || projectIds.some(id => typeof id !== 'string' || !/^\d{11}$/.test(id)))) return await invalid('projectIds must contain at most limit eleven-digit project IDs');
+        if (typeof allowBrowser !== 'boolean' || typeof force !== 'boolean' || sync !== false) return await invalid('allowBrowser and force must be booleans; sync must be false (this endpoint is always asynchronous)');
+        if ('tenders' in body) return await invalid('Raw tender injection is not supported; use projectIds');
+        await connectDB();
+        const run = await triggerPipeline({ limit, depts, projectIds, allowBrowser, force }, actor, after);
+        return NextResponse.json({ status: 'accepted', jobId: run.id, runId: run.id, startedAt: run.startedAt,
+            message: 'Data pipeline run started in background', statusUrl: '/api/admin/pipeline/status', run }, { status: 202 });
     } catch (error) {
-        if (error.code === 'PIPELINE_ALREADY_RUNNING') {
-            return NextResponse.json({
-                status: 'conflict',
-                error: {
-                    code: 'PIPELINE_ALREADY_RUNNING',
-                    message: error.message,
-                },
-                currentRun: getStatus(),
-            }, { status: 409 });
-        }
-
-        console.error('❌ Failed to trigger admin pipeline:', error);
-        return NextResponse.json({
-            status: 'failed',
-            error: {
-                code: 'PIPELINE_TRIGGER_FAILED',
-                message: error.message,
-            },
-        }, { status: 500 });
+        if (error.code === 'PIPELINE_ALREADY_RUNNING') return NextResponse.json({ status: 'conflict',
+            error: { code: error.code, message: 'A data pipeline run is already in progress' }, currentRun: error.currentRun }, { status: 409 });
+        logPipelineAudit({ ...actor, outcome: 'start_failed', http_status: 503 });
+        return NextResponse.json({ status: 'failed', error: { code: 'PIPELINE_TRIGGER_FAILED', message: 'Pipeline control is unavailable; no new run was started' } }, { status: 503 });
     }
 }
 

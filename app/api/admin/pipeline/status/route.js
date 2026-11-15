@@ -15,7 +15,7 @@ async function handleGET() {
     try {
         await connectDB();
 
-        const run = getStatus();
+        const run = await getStatus();
 
         let dbStats = null;
         try {
@@ -34,12 +34,12 @@ async function handleGET() {
             dbStats,
         }, { status: 200 });
     } catch (error) {
-        console.error('❌ Failed to get pipeline status:', error);
+        console.error(JSON.stringify({ event: 'pipeline_status_error', name: error?.name || 'Error' }));
         return NextResponse.json({
             status: 'failed',
             error: {
                 code: 'STATUS_CHECK_FAILED',
-                message: error.message,
+                message: 'Pipeline status is unavailable',
             },
         }, { status: 500 });
     }
@@ -52,18 +52,21 @@ async function handleGET() {
  */
 async function handleDELETE() {
     try {
-        const run = resetStatus();
+        await connectDB();
+        const run = await resetStatus();
         return NextResponse.json({
             status: 'ok',
             message: 'Pipeline status reset to idle',
             run,
         }, { status: 200 });
     } catch (error) {
+        if (error.code === 'PIPELINE_ALREADY_RUNNING') return NextResponse.json({ status: 'conflict',
+            error: { code: error.code, message: 'An active run cannot be reset' }, currentRun: error.currentRun }, { status: 409 });
         return NextResponse.json({
             status: 'failed',
             error: {
                 code: 'STATUS_RESET_FAILED',
-                message: error.message,
+                message: 'Pipeline status reset is unavailable',
             },
         }, { status: 500 });
     }

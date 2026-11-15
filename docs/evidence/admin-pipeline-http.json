@@ -1,0 +1,111 @@
+{
+  "checks": [
+    "Real MongoDB atomic lock: 1 winner across 5 independent controllers",
+    "HTTP 401/403 and 409 on occupied shared lock",
+    "Restart/expired-lease recovery and stale callback fencing",
+    "Actual admin session trigger -> 202 -> persisted completed status",
+    "Durable who/when/IP audit; no credentials in evidence"
+  ],
+  "responses": {
+    "202": {
+      "status": "accepted",
+      "jobId": "pipe_1794503702659_7300ca31-a3be-4ab8-ada1-a40d264ad890",
+      "runId": "pipe_1794503702659_7300ca31-a3be-4ab8-ada1-a40d264ad890",
+      "startedAt": "2026-11-12T17:15:02.659Z",
+      "message": "Data pipeline run started in background",
+      "statusUrl": "/api/admin/pipeline/status",
+      "run": {
+        "id": "pipe_1794503702659_7300ca31-a3be-4ab8-ada1-a40d264ad890",
+        "status": "running",
+        "phase": "starting",
+        "startedAt": "2026-11-12T17:15:02.659Z",
+        "completedAt": null,
+        "error": null,
+        "errorCode": null,
+        "progress": {
+          "current": 0,
+          "total": 0,
+          "percent": 5,
+          "stage": "initializing",
+          "message": "Pipeline starting"
+        },
+        "summary": {
+          "discovered": 0,
+          "candidates": 0,
+          "documentsAcquired": 0,
+          "processed": 0,
+          "notified": 0,
+          "errors": []
+        }
+      }
+    },
+    "403": {
+      "error": {
+        "code": "INSUFFICIENT_SCOPE",
+        "message": "Required permission is missing"
+      }
+    },
+    "409": {
+      "status": "conflict",
+      "error": {
+        "code": "PIPELINE_ALREADY_RUNNING",
+        "message": "A data pipeline run is already in progress"
+      },
+      "currentRun": {
+        "id": "pipe_1794503700324_1d841e0d-6db0-4876-9cf9-c4491eb70d81",
+        "status": "running",
+        "phase": "starting",
+        "startedAt": "2026-11-12T17:15:00.324Z",
+        "completedAt": null,
+        "error": null,
+        "errorCode": null,
+        "progress": {
+          "current": 0,
+          "total": 0,
+          "percent": 5,
+          "stage": "initializing",
+          "message": "Pipeline starting"
+        },
+        "summary": {
+          "discovered": 0,
+          "candidates": 0,
+          "documentsAcquired": 0,
+          "processed": 0,
+          "notified": 0,
+          "errors": []
+        }
+      }
+    },
+    "completed": {
+      "status": "ok",
+      "run": {
+        "id": "pipe_1794503702659_7300ca31-a3be-4ab8-ada1-a40d264ad890",
+        "status": "completed",
+        "phase": "completed",
+        "startedAt": "2026-11-12T17:15:02.659Z",
+        "completedAt": "2026-11-12T17:15:03.256Z",
+        "error": null,
+        "errorCode": null,
+        "progress": {
+          "current": 0,
+          "total": 0,
+          "percent": 100,
+          "stage": "completed",
+          "message": "การประมวลผลเสร็จสมบูรณ์: นำเข้า 0 เอกสาร, สรุปแล้ว 0 รายการ, แจ้งเตือนผู้รับเหมา 0 ครั้ง"
+        },
+        "summary": {
+          "discovered": 1,
+          "candidates": 0,
+          "documentsAcquired": 0,
+          "processed": 0,
+          "notified": 0,
+          "errors": []
+        }
+      },
+      "dbStats": {
+        "totalProjects": 1,
+        "withSummary": 0
+      }
+    }
+  }
+}
