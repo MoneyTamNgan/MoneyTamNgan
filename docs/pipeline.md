@@ -51,6 +51,44 @@ flowchart TD
 
 Orchestration is `processProject` in `lib/processing-pipeline.js`. API requests only enqueue a job in MongoDB; `scripts/worker.js` runs jobs with leases and bounded retries, so a crashed worker never leaves a job stuck in `running`.
 
+## Where the data comes from
+
+| Source | What it gives | Used for |
+|---|---|---|
+| e-GP Open Data API (`lib/egp-api.js`) | structured project metadata and a `pdf_url` when known | stage 1, stage 2 |
+| e-GP announcement RSS, per department (`lib/egp-rss.js`) | `B0`: draft bidding documents (ZIP). `D0`: invitation announcement (PDF) | stages 3 and 4 (the invitation supplies the submission window, agency and reference price; the ZIP supplies the TOR) |
+| Official e-GP detail page (Puppeteer) | the document when nothing above has it | stage 4, last resort |
+
+## Jobs, retries and recovery
+
+API requests never process a TOR themselves. They enqueue a job in the `processingjobs` collection and the worker (`scripts/worker.js`) picks it up.
+
+| Rule | Value | Code |
+|---|---|---|
+| Claim | oldest queued job; the worker takes a **lease** of 10 minutes and the attempt counter goes up | `claimNextJob` in `lib/job-queue.js` |
+| Attempts | up to 3 per job by default (`max_attempts`) | `lib/job-queue.js` |
+| Retry backoff | 30 s, doubling each attempt, capped at 1 hour; a non-retryable error fails the job at once | `lib/job-queue.js` |
+| Crashed worker | a `running` job whose lease has expired goes back to `queued` | `lib/job-queue.js` |
+| Duplicate requests | a project that already has a queued or running job is not enqueued twice | `lib/job-queue.js` |
+| Recovery sweep | plans which stuck projects to re-enqueue (skips summarised, terminal, not-software and manual-review projects) | `lib/processing-recovery.js` |
+| Browser failures | retried with backoff; a circuit breaker pauses the run after repeated transient failures so an e-GP outage does not use up every attempt | `lib/tender-acquisition.js` |
+| Scheduler | runs ingestion then scraping at 06:00, 12:00 and 18:00 Asia/Bangkok; each run is stored in `ingestionruns` | `scripts/ingestion-scheduler.js`, [reference.md](reference.md#automated-ingestion-schedule) |
+
+## Statuses
+
+`processing.status` (mirrored in `workflow.status`) tells you where a project is:
+
+| Status | Meaning | Who moves it on |
+|---|---|---|
+| `irrelevant` | classified as not software | nobody (admin can override the classification) |
+| `metadata_only` | tender closed or cancelled, or the document was never published | nobody |
+| `review_required` | needs a human: uncertain classification, unknown eligibility, unreadable document, partial or low-confidence AI result | admin review queue (`/api/processing/review`, `/api/admin/classification`) |
+| `retry_pending` | a retryable failure (network, e-GP 5xx, browser, Vertex) | the worker, with backoff |
+| `document_downloaded`, `text_extraction_pending`, `text_extracted`, `ai_pending` | in progress between stages | the worker |
+| `completed` | summary and evidence stored | done; the embedding sweep adds the vector |
+
+Admins can start a run and watch its progress through `/api/admin/pipeline/trigger` and `/api/admin/pipeline/status`; these actions are recorded by `lib/admin-pipeline-audit.js`. Check progress with `GET /api/processing/status` and `GET /api/ingestion/status`.
+
 ## Run it
 
 ```bash
