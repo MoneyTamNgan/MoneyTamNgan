@@ -33,7 +33,7 @@ Comparison of TOR qualifications stays `manual` here. Issue #137 owns the rules.
 | Proposal draft text and sources | The user edits and exports them | Until that draft or all company data is deleted. |
 | Audit record: user id, ISO-8601 time, client address, draft id, project id | Draft created, exported, or data deleted | Operational log only. No draft text, profile or secret. |
 
-The customer has not confirmed a retention period (SRS sign-off is #143). No automatic expiry is applied, and this file must be updated when they give one. Do not invent a period.
+**Decision (team, 16 Nov 2026): data is kept until the user deletes it. No automatic expiry is applied.** The customer was asked (SRS question 6, #143) and has not confirmed in writing yet. If they give a period, update this file, `ASVS_CHECKLIST.md` and `THREAT_MODEL.md` (TH-14). Do not invent a period. All team decisions on the SRS questions: [../bid-prep-decisions.md](../bid-prep-decisions.md).
 
 ## Vertex and logs
 
