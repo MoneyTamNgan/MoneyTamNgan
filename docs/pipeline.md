@@ -176,6 +176,20 @@ API requests never process a TOR themselves. They enqueue a job in the `processi
 
 Admins can start a run and watch its progress through `/api/admin/pipeline/trigger` and `/api/admin/pipeline/status`; these actions are recorded by `lib/admin-pipeline-audit.js`. Check progress with `GET /api/processing/status` and `GET /api/ingestion/status`.
 
+## Trial on live e-GP (16 November 2026)
+
+Run on a development machine with a local MongoDB (not Atlas) and Vertex turned off, so it covers steps 1 to 5.
+
+| Step | What was run | Result |
+|---|---|---|
+| 1. Ingest | `POST /api/ingestion/trigger` with the default year | fiscal year 2570 returned **0 records**: it only began in October, so the contract dataset is empty |
+| 1. Ingest | same, `year` 2569, `limit` 40 | 40 records in 8 s: 22 not software, 12 uncertain (saved as candidates), 6 already contracted. None was an open bid, because this dataset lists contracts |
+| 3. Discover open bids | `ingest-open-tenders.js --depts=1507,2102,0703 --dry-run` | 51 open tenders, 1 software; the `B0` feeds of departments 2102 and 0703 timed out and the run carried on |
+| 4. Acquire | same script on the software tender | invitation PDF stored and its window parsed (20 Nov 2026, 09:00 to 12:00); TOR taken **through the browser route** (aggregator, official page, e-Bidding ZIP, `12. TOR_software_Genomic.pdf` chosen) in about 9 s |
+| 3 and 5. Worker | the queued `process_project` job | stopped at eligibility, see below |
+
+**Finding.** The worker re-checks that bidding is open. When it reuses a stored schedule (less than 15 minutes old) it reads `submission_schedule.ends_at` from MongoDB, which is a `Date`, but `parseBidDeadline` only accepts strings. The project is then marked `unknown` ("No unambiguous bid closing timestamp") and ends as `review_required` although the deadline is 4 days away. Checked directly: `assessProcurementEligibility({ bid_deadline: '2026-11-20T05:00:00.000Z' })` is `open`, the same value as a `Date` is `unknown`. Text extraction and Vertex were therefore not reached for this tender.
+
 ## Run it
 
 ```bash
