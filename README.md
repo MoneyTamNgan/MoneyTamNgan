@@ -86,6 +86,7 @@ Start, stop and rollback on a demo machine: [docs/local-deployment.md](docs/loca
 - [docs/vector-search.md](docs/vector-search.md): embeddings and the Atlas Vector Search index
 - [docs/admin-pipeline-control.md](docs/admin-pipeline-control.md): admin pipeline controls
 - [docs/company-profile.md](docs/company-profile.md): company profile for bids
+- [tests/e2e/](tests/e2e/README.md): browser test for username login (Playwright) and its evidence
 
 ## Branches and CI
 
