@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import { SESSION_COOKIE, signSession } from '@/lib/auth';
+import { securityHeaders } from '@/lib/security-policy';
 import { proxy } from '@/proxy';
 
 const request = (path, init = {}) => new NextRequest(`http://localhost:3000${path}`, init);
@@ -121,6 +122,33 @@ describe('proxy middleware', () => {
                 })
             );
             expect(invalidRes.status).toBe(401);
+        });
+    });
+
+    describe('trailing-slash redirects (ASVS V3.2.1)', () => {
+        it.each([
+            ['/api/health/', 'http://localhost:3000/api/health'],
+            ['/api/health/?limit=5&q=a%2Fb', 'http://localhost:3000/api/health?limit=5&q=a%2Fb'],
+            ['/api/health///', 'http://localhost:3000/api/health'],
+            ['/dashboard/', 'http://localhost:3000/dashboard'],
+            ['/profile/', 'http://localhost:3000/profile'],
+        ])('308 %s to %s with nosniff and HSTS', async (path, location) => {
+            const response = await proxy(request(path));
+            expect(response.status).toBe(308);
+            expect(response.headers.get('location')).toBe(location);
+            expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+            expect(response.headers.get('strict-transport-security')).toBe('max-age=31536000; includeSubDomains');
+            for (const header of securityHeaders()) {
+                expect(response.headers.get(header.key)).toBe(header.value);
+            }
+        });
+
+        it('leaves the root path and slash-less paths unchanged', async () => {
+            for (const path of ['/', '/?q=1', '/api/health', '/api/health?limit=5', '/dashboard']) {
+                const response = await proxy(request(path));
+                expect(response.status, path).not.toBe(308);
+                expect(response.headers.get('location'), path).toBeNull();
+            }
         });
     });
 });
