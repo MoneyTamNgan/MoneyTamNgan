@@ -37,12 +37,18 @@ test('stored OCR pages can be reanalyzed without scraping or OCR', async () => {
         },
         saveSummaryBundle: async (...args) => {
             saved = args;
-            return { _id: 'summary-v3' };
+            return { _id: 'summary-v3', extraction };
+        },
+        enrichPastProject: async summary => {
+            assert.ok(saved, 'normal summary has already been saved');
+            assert.equal(summary.extraction, extraction);
+            return { reused: false, requirement: { status: 'not_stated' } };
         },
     });
     assert.equal(result.status, 'review_required');
     assert.equal(result.reused, false);
     assert.equal(result.documentSummaryId, 'summary-v3');
+    assert.equal(result.pastProjectEnrichment.status, 'completed');
     assert.equal(saved[5], true);
     assert.equal(saved[3].textHash, 'text-hash');
     assert.equal(updates.length, 0);
@@ -60,9 +66,14 @@ test('stored v3 summary is reused idempotently', async () => {
         ExtractionRunModel: { findById: () => lean({ _id: 'run-1', document_id: 'document-1' }) },
         SummaryModel: { findOne: () => lean({ _id: 'summary-v3', needs_review: false,
             extraction: { risk_findings: [] } }) },
+        enrichPastProject: async summary => {
+            assert.equal(updates[0][1].$set.latest_summary_id, summary._id);
+            return { reused: false, requirement: { status: 'manual_review' } };
+        },
     });
     assert.equal(result.reused, true);
     assert.equal(result.status, 'completed');
+    assert.equal(result.pastProjectEnrichment.requirement.status, 'manual_review');
     assert.equal(updates[0][1].$set.latest_summary_id, 'summary-v3');
 });
 
@@ -78,6 +89,7 @@ test('cached summary reuse refreshes budget policy without another Vertex call',
         DocumentModel: { findById: () => lean({ _id: 'doc' }) },
         ExtractionRunModel: { findById: () => lean({ _id: 'run', document_id: 'doc' }) },
         SummaryModel: { findOne: () => lean({ _id: 'summary', extraction: {} }) },
+        enrichQualifications: false,
         extractWithVertex: () => assert.fail('cached summary must not invoke Vertex'),
     });
     assert.equal(update.$set['anomalies.baseline_price'], 100);

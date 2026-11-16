@@ -8,6 +8,9 @@ import ProjectSummaryCard from "@/components/ui/ProjectSummaryCard";
 import SchedulePlanCard from "@/components/ui/SchedulePlanCard";
 import TechStackComparisonCard from "@/components/ui/TechStackComparisonCard";
 import NoEgpSubmissionNotice from "@/components/ui/NoEgpSubmissionNotice";
+import PastProjectValueCard from "@/components/ui/PastProjectValueCard";
+import TorBidChecklistCard from "@/components/ui/TorBidChecklistCard";
+import TorChecklistProvider from "@/components/ui/TorChecklistProvider";
 import { getTorDetail } from "@/lib/services/tor-service";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 
@@ -193,6 +196,7 @@ export default async function TorOverviewPage({ params }) {
   const bidEndTime = submissionEndTime(project.bidding);
 
   return <AppShell title="ภาพรวม TOR" hideTitle><div className="tor-overview-layout"><aside className="tor-overview-side"><p>ภาพรวม TOR</p><div className="tor-overview-utility"><Link className="tor-home-button" href="/dashboard">← กลับสู่หน้าแรก</Link>{torPdfUrl && <a className="tor-header-pdf" href={torPdfUrl} target="_blank" rel="noreferrer">เปิด TOR PDF ↗</a>}</div></aside><div className="tor-overview">
+    <TorChecklistProvider key={project.project_id} projectId={session ? project.project_id : null}>
     {!session && (
       <aside className="guest-login-banner" aria-label="แจ้งเตือนการเข้าสู่ระบบ">
         <div className="guest-login-banner-content">
@@ -215,9 +219,12 @@ export default async function TorOverviewPage({ params }) {
     <p className="tor-bid-prep-entry"><Link href={`/bid-prep?projectId=${encodeURIComponent(project.project_id)}`}>เตรียมร่างข้อเสนอและ checklist สำหรับ TOR นี้ →</Link></p>
     <ProjectSummaryCard summary={project.extracted_data.summary} />
     <section className="tor-detail-grid"><article className="tor-detail-card"><p className="tor-section-kicker">ข้อมูลโครงการ</p><h2>รายละเอียดที่จัดเก็บ</h2><dl><div><dt>หน่วยงาน</dt><dd>{valueOrUnknown(project.dept_name)}</dd></div><div><dt>หน่วยงานย่อย / ฝ่าย</dt><dd>{valueOrUnknown(project.dept_sub_name)}</dd></div><div><dt>สถานะการยื่นข้อเสนอ</dt><dd>{status.label}</dd></div><div><dt>สถานะ TOR</dt><dd>{stage.label}</dd></div><div><dt>วันยื่นข้อเสนอ</dt><dd>{bidDate}</dd></div><div><dt>เวลาเปิดรับข้อเสนอ</dt><dd>{bidStartTime !== "ยังไม่มีข้อมูล" ? `${bidStartTime} น.` : bidStartTime}</dd></div><div><dt>เวลาปิดรับข้อเสนอ</dt><dd>{bidEndTime !== "ยังไม่มีข้อมูล" ? `${bidEndTime} น.` : bidEndTime}</dd></div><div><dt>TOR PDF</dt><dd>{torPdfUrl ? <a className="tor-document-link" title={torDocument?.filename ?? "เปิดเอกสาร TOR"} href={torPdfUrl} target="_blank" rel="noreferrer">{torDocument?.filename ?? "เปิดเอกสาร TOR"} ↗</a> : "ยังไม่มีเอกสาร TOR"}</dd></div><div><dt>ประกาศเชิญชวน PDF</dt><dd>{announcementDocument?.sourceUrl ? <a className="tor-document-link" title={announcementDocument.filename ?? "เปิดประกาศเชิญชวน"} href={announcementDocument.sourceUrl} target="_blank" rel="noreferrer">{announcementDocument.filename ?? "เปิดประกาศเชิญชวน"} ↗</a> : "ยังไม่มีประกาศเชิญชวน"}</dd></div><div><dt>บันทึกข้อมูลเมื่อ</dt><dd>{thaiDate(project.created_at)}</dd></div><div><dt>ปรับปรุงข้อมูลเมื่อ</dt><dd>{thaiDate(project.updated_at)}</dd></div></dl></article><BidderQualificationCard items={qualificationItems} hasDocument={hasDocument} /></section>
+    {session && <PastProjectValueCard pdfUrl={torPdfUrl} />}
     <SchedulePlanCard announceDate={project.timeline.announce_date} opensAt={project.bidding.opensAt} closesAt={project.bidding.closesAt} contractStart={project.timeline.contract_start} contractEnd={project.timeline.contract_end} durationDays={project.timeline.duration_days} />
     <DocumentObservationsCard anomalies={project.anomalies} />
     <section className="tor-extracted-data"><AdditionalInfoCard scopeItems={project.extracted_data.scope_of_work} /></section>
     <TechStackComparisonCard items={project.extracted_data.tech_stack} />
+    {session && <TorBidChecklistCard projectId={project.project_id} pdfUrl={torPdfUrl} />}
+    </TorChecklistProvider>
   </div></div></AppShell>;
 }

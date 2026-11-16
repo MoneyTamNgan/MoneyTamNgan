@@ -49,6 +49,10 @@ async function runOne() {
             return true;
         }
         const result = job.type === 'verify_candidate' ? await verifyDiscoveryCandidate(job.project_id) : await processProject(job.project_id, { runId: String(job._id), onProgress: progress => {
+            if (progress.stage === 'past_project_pending') {
+                console.warn(`Past-project minimum pending for ${job.project_id}: ${progress.message}`);
+                return;
+            }
             console.log(`Vertex ${progress.stage}: ${progress.chunk || progress.attempt}/${progress.total || 'retry'}`);
         } });
         if (result.retryable) throw new Error(result.eligibility?.reason || 'Verification unavailable');
