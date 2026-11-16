@@ -27,6 +27,18 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Fails on high or critical advisories in package-lock.json (ASVS V15.2.1, #188).
+      # Moderate and low are reported but do not block. Needs no install.
+      - run: npm audit --package-lock-only --audit-level=high
+
   test:
     name: Test (mocked data)
     runs-on: ubuntu-latest
