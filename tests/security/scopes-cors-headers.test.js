@@ -108,6 +108,10 @@ it('never allows wildcard or malformed configured origins and does not trust arb
     expect(allowedOrigins({ NODE_ENV: 'production' })).toEqual(['http://localhost:3000', 'http://127.0.0.1:3000']);
 });
 
+it('lets proxy.js own trailing-slash redirects so they can carry security headers', () => {
+    expect(config.skipTrailingSlashRedirect).toBe(true);
+});
+
 it('configures all five headers plus conditional exact-origin CORS in next.config.js', async () => {
     expect(config.poweredByHeader).toBe(false);
     const rules = await config.headers();
