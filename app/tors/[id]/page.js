@@ -12,7 +12,8 @@ import PastProjectValueCard from "@/components/ui/PastProjectValueCard";
 import TorBidChecklistCard from "@/components/ui/TorBidChecklistCard";
 import TorChecklistProvider from "@/components/ui/TorChecklistProvider";
 import { getTorDetail } from "@/lib/services/tor-service";
-import { SESSION_COOKIE, verifySession } from "@/lib/auth";
+import { SESSION_COOKIE } from "@/lib/auth";
+import { verifyActiveSession } from "@/lib/account-status";
 
 function valueOrUnknown(value) {
   return value || "ยังไม่มีข้อมูล";
@@ -175,7 +176,7 @@ export default async function TorOverviewPage({ params }) {
   const requestHeaders = await headers();
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
-  const session = token ? await verifySession(token) : null;
+  const session = token ? await verifyActiveSession(token) : null;
 
   const tor = await getTorDetail(id, getApiOrigin(requestHeaders), requestHeaders);
   const project = tor ? detailToProjectRecord(tor) : null;

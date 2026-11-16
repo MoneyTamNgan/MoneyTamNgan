@@ -200,6 +200,8 @@ async function handleGET(request) {
                 const session = await verifySession(token);
                 if (session?.sub) {
                     userDoc = await User.findOne({ _id: session.sub }).lean();
+                    // A disabled account is served as a guest (ASVS V7.4.2).
+                    if (userDoc?.disabled === true) userDoc = null;
                 }
             }
         } catch (err) {
