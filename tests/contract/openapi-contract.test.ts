@@ -188,6 +188,8 @@ describe("TOR API responses match docs/api/openapi.yaml", () => {
             },
             truncated: false,
             items: [{
+                id: "a".repeat(64),
+                overrideStatus: null,
                 requirement: "ทุนจดทะเบียน",
                 status: "manual",
                 reason: "Not compared automatically.",

@@ -28,6 +28,8 @@ const UserSchema = new Schema({
     picture: String,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     bid_prep_revision: { type: Number, default: 0, select: false },
+    bid_checklist_revision: { type: Number, select: false },
+    bid_checklist_statuses: { type: Map, of: { type: String, enum: ['pass', 'fail', 'manual'] }, select: false },
     techStack: { type: [String], default: [] },
     company_name: { type: String, default: '', trim: true, maxlength: LIMITS.company_name },
     registration_number: { type: String, default: '', trim: true, maxlength: LIMITS.registration_number },

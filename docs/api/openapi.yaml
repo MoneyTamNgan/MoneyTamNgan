@@ -1716,9 +1716,9 @@ paths:
     get:
       summary: Checklist for one TOR using the signed-in user's profile
       description: >
-        The checklist includes a past-project value comparison backed by TOR
-        evidence. Qualification items require manual review. A user id in
-        the query is ignored. Missing or unprocessed TORs return 404 or 409.
+        The checklist can automatically check a verified past-project minimum
+        as a separate value-only item. Items include any status overrides saved by the caller.
+        A user id in the query is ignored. Missing or unprocessed TORs return 404 or 409.
       operationId: getBidPrepChecklist
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }]
@@ -1755,6 +1755,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    patch:
+      summary: Set or clear the caller's checklist item status override
+      operationId: updateBidPrepChecklistStatus
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/BidPrepProjectIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itemId, status]
+              properties:
+                itemId: { type: string, pattern: "^[a-f0-9]{64}$" }
+                status:
+                  type: string
+                  nullable: true
+                  enum: [pass, fail, manual, null]
+                  description: Use null to restore the automatic status.
+      responses:
+        "200":
+          description: Updated checklist for the caller
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BidPrepChecklist" }
+        "400":
+          description: Invalid checklist item ID or status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Request origin or scope is not allowed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: TOR or checklist item not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: TOR has not been processed or the caller's Bid Prep data changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "413":
+          description: Request body is too large
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "415":
+          description: Request body must be JSON
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
 components:
   securitySchemes:
@@ -2823,10 +2890,12 @@ components:
         draftsDeleted: { type: integer, minimum: 0 }
     BidPrepChecklistItem:
       type: object
-      required: [requirement, status, reason, evidencePages, needsReview]
+      required: [id, requirement, status, overrideStatus, reason, evidencePages, needsReview]
       properties:
+        id: { type: string, pattern: "^[a-f0-9]{64}$" }
         requirement: { type: string }
         status: { type: string, enum: [pass, fail, manual] }
+        overrideStatus: { type: string, nullable: true, enum: [pass, fail, manual, null] }
         reason: { type: string }
         evidencePages:
           type: array
