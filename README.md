@@ -26,6 +26,7 @@ Tracks software-related TOR (procurement) projects from Thailand's e-GP portal: 
 - [Sprint api planing](https://docs.google.com/spreadsheets/d/1aXUlWRg__PmH6LtbzPxBnOCS7z7v9pk-xxEpwySVCU0/edit?usp=sharing): sprint API plan (ticket, endpoint, expected response, status).
 - [MoneyTamNgan Secure Test](https://docs.google.com/spreadsheets/d/1zl9NWZmycvNj0Brg7PMB2kdizVcQq-ihKPNbVODycvY/edit?usp=sharing): STRIDE and ASVS security catalog with project status.
 - [TOR Discovery, Extraction, and Display](docs/tor-flow.md): sequence diagram of the pipeline.
+- [TOR pull pipeline](docs/pipeline.md): stage-by-stage flowchart with statuses and code locations.
 
 ## How a software TOR flows through the system
 
@@ -34,7 +35,18 @@ Tracks software-related TOR (procurement) projects from Thailand's e-GP portal: 
 3. **Extract:** text and OCR, then a Vertex AI summary and embedding.
 4. **Display:** the dashboard lists and searches the result; admins can review and override.
 
-Full sequence diagram: [docs/tor-flow.md](docs/tor-flow.md).
+```mermaid
+flowchart LR
+    A[Ingest e-GP metadata] --> B[Classify software]
+    B --> C[Check tender open]
+    C --> D[Acquire TOR PDF or ZIP]
+    D --> E[Extract text + Thai OCR]
+    E --> F[Vertex AI summary]
+    F --> G[Embedding]
+    G --> H[Dashboard and search]
+```
+
+Stage details, statuses and failure paths: [docs/pipeline.md](docs/pipeline.md). Actor-by-actor sequence: [docs/tor-flow.md](docs/tor-flow.md).
 
 ## Quick start
 
