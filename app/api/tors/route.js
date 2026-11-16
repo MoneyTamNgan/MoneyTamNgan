@@ -54,8 +54,8 @@ function biddingStatusPipeline(status, now = new Date()) {
             : { $eq: ['$_biddingCloseAt', null] };
 
     const conditions = status === 'unknown'
-        ? [{ $ne: [{ $type: '$_biddingCloseAt' }, 'date'] }]
-        : [notCancelled, hasDeadline, deadlineMatches];
+        ? [{ $or: [{ $eq: ['$announcement_schedule.status', 'needs_review'] }, { $ne: [{ $type: '$_biddingCloseAt' }, 'date'] }] }]
+        : [notCancelled, { $ne: ['$announcement_schedule.status', 'needs_review'] }, hasDeadline, deadlineMatches];
 
     return [
         { $addFields: { _biddingCloseAt: biddingDeadlineExpression() } },

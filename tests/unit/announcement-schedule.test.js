@@ -146,7 +146,7 @@ test('extraction errors remain visible, with no invented schedule', async () => 
         readText: async () => { throw new Error('pdftotext failed'); },
         ocr: async () => { throw new Error('missing tha traineddata'); },
     });
-    assert.match(r.error, /missing tha/);
+    assert.match(r.error, /OCR tooling/);
     assert.equal(r.schedule.status, 'needs_review');
     assert.equal(r.schedule.bidding_date, null);
 });
@@ -180,6 +180,15 @@ test('uncertain OCR candidates are stored for review but do not automatically cl
     const schedule = parseAnnouncementSchedule(invitation);
     schedule.status = 'needs_review';
     const fields = announcementScheduleFields(schedule);
-    assert.equal(fields.submission_schedule.end_time, '12:00');
+    assert.equal(fields.submission_schedule, null);
+    assert.equal(fields.announcement_schedule.evidence[0].end_time, '12:00');
     assert.equal(fields['tender.closes_at'], null);
+});
+
+test('ambiguous time candidates never publish a future submission window as authoritative', () => {
+    const schedule = parseAnnouncementSchedule('กำหนดวันยื่นข้อเสนอวันที่ 20 ธันวาคม 2570 ระหว่างเวลา 09.00 ถึง 08.00 น.');
+    assert.equal(schedule.status, 'needs_review');
+    const fields = announcementScheduleFields(schedule);
+    assert.equal(fields.bidding_date, null); assert.equal(fields.submission_schedule, null);
+    assert.equal(fields['tender.closes_at'], null); assert.ok(fields.announcement_schedule.evidence.length);
 });

@@ -12,6 +12,7 @@ import ClassificationOverride from '../models/ClassificationOverride.js';
 import IngestionRun from '../models/IngestionRun.js';
 import AdminPipelineState from '../models/AdminPipelineState.js';
 import PipelineTriggerAudit from '../models/PipelineTriggerAudit.js';
+import AcquisitionAttempt from '../models/AcquisitionAttempt.js';
 import Project from '../models/Project.js';
 import VertexChunk from '../models/VertexChunk.js';
 import { User } from '../models/User.js';
@@ -21,6 +22,7 @@ import { embeddingConfig } from '../lib/embedding-config.js';
 import { ensureVectorSearchIndex, VECTOR_INDEX_NAME } from '../lib/vector-index.js';
 
 const MODELS = [
+    AcquisitionAttempt,
     Project,
     Document,
     ExtractionRun,

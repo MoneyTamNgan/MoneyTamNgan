@@ -327,7 +327,7 @@ test('stress | acquisition | download failure with retryable flag throws for ret
 
     await assert.rejects(
         () => processProject(record.project_id, { allowBrowserFallback: false }, deps),
-        /Connection reset by peer/,
+        { outcome: 'download_failed' },
     );
 });
 
@@ -451,7 +451,7 @@ test('stress | ocr | extraction failure sets retry_pending and rethrows', async 
 
     await assert.rejects(
         () => processProject(record.project_id, { storageDir: dir }, deps),
-        /OCR engine crashed/,
+        { outcome: 'text_extraction_failed' },
     );
 
     const retryUpdate = updates.find(u => u.$set?.['processing.status'] === 'retry_pending');
@@ -1282,7 +1282,7 @@ test('stress | e2e pipeline | fault-injected pulling & AI network stalls with re
     // Attempt 1: Pulling fails -> must reject and persist retry_pending state
     await assert.rejects(
         () => processProject(projectId, { storageDir: dir, allowBrowserFallback: false }, deps),
-        /503 Service Unavailable/,
+        { outcome: 'download_failed' },
     );
     assert.equal(downloadAttempts, 1);
     const retry1 = recordedUpdates.find(u => u.$set?.['processing.status'] === 'retry_pending');
