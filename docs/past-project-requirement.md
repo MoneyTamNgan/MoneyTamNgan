@@ -2,6 +2,16 @@
 
 ## Run it
 
+New summaries start with `extraction.past_project_requirement` set to `pending_extraction`, with `minimum_baht` and `operator` set to `null`. The extractor replaces the pending status when it runs. Results with no verified amount keep both value fields set to `null`.
+
+To add the fields to existing MongoDB summaries, run:
+
+```powershell
+npm run vertex:past-project -- --initialize
+```
+
+This fills missing fields and preserves saved values. It uses MongoDB only and prints counts for the fields it added.
+
 For an existing TOR with a saved `DocumentSummary`, run this from the repo root:
 
 ```powershell

@@ -1,5 +1,13 @@
 import mongoose from 'mongoose';
 
+export const PAST_PROJECT_FIELD = 'extraction.past_project_requirement';
+export const PENDING_PAST_PROJECT_REQUIREMENT = Object.freeze({
+    status: 'pending_extraction',
+    minimum_baht: null,
+    operator: null,
+    evidence: Object.freeze([]),
+});
+
 const DocumentSummarySchema = new mongoose.Schema({
     project_id: { type: String, required: true, index: true },
     document_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Document', required: true, index: true },

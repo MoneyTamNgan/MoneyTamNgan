@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { enrichPastProjectForProject, enrichPastProjectSummary } from '../../lib/vertex/past-project-qualifications.js';
+import { enrichPastProjectForProject, enrichPastProjectSummary, initializePastProjectFields } from '../../lib/vertex/past-project-qualifications.js';
+import { PAST_PROJECT_FIELD, PENDING_PAST_PROJECT_REQUIREMENT } from '../../models/DocumentSummary.js';
 
 const clause = 'จะต้องมีผลงานด้านพัฒนาระบบซอฟท์แวร์คอมพิวเตอร์ที่มีมูลค่าไม่น้อยกว่า ๔,๕๐๐,๐๐๐ บาท (สี่ล้านห้าแสนบาทถ้วน) ไม่น้อยกว่า ๑ สัญญา และเป็นผลงานแล้วเสร็จย้อนหลังไม่เกิน ๕ ปี';
 const qualifications = [
@@ -63,8 +64,11 @@ test('standalone enrichment sends every qualification with มูลค่า an
     assert.equal(result.requirement.minimum_baht, 4500000);
     assert.equal(result.requirement.operator, '>=');
     assert.deepEqual(result.requirement.evidence, [{ page: 6, clause_text: clause }]);
-    assert.deepEqual(dependencies.writes[0][0]['extraction.qualifications'], { $eq: qualifications });
     assert.deepEqual(dependencies.writes[0][1], {
+        $set: { [PAST_PROJECT_FIELD]: PENDING_PAST_PROJECT_REQUIREMENT },
+    });
+    assert.deepEqual(dependencies.writes[1][0]['extraction.qualifications'], { $eq: qualifications });
+    assert.deepEqual(dependencies.writes[1][1], {
         $set: { 'extraction.past_project_requirement': result.requirement },
     });
     assert.equal(dependencies.calls.length, 1);
@@ -77,6 +81,8 @@ test('missing qualifications and a filtered-out list skip the Vertex request', a
         const dependencies = fixture(summary, null);
         const { requirement } = await enrichPastProjectSummary(summary, dependencies);
         assert.equal(requirement.status, status);
+        assert.equal(requirement.minimum_baht, null);
+        assert.equal(requirement.operator, null);
         assert.equal(dependencies.calls.length, 0);
     }
 });
@@ -88,7 +94,8 @@ test('amount, quote, operator, and source ID must match the stored qualification
         const dependencies = fixture(summary, { ...detected, ...override });
         const { requirement } = await enrichPastProjectSummary(summary, dependencies);
         assert.equal(requirement.status, 'manual_review');
-        assert.equal(requirement.minimum_baht, undefined);
+        assert.equal(requirement.minimum_baht, null);
+        assert.equal(requirement.operator, null);
     }
 });
 
@@ -123,6 +130,15 @@ test('unchanged qualifications reuse the result while changed qualifications are
     const refreshed = await enrichPastProjectSummary(summary, fixture(summary, { status: 'not_stated' }));
     assert.equal(refreshed.reused, false);
     assert.equal(refreshed.requirement.status, 'not_stated');
+    const { minimum_baht, operator, ...oldShape } = refreshed.requirement;
+    summary.extraction.past_project_requirement = oldShape;
+    const backfill = fixture(summary, null);
+    const updated = await enrichPastProjectSummary(summary, backfill);
+    assert.equal(updated.reused, true);
+    assert.equal(updated.requirement.minimum_baht, null);
+    assert.equal(updated.requirement.operator, null);
+    assert.equal(backfill.calls.length, 0);
+    assert.equal(backfill.writes.length, 1);
 });
 
 test('Vertex failure leaves the saved summary available for another enrichment attempt', async () => {
@@ -131,6 +147,27 @@ test('Vertex failure leaves the saved summary available for another enrichment a
     dependencies.maxAttempts = 1;
     dependencies.fetchImpl = async () => new Response(null, { status: 503 });
     await assert.rejects(enrichPastProjectSummary(summary, dependencies), /Vertex HTTP 503/);
-    assert.equal(dependencies.writes.length, 0);
+    assert.equal(dependencies.writes.length, 1);
+    assert.deepEqual(dependencies.writes[0][1], {
+        $set: { [PAST_PROJECT_FIELD]: PENDING_PAST_PROJECT_REQUIREMENT },
+    });
     assert.equal(summary.extraction.fiscal_budget.year, 2569);
+});
+
+test('bulk initialization only targets missing requirements or value fields', async () => {
+    const writes = [];
+    const model = { updateMany: async (filter, update, options) => {
+        assert.deepEqual(options, { timestamps: false });
+        return { modifiedCount: writes.push({ filter, update }) };
+    } };
+    assert.deepEqual(await initializePastProjectFields(model), {
+        initialized: 1, addedFields: { minimum_baht: 2, operator: 3 },
+    });
+    assert.equal(writes[0].filter[PAST_PROJECT_FIELD], null);
+    assert.deepEqual(writes[0].update.$set[PAST_PROJECT_FIELD], PENDING_PAST_PROJECT_REQUIREMENT);
+    for (const [index, key] of ['minimum_baht', 'operator'].entries()) {
+        const { filter, update } = writes[index + 1];
+        assert.deepEqual(filter[`${PAST_PROJECT_FIELD}.${key}`], { $exists: false });
+        assert.equal(update.$set[`${PAST_PROJECT_FIELD}.${key}`], null);
+    }
 });
