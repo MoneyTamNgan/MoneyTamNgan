@@ -77,4 +77,6 @@ The Atlas test creates only an isolated mtn_health_test_* database, verifies per
 
 ## Remaining acceptance
 
-Application work can be reviewed now. Non-author approval and merge remain required. The live 20-project target, post-deployment three-day observation and final Atlas verification depend on real infrastructure and cannot be fabricated. #165 remains manual. The delivery report tracks other card acceptance separately.
+Application work can be reviewed now. Non-author approval and merge remain required. The live 20-project target and post-deployment three-day observation depend on real infrastructure and cannot be fabricated. #165 remains manual. The delivery report tracks other card acceptance separately.
+
+Atlas persistence verification passed after the owner restored IP access, then passed again after the duplicate-log correction. [Sanitized fixture evidence](evidence/acquisition-health/atlas-telemetry-2026-11-16.json) verifies stored metrics, idempotency, benchmark exclusion and TTL in a disposable database that was removed. This is not a production success-rate measurement.
