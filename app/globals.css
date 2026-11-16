@@ -8721,8 +8721,285 @@ body {
 .auth-wait-dialog button { width: 100%; min-height: 48px; border: 0; border-radius: 12px; background: var(--orange-primary, #c46c2d); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .auth-wait-dialog button:focus-visible { outline: 3px solid var(--ink, #30281f); outline-offset: 4px; }
 
+.tor-past-project-card {
+  margin-top: 18px;
+}
+
+.tor-past-project-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 18px;
+  margin-bottom: 16px;
+}
+
+.tor-past-project-card .tor-past-project-heading h2 {
+  margin: 0;
+}
+
+.tor-past-project-status {
+  width: fit-content;
+  margin: 0;
+  padding: 5px 11px;
+  border: 1px solid var(--orange-border);
+  border-radius: 999px;
+  background: var(--cream-soft);
+  color: var(--ink);
+  font-size: .85rem;
+  font-weight: 700;
+}
+
+.tor-past-project-status[data-tone="met"] {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.tor-past-project-status[data-tone="review"] {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.tor-past-project-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.tor-past-project-values > div,
+.tor-past-project-sources details {
+  min-width: 0;
+  padding: 13px 16px;
+  border: 1px solid var(--orange-border-soft);
+  border-radius: 12px;
+  background: var(--cream-input);
+}
+
+.tor-past-project-values dt,
+.tor-past-project-note,
+.tor-past-project-sources blockquote {
+  color: var(--ink-secondary);
+  font-size: .92rem;
+  line-height: 1.6;
+}
+
+.tor-past-project-values dd {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.tor-past-project-values dd span {
+  color: var(--ink-secondary);
+  font-size: .85rem;
+  font-weight: 600;
+}
+
+.tor-past-project-card .tor-past-project-note {
+  margin: 12px 0 0;
+  color: var(--ink-secondary);
+}
+
+.tor-past-project-sources {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.tor-past-project-sources summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-size: .92rem;
+  font-weight: 700;
+}
+
+.tor-past-project-sources blockquote {
+  margin: 10px 0;
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid var(--orange-border);
+  overflow-wrap: anywhere;
+}
+
+.tor-past-project-card a {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tor-bid-checklist {
+  margin-top: 18px;
+}
+
+.tor-bid-checklist-note,
+.tor-bid-checklist-profile,
+.tor-bid-checklist-error {
+  padding: 12px 14px;
+  border: 1px solid var(--orange-border-soft);
+  border-radius: 12px;
+  background: var(--cream-soft);
+  color: var(--ink-secondary);
+  font-size: .92rem;
+  line-height: 1.6;
+}
+
+.tor-bid-checklist-note p,
+.tor-bid-checklist-profile p,
+.tor-bid-checklist-error p {
+  margin: 0;
+}
+
+.tor-bid-checklist-note p + p {
+  margin-top: 4px;
+}
+
+.tor-bid-checklist-error,
+.tor-bid-checklist-profile {
+  margin-block: 14px;
+}
+
+.tor-bid-checklist-profile ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  margin: 4px 0 8px;
+  padding-inline-start: 1.15em;
+}
+
+.tor-bid-checklist-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.tor-bid-checklist-counts > div,
+.tor-bid-checklist-items > li {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--orange-border-soft);
+  border-radius: 12px;
+  background: var(--cream-input);
+}
+
+.tor-bid-checklist-counts dt {
+  font-size: .82rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.tor-bid-checklist-counts dd {
+  margin: 2px 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.tor-bid-checklist :is(.tor-bid-checklist-counts > div, .tor-bid-checklist-item-heading span)[data-status="pass"] {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.tor-bid-checklist :is(.tor-bid-checklist-counts > div, .tor-bid-checklist-item-heading span)[data-status="fail"] {
+  border-color: var(--danger);
+  background: var(--paper);
+}
+
+.tor-bid-checklist :is(.tor-bid-checklist-counts > div, .tor-bid-checklist-item-heading span)[data-status="manual"] {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.tor-bid-checklist-items {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tor-bid-checklist-item-heading,
+.tor-bid-checklist-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.tor-bid-checklist-item-heading p {
+  flex: 1 1 18rem;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.tor-bid-checklist-item-heading span {
+  padding: 2px 8px;
+  border: 1px solid var(--orange-border);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.tor-bid-checklist-reason,
+.tor-bid-checklist-pages {
+  margin: 7px 0 0;
+  color: var(--ink-secondary);
+  font-size: .9rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.tor-bid-checklist a {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tor-bid-checklist-status-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  color: var(--ink-secondary);
+  font-size: .9rem;
+}
+
+.tor-bid-checklist-status-control select {
+  max-width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--orange-border);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+@media (max-width: 480px) {
+  .tor-bid-checklist-counts > div {
+    padding-inline: 8px;
+  }
+}
+
 .tor-schedule-plan {
   margin-top: 18px
+}
+
+.theme-mint .tor-schedule-plan {
+  --tor-schedule-tile: #0c2227;
+  --tor-schedule-neutral: #5f7f78;
+  --tor-schedule-done: #4fbf8f;
+  --tor-schedule-upcoming: #e0b84f;
+  --tor-schedule-label: var(--ink-muted);
 }
 
 .tor-schedule-list {
@@ -8739,34 +9016,34 @@ body {
   gap: 6px;
   margin: 0;
   padding: 14px 16px;
-  border: 1px solid #294b52;
-  border-left: 4px solid #5f7f78;
+  border: 1px solid var(--orange-border-soft);
+  border-left: 4px solid var(--tor-schedule-neutral, var(--ink-muted));
   border-radius: 12px;
-  background: #0c2227
+  background: var(--tor-schedule-tile, var(--cream-input))
 }
 
 .tor-schedule-list li.is-done {
-  border-left-color: #4fbf8f
+  border-left-color: var(--tor-schedule-done, var(--success))
 }
 
 .tor-schedule-list li.is-upcoming {
-  border-left-color: #e0b84f
+  border-left-color: var(--tor-schedule-upcoming, var(--warning))
 }
 
 .tor-schedule-list span {
-  color: #9fb9af;
+  color: var(--tor-schedule-label, var(--ink-secondary));
   font-size: .85rem
 }
 
 .tor-schedule-list strong {
-  color: #e8f5ef;
+  color: var(--ink);
   font-size: .95rem;
   line-height: 1.4
 }
 
 .tor-schedule-duration {
   margin: 14px 0 0;
-  color: #9fb9af
+  color: var(--tor-schedule-label, var(--ink-secondary))
 }
 
 /* Personal proposal draft workspace and editor (#140/#141). */
@@ -8798,12 +9075,22 @@ body {
 .bid-modal-backdrop { position: fixed; inset: 0; z-index: 50; background: #0008; display: grid; place-items: center; padding: 18px; }
 .bid-modal { max-width: 520px; max-height: 85vh; overflow: auto; }
 .tor-bid-prep-entry { padding: 14px 0; font-weight: 700; }
+
+.theme-orange .tor-bid-prep-entry > a {
+  color: var(--orange-deep);
+}
+
+.theme-orange .tor-bid-prep-entry > a:hover {
+  color: var(--warning);
+}
+
 @media(max-width:760px) {
   .sidebar-layout:has(.bid-workspace) .sidebar-page { margin-left: 82px; }
   .app-shell:has(.bid-workspace) .page-container { padding-inline: 12px; }
   .bid-card { padding: 16px; }
   .bid-actions { flex-direction: column; }
   .bid-workspace table { min-width: 550px; }
+}
 /* Company bid identity and editable project history (#136). */
 .profile-field-wide { grid-column: 1 / -1; }
 .profile-fields textarea { width: 100%; min-width: 0; padding: 12px 14px; border: 1px solid var(--orange-border); border-radius: 11px; background: var(--cream-input); color: var(--ink); font: inherit; resize: vertical; }

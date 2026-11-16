@@ -144,6 +144,9 @@ test('OCR pages and Vertex output are persisted with document references', async
     const summary = await persistVertexSummary(document, textResult, vertex, false,
         { DocumentModel, SummaryModel });
     assert.equal(summary._id, 'summary-1');
+    assert.deepEqual(writes.summaries[0].update.$set.extraction.past_project_requirement, {
+        status: 'pending_extraction', minimum_baht: null, operator: null, evidence: [],
+    });
     assert.equal(writes.summaries[0].update.$set.extraction.summary, 'สรุป');
     assert.equal(writes.document.at(-1)[1].$set.processing_status, 'summarized');
 });

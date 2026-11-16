@@ -16,6 +16,7 @@ async function main() {
         status: result.status,
         reused: result.reused,
         documentSummaryId: result.documentSummaryId,
+        pastProjectEnrichment: result.pastProjectEnrichment,
         riskFindingCount: result.extraction?.risk_findings?.length || 0,
         riskFindings: (result.extraction?.risk_findings || []).map(finding => ({
             category: finding.category,
