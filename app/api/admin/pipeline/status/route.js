@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withRouteSecurity } from '@/lib/route-security';
 import connectDB from '@/lib/db';
 import { getStatus, resetStatus } from '@/lib/services/pipeline-runner';
+import { getAcquisitionHealth } from '@/lib/acquisition-health';
 import Project from '@/models/Project';
 
 export const runtime = 'nodejs';
@@ -28,7 +29,11 @@ async function handleGET() {
             // Stats are secondary to runner status
         }
 
+        let acquisitionHealth;
+        try { acquisitionHealth = await getAcquisitionHealth(); }
+        catch { acquisitionHealth = { status: 'unavailable' }; }
         return NextResponse.json({
+            acquisitionHealth,
             status: 'ok',
             run,
             dbStats,

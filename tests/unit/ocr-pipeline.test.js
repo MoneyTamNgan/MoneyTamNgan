@@ -118,7 +118,7 @@ test('stored PDF resumes at OCR and waits for Vertex configuration with durable 
 test('OCR failures leave retry state and record the extraction error', async t => {
     const { updates, dependencies } = await fixture(t);
     dependencies.extractText = async () => { throw new Error('OCR unavailable'); };
-    await assert.rejects(processProject('68019088742', {}, dependencies), /OCR unavailable/);
+    await assert.rejects(processProject('68019088742', {}, dependencies), { outcome: 'text_extraction_failed' });
     assert.equal(updates.at(-1).$set['processing.status'], 'retry_pending');
     assert.equal(updates.at(-1).$set['workflow.status'], 'retry_pending');
 });
@@ -348,4 +348,28 @@ test('newly classified software uses its new category for the historical baselin
     const set = updates.find(u => u.$set?.['anomalies.baseline_method'])?.$set;
     assert.equal(set['anomalies.baseline_category'], 'software');
     assert.equal(set['anomalies.budget_deviation_multiplier'], 1.6);
+});
+
+test('permanent acquisition failure with a known URL goes to review and preserves prior summary pointers', async t => {
+    const { record, updates, dependencies } = await fixture(t);
+    record.pdf_url = 'https://process5.gprocurement.go.th/file.pdf';
+    record.latest_summary_id = 'prior-summary';
+    record.flagged_clauses = [{ reason: 'prior verified finding' }];
+    dependencies.acquireDocument = async () => ({ result: null, retryable: false, errorCode: 'archive_invalid', errors: ['corrupt ZIP'] });
+    const attempts = [];
+    dependencies.recordAcquisition = async row => attempts.push(row);
+    const result = await processProject(record.project_id, { allowBrowserFallback: false }, dependencies);
+    assert.equal(result.status, 'review_required'); assert.equal(result.errorCode, 'archive_invalid');
+    assert.ok(!updates.some(u => u.$unset?.latest_summary_id !== undefined));
+    assert.ok(!updates.some(u => u.$set?.latest_summary_id !== undefined));
+    assert.equal(attempts[0].status, 'failed');
+});
+
+test('corrupt unreadable PDF skips Vertex and completes into manual review without retrying', async t => {
+    const { updates, dependencies, normalizedWrites } = await fixture(t);
+    dependencies.extractText = async () => { throw Error('PDF is encrypted and unreadable https://host/?token=SECRET'); };
+    const result = await processProject('68019088742', {}, dependencies);
+    assert.equal(result.status, 'review_required'); assert.equal(result.errorCode, 'unreadable_pdf');
+    assert.equal(normalizedWrites.summary, 0);
+    assert.doesNotMatch(JSON.stringify(updates), /SECRET/);
 });

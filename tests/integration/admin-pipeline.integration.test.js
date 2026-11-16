@@ -16,6 +16,7 @@ function contract(path, method, status, value) {
 
 const state = vi.hoisted(() => ({ tasks: [], execute: vi.fn(), store: null }));
 vi.mock('next/server', async original => ({ ...await original(), after: vi.fn(task => state.tasks.push(task)) }));
+vi.mock('@/lib/acquisition-health', () => ({ getAcquisitionHealth: vi.fn(async () => ({ status: 'insufficient_data', attempted: 0, successRate: null })) }));
 vi.mock('@/lib/db', () => ({ default: vi.fn(async () => {}) }));
 vi.mock('@/models/Project', () => ({ default: { countDocuments: vi.fn(async () => 42) } }));
 vi.mock('@/lib/admin-pipeline-store', async () => {
@@ -123,4 +124,14 @@ it('fails closed when the durable audit cannot be written', async () => {
     expect(response.status).toBe(503); expect(state.tasks).toHaveLength(0);
     expect(JSON.stringify(await response.json())).not.toContain('secret');
     audit.mockRestore();
+});
+
+it('exposes protected acquisition health, degrading telemetry independently from runner status', async () => {
+    const { getAcquisitionHealth } = await import('@/lib/acquisition-health');
+    const first = await (await GET(await request('status', { method: 'GET' }))).json();
+    expect(first.acquisitionHealth).toMatchObject({ status: 'insufficient_data', successRate: null });
+    getAcquisitionHealth.mockRejectedValueOnce(Error('private DB details'));
+    const fallback = await (await GET(await request('status', { method: 'GET' }))).json();
+    expect(fallback.run.status).toBe('idle'); expect(fallback.acquisitionHealth.status).toBe('unavailable');
+    expect(JSON.stringify(fallback)).not.toContain('private');
 });

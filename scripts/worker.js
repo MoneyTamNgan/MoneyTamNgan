@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { safePipelineMessage } from '../lib/scrape-failure.js';
 
 import 'dotenv/config';
 import mongoose from 'mongoose';
@@ -38,7 +39,7 @@ async function runOne() {
     const heartbeat = setInterval(() => {
         job.constructor.updateOne({ _id: job._id, status: 'running' }, {
             $set: { lease_until: new Date(Date.now() + 10 * 60 * 1000) },
-        }).catch(error => console.error(`Lease renewal failed: ${error.message}`));
+        }).catch(error => console.error(`Lease renewal failed: ${safePipelineMessage(error)}`));
     }, 30000);
     try {
         // Proposal drafts share this queue but must not change project processing
@@ -47,7 +48,7 @@ async function runOne() {
             await settleProposalDraftJob(job);
             return true;
         }
-        const result = job.type === 'verify_candidate' ? await verifyDiscoveryCandidate(job.project_id) : await processProject(job.project_id, { onProgress: progress => {
+        const result = job.type === 'verify_candidate' ? await verifyDiscoveryCandidate(job.project_id) : await processProject(job.project_id, { runId: String(job._id), onProgress: progress => {
             if (progress.stage === 'past_project_pending') {
                 console.warn(`Past-project minimum pending for ${job.project_id}: ${progress.message}`);
                 return;
@@ -67,10 +68,10 @@ async function runOne() {
         if (job.type !== 'verify_candidate' && result.status === 'completed') {
             try {
                 const embedding = await embedProject(job.project_id);
-                if (embedding.status === 'failed') console.error(`⚠️ Embedding for ${job.project_id} failed: ${embedding.error}`);
+                if (embedding.status === 'failed') console.error(`⚠️ Embedding for ${job.project_id} failed: ${safePipelineMessage(embedding.error)}`);
                 else if (embedding.status === 'ready') console.log(`🧭 Embedded ${job.project_id}`);
             } catch (embedError) {
-                console.error(`⚠️ Embedding warning for ${job.project_id}: ${embedError.message}`);
+                console.error(`⚠️ Embedding warning for ${job.project_id}: ${safePipelineMessage(embedError)}`);
             }
         }
 
@@ -85,26 +86,26 @@ async function runOne() {
                     }
                 }
             } catch (notifyErr) {
-                console.error(`⚠️ Notification warning for ${job.project_id}: ${notifyErr.message}`);
+                console.error(`⚠️ Notification warning for ${job.project_id}: ${safePipelineMessage(notifyErr)}`);
             }
         }
     } catch (error) {
         const { finalFailure } = await failJob(job, error);
         if (job.type === 'proposal_draft') {
-            console.error(`❌ proposal draft ${job._id}: ${error.message}`);
+            console.error(`❌ proposal draft ${job._id}: ${safePipelineMessage(error)}`);
             return true;
         }
         if (job.type === 'verify_candidate') {
             await DiscoveryCandidate.updateOne({ project_id: job.project_id }, { $set: {
-                status: finalFailure ? 'review_required' : 'pending', error: error.message,
+                status: finalFailure ? 'review_required' : 'pending', error: safePipelineMessage(error),
             } });
         } else {
             await Project.updateOne({ project_id: job.project_id }, {
-                $set: { 'processing.status': finalFailure ? 'failed' : 'retry_pending', 'processing.error': error.message,
-                    'workflow.status': finalFailure ? 'failed' : 'retry_pending', 'workflow.error': error.message },
+                $set: { 'processing.status': finalFailure ? 'failed' : 'retry_pending', 'processing.error': safePipelineMessage(error),
+                    'workflow.status': finalFailure ? 'failed' : 'retry_pending', 'workflow.error': safePipelineMessage(error) },
             });
         }
-        console.error(`❌ ${job.project_id}: ${error.message}`);
+        console.error(`❌ ${job.project_id}: ${safePipelineMessage(error)}`);
     } finally {
         clearInterval(heartbeat);
     }
@@ -133,14 +134,14 @@ async function main() {
                         queued = report.queued;
                         console.log(`Recovery: ${report.scanned} scanned, ${report.queued} queued, ${report.failed} errors; skipped ${JSON.stringify(report.skipped)}`);
                     }
-                } catch (error) { console.error(`Recovery deferred: ${error.message}`); }
+                } catch (error) { console.error(`Recovery deferred: ${safePipelineMessage(error)}`); }
             }
             if (!queued && embeddingConfig().enabled && Date.now() - lastEmbeddingSweep > EMBEDDING_SWEEP_MS) {
                 lastEmbeddingSweep = Date.now();
                 try {
                     const swept = await embedPending({ limit: 5 });
                     if (swept.length) console.log(`Embedding sweep: ${swept.map(item => `${item.projectId}=${item.status}`).join(', ')}`);
-                } catch (error) { console.error(`Embedding sweep deferred: ${error.message}`); }
+                } catch (error) { console.error(`Embedding sweep deferred: ${safePipelineMessage(error)}`); }
             }
             if (!queued) await sleep(pollMs);
         }
@@ -150,6 +151,6 @@ async function main() {
 }
 
 main().catch(error => {
-    console.error(error);
+    console.error(safePipelineMessage(error));
     process.exitCode = 1;
 });
