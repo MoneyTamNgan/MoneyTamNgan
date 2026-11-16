@@ -1716,9 +1716,9 @@ paths:
     get:
       summary: Checklist for one TOR using the signed-in user's profile
       description: >
-        A user id in the query is ignored. Items are manual until the
-        comparison engine is allowed to decide; this endpoint does not guess
-        a pass. Missing or unprocessed TORs return 404 or 409.
+        The checklist includes a past-project value comparison backed by TOR
+        evidence. Qualification items require manual review. A user id in
+        the query is ignored. Missing or unprocessed TORs return 404 or 409.
       operationId: getBidPrepChecklist
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }]
@@ -2834,7 +2834,7 @@ components:
         needsReview: { type: boolean }
     BidPrepChecklist:
       type: object
-      required: [projectId, notices, summary, missingProfileFields, truncated, items]
+      required: [projectId, notices, summary, missingProfileFields, truncated, items, pastProjectValueComparison]
       properties:
         projectId: { type: string }
         notices:
@@ -2849,6 +2849,23 @@ components:
         missingProfileFields:
           type: array
           items: { type: string }
+        pastProjectValueComparison:
+          type: object
+          required: [status, companyValueBaht, minimumBaht, operator, meetsMinimum, evidence]
+          properties:
+            status: { type: string, enum: [found, not_stated, manual_review, pending_extraction] }
+            companyValueBaht: { type: number, minimum: 0, nullable: true }
+            minimumBaht: { type: number, minimum: 0, nullable: true }
+            operator: { type: string, enum: [">=", ">", null], nullable: true }
+            meetsMinimum: { type: boolean, nullable: true }
+            evidence:
+              type: array
+              items:
+                type: object
+                required: [page, clauseText]
+                properties:
+                  page: { type: integer, minimum: 1 }
+                  clauseText: { type: string }
         truncated: { type: boolean }
         items:
           type: array

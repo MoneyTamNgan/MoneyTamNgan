@@ -16,6 +16,9 @@ async function main() {
         status: result.status,
         reused: result.reused,
         documentSummaryId: result.documentSummaryId,
+        reason: result.reason,
+        pastProjectRequirement: result.extraction?.past_project_requirement
+            ?? (result.reason === 'document_unreadable' ? { status: 'manual_review', evidence: [] } : undefined),
         riskFindingCount: result.extraction?.risk_findings?.length || 0,
         riskFindings: (result.extraction?.risk_findings || []).map(finding => ({
             category: finding.category,

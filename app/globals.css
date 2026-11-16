@@ -8804,6 +8804,7 @@ body {
   .bid-card { padding: 16px; }
   .bid-actions { flex-direction: column; }
   .bid-workspace table { min-width: 550px; }
+}
 /* Company bid identity and editable project history (#136). */
 .profile-field-wide { grid-column: 1 / -1; }
 .profile-fields textarea { width: 100%; min-width: 0; padding: 12px 14px; border: 1px solid var(--orange-border); border-radius: 11px; background: var(--cream-input); color: var(--ink); font: inherit; resize: vertical; }

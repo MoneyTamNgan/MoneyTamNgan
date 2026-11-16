@@ -178,6 +178,14 @@ describe("TOR API responses match docs/api/openapi.yaml", () => {
             notices,
             summary: { pass: 0, fail: 0, manual: 1 },
             missingProfileFields: ["registered_capital"],
+            pastProjectValueComparison: {
+                status: "pending_extraction",
+                companyValueBaht: null,
+                minimumBaht: null,
+                operator: null,
+                meetsMinimum: null,
+                evidence: [],
+            },
             truncated: false,
             items: [{
                 requirement: "ทุนจดทะเบียน",
