@@ -1,0 +1,63 @@
+{
+  "startedAt": "2026-11-16T10:29:51.925Z",
+  "completedAt": "2026-11-16T10:31:32.271Z",
+  "samplePolicy": "built-in software keyword classification; official open-bid verification before TOR acquisition",
+  "requestedSample": 20,
+  "discovered": 77,
+  "softwareCandidates": 1,
+  "allowBrowser": true,
+  "summary": {
+    "status": "insufficient_data",
+    "policy": {
+      "sampleSize": 100,
+      "minimumSample": 20,
+      "targetSuccessRate": 0.9,
+      "consecutiveFailureThreshold": 5,
+      "staleAfterHours": 24
+    },
+    "attempted": 1,
+    "succeeded": 1,
+    "failed": 0,
+    "skipped": 0,
+    "successRate": 1,
+    "consecutiveFailures": 0,
+    "lastSuccessAt": "2026-11-16T10:31:29.268Z",
+    "lastAttemptAt": "2026-11-16T10:31:29.268Z",
+    "stale": false,
+    "bySource": {
+      "benchmark": {
+        "attempted": 1,
+        "succeeded": 1
+      }
+    },
+    "byRun": {},
+    "scope": "latest acquisition attempts; not OCR, Vertex, or metadata-ingestion success"
+  },
+  "discoveryErrors": [
+    {
+      "deptId": "2102",
+      "type": "B0",
+      "code": "temporary_timeout"
+    },
+    {
+      "deptId": "0703",
+      "type": "B0",
+      "code": "temporary_timeout"
+    }
+  ],
+  "rows": [
+    {
+      "project_id": "69109037016",
+      "source": "benchmark",
+      "status": "success",
+      "reason_code": null,
+      "route": "browser",
+      "announcement": true,
+      "eligibility": "open",
+      "duration_ms": 9496,
+      "completed_at": "2026-11-16T10:31:29.268Z"
+    }
+  ],
+  "acceptance": "insufficient eligible sample; no 90% reliability claim",
+  "limitations": "No OCR/Vertex quality measurement. Benchmark is excluded from production telemetry. No live project data changed."
+}

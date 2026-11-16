@@ -129,6 +129,7 @@ paths:
                 properties:
                   status: { type: string, enum: [ok] }
                   run: { $ref: '#/components/schemas/AdminPipelineRun' }
+                  acquisitionHealth: { $ref: '#/components/schemas/AcquisitionHealth' }
                   dbStats:
                     type: object
                     nullable: true
@@ -1833,6 +1834,25 @@ components:
         default: 10
 
   schemas:
+    AcquisitionHealth:
+      type: object
+      required: [status]
+      description: Latest 100 production acquisition attempts retained for 90 days. Excludes benchmark probes and OCR/Vertex success. A proposed 90 percent target needs team acceptance.
+      properties:
+        status: { type: string, enum: [healthy, degraded, insufficient_data, unavailable] }
+        attempted: { type: integer, minimum: 0 }
+        succeeded: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        successRate: { type: number, minimum: 0, maximum: 1, nullable: true }
+        consecutiveFailures: { type: integer, minimum: 0 }
+        lastSuccessAt: { type: string, format: date-time, nullable: true }
+        lastAttemptAt: { type: string, format: date-time, nullable: true }
+        stale: { type: boolean }
+        bySource: { type: object, additionalProperties: { type: object } }
+        byRun: { type: object, additionalProperties: { type: object } }
+        policy: { type: object }
+        scope: { type: string }
     AdminPipelineRun:
       type: object
       required: [id, status, phase, startedAt, completedAt, progress, summary, error, errorCode]

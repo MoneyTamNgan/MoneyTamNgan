@@ -136,7 +136,7 @@ test('browser fallback stops at non-retryable failures and still returns the ann
     );
     assert.equal(attempts, 1);
     assert.equal(outcome.tor, null);
-    assert.match(outcome.torError, /Aggregator/);
+    assert.match(outcome.torError, /could not be resolved/);
     assert.ok(outcome.announcement);
 });
 
