@@ -202,3 +202,14 @@ it('shares one attempt budget per account across email and username', async () =
     expect(statuses.slice(0, 5)).toEqual([401, 401, 401, 401, 401]);
     expect(statuses).toContain(429);
 });
+
+it('refuses a disabled account with the same 401 as a wrong password and sets no cookie', async () => {
+    const data = details();
+    expect((await register(request('register', data))).status).toBe(201);
+    state.users[0].disabled = true;
+    const disabled = await login(request('login', { identifier: data.email, password: data.password }));
+    const wrong = await login(request('login', { identifier: data.email, password: 'not the right passphrase at all' }));
+    expect(disabled.status).toBe(401);
+    expect(disabled.cookies.get('mtn_session')).toBeUndefined();
+    expect(await disabled.json()).toEqual(await wrong.json());
+});

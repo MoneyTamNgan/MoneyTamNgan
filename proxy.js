@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { SESSION_COOKIE, verifySession, hasScope } from '@/lib/auth';
+import { SESSION_COOKIE, verifySession, hasScope, sessionCookieOptions } from '@/lib/auth';
+import { sessionAccountActive } from '@/lib/account-status';
 import { authorizeScopeRequest, permissionFor } from '@/lib/request-authorization';
 import { applyCors, contentSecurityPolicy, originError, securityHeaders } from '@/lib/security-policy';
 import { randomBytes } from 'node:crypto';
@@ -56,6 +57,7 @@ export async function proxy(request) {
     requestHeaders.set('Content-Security-Policy', csp);
     const next = () => NextResponse.next({ request: { headers: requestHeaders } });
     let response;
+    let pageHasSession = true;
     if (pathname.startsWith('/api/')) {
         if (request.method === 'OPTIONS') {
             const error = originError(request);
@@ -78,7 +80,9 @@ export async function proxy(request) {
         }
         try { applyCors(response, request); } catch { /* configuration errors already fail closed */ }
     } else {
-        const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
+        const cookieSession = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
+        const session = cookieSession && await sessionAccountActive(cookieSession) ? cookieSession : null;
+        pageHasSession = Boolean(session);
         if (!session && startsWithAny(pathname, PROTECTED_PAGES)) {
             const loginUrl = new URL('/', request.url);
             loginUrl.searchParams.set('next', pathname);
@@ -86,6 +90,10 @@ export async function proxy(request) {
         } else if (pathname.startsWith('/admin') && !hasScope(session, 'admin:read')) response = new NextResponse('Admin permission required', { status: 403 });
         else if (startsWithAny(pathname, ['/profile']) && !hasScope(session, 'profile:read')) response = new NextResponse('Profile permission required', { status: 403 });
         else response = next();
+    }
+    // A refused credential (expired, invalid, or its account is disabled) is cleared from the browser.
+    if (request.cookies.get(SESSION_COOKIE) && (response.status === 401 || !pageHasSession)) {
+        response.cookies.set(SESSION_COOKIE, '', { ...sessionCookieOptions(), maxAge: 0 });
     }
     for (const { key, value } of securityHeaders(csp)) response.headers.set(key, value);
     if (!pathname.startsWith('/api/')) response.headers.set('Cache-Control', 'private, no-store');
