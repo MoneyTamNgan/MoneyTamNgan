@@ -31,3 +31,12 @@ test('telemetry failure never throws or interrupts processing', async t => {
     t.mock.method(console, 'error', () => {});
     assert.equal(await recordAcquisitionAttempt({ projectId: '69000000001', startedAt: now }, { updateOne: async () => { throw Error('secret'); } }), false);
 });
+
+test('a duplicate immutable attempt does not emit a new failure signal', async t => {
+    const logs = []; t.mock.method(console, 'error', line => logs.push(line));
+    const event = { attemptKey: 'same', projectId: '69000000001', source: 'worker', status: 'failed', reasonCode: 'temporary_timeout', startedAt: now };
+    await recordAcquisitionAttempt(event, { updateOne: async () => ({ matchedCount: 1, upsertedCount: 0 }) });
+    assert.equal(logs.length, 0);
+    await recordAcquisitionAttempt(event, { updateOne: async () => ({ matchedCount: 0, upsertedCount: 1 }) });
+    assert.equal(logs.length, 1);
+});
