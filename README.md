@@ -1,459 +1,106 @@
 # MoneyTamNgan
 
+Tracks software-related TOR (procurement) projects from Thailand's e-GP portal: it ingests project metadata, downloads and reads the TOR documents (text and Thai OCR), summarises them with Vertex AI, and shows them in a Next.js dashboard with search, matching and analytics. A Bid Preparation Assistant helps sellers prepare bid documents; it never submits a bid.
+
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22-5FA04E?logo=nodedotjs&logoColor=white)
+![MongoDB Atlas](https://img.shields.io/badge/MongoDB_Atlas-Vector_Search-47A248?logo=mongodb&logoColor=white)
+![Mongoose](https://img.shields.io/badge/Mongoose-9-880000)
+![Vertex AI](https://img.shields.io/badge/Vertex_AI-Gemini_2.5_Flash-4285F4?logo=googlecloud&logoColor=white)
+![Puppeteer](https://img.shields.io/badge/Puppeteer-25-40B5A4?logo=puppeteer&logoColor=white)
+![Tesseract](https://img.shields.io/badge/Tesseract_OCR-Thai_%2B_English-5A5A5A)
+![Poppler](https://img.shields.io/badge/Poppler-pdf_text-5A5A5A)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-5-6E9F18?logo=vitest&logoColor=white)
+![Semgrep](https://img.shields.io/badge/Semgrep-SAST-1B2A3B)
+![OWASP ZAP](https://img.shields.io/badge/OWASP_ZAP-DAST-00549E)
+
 ## Project documents
 
-This inventory matches the Google documents as they stand on 12 November 2026
-(Asia/Bangkok).
+- [MoneyTamNgan_SRS](https://docs.google.com/document/d/1_o6RmB_G54MWgXHGiePvBzy-vLkhECAzDnhtU15rz0A/edit?usp=sharing): official SRS and use case diagram (TOR aggregation, matching, analytics).
+- [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing): short SRS for the Bid Preparation Assistant (epic #135), waiting for customer confirmation (#143).
+- [MoneyTamNgan Testcase doc](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?usp=sharing): automated tests mapped to modules and source files.
+- [Sprint api planing](https://docs.google.com/spreadsheets/d/1aXUlWRg__PmH6LtbzPxBnOCS7z7v9pk-xxEpwySVCU0/edit?usp=sharing): sprint API plan (ticket, endpoint, expected response, status).
+- [MoneyTamNgan Secure Test](https://docs.google.com/spreadsheets/d/1zl9NWZmycvNj0Brg7PMB2kdizVcQq-ihKPNbVODycvY/edit?usp=sharing): STRIDE and ASVS security catalog with project status.
+- [TOR Discovery, Extraction, and Display](docs/tor-flow.md): sequence diagram of the pipeline.
+- [TOR pull pipeline](docs/pipeline.md): stage-by-stage flowchart with statuses and code locations.
 
-- [MoneyTamNgan_SRS](https://docs.google.com/document/d/1_o6RmB_G54MWgXHGiePvBzy-vLkhECAzDnhtU15rz0A/edit?usp=sharing).
-  Official SRS (the use case diagram lives here) for TOR aggregation, matching,
-  and analytics. An addendum dated 12 November 2026 was appended; it does not
-  replace the original scope, and BidPrep is not treated as customer-confirmed.
-  The short BidPrep SRS is linked below.
-- [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing).
-  Short English SRS for the Bid Preparation Assistant (epic #135). Version 0.1
-  draft, still waiting for customer confirmation (#143). An
-  implementation-status section dated 12 November 2026 was appended; it does
-  not change the requirements. Issues #136–#142 remain open even where related
-  routes exist on develop.
-- [MoneyTamNgan Testcase doc](https://docs.google.com/spreadsheets/d/1R6gXlBh75GxtKXlraxE6N0eJU5URTa0pgbbUvg4j3GE/edit?usp=sharing).
-  Maps automated tests (TC-001 through TC-251) to modules and source files.
-  Existing TC-001–212 were left as they were; TC-213–251 were added on
-  12 November 2026 for suites that were missing (including BidPrep and security
-  tests from PRs #148 and #149). The Atlas suite (TC-251) is Pending, not Pass.
-  The Status column is color-coded (Pass / Pending).
-- [Sprint api planing](https://docs.google.com/spreadsheets/d/1aXUlWRg__PmH6LtbzPxBnOCS7z7v9pk-xxEpwySVCU0/edit?usp=sharing).
-  Sprint API plan with ticket, endpoint, expected response, and status,
-  reviewed 12 November 2026 against develop. Tickets #10–#20 were brought up
-  to date (#17 stays In Progress because live Atlas verification is still
-  open). Rows were added for health, auth (Google and email/password), admin
-  extras, analytics, matching, and BidPrep (#136 To Do; #137–#142 In Progress).
-  The Status column is color-coded (Done / In Progress / To Do).
-- [MoneyTamNgan Secure Test](https://docs.google.com/spreadsheets/d/1zl9NWZmycvNj0Brg7PMB2kdizVcQq-ihKPNbVODycvY/edit?usp=sharing).
-  Working copy of the security catalog (STRIDE + ASVS), named and updated on
-  12 November 2026: TH-05 and TH-10 set to DONE from current code; TH-03 left
-  IN PLANNING; BidPrep threats appended as TH-11–TH-18; selected ASVS rows
-  updated (headers, email/password V6.2, scanners in CI). It also has a
-  Project status tab reflecting open GitHub issues the same day. Status cells
-  are color-coded.
-- [MoneyTamNgan TOR Discovery, Extraction, and Display](docs/diagrams/tor-discovery-extraction-display.png).
-  Sequence diagram of the current pipeline: e-GP discovery and classification,
-  official ZIP/PDF download, text/OCR/Vertex extraction, and dashboard display.
+## How a software TOR flows through the system
 
-![MoneyTamNgan TOR Discovery, Extraction, and Display](docs/diagrams/tor-discovery-extraction-display.png)
+1. **Discover:** the scheduler or an admin run reads the e-GP feed and stores new projects.
+2. **Acquire:** the worker downloads each TOR document (PDF or ZIP).
+3. **Extract:** text and OCR, then a Vertex AI summary and embedding.
+4. **Display:** the dashboard lists and searches the result; admins can review and override.
 
-*Sequence diagram: e-GP discovery and classification, official ZIP/PDF download, text/OCR/Vertex extraction, and dashboard display.*
-
-In-repo docs: [docs/security/](docs/security/) and the API contract at [docs/api/openapi.yaml](docs/api/openapi.yaml).
-
-## TOR processing pipeline
-
-MoneyTamNgan uses an API-first pipeline:
-
-1. Ingest structured project metadata from the e-GP Open Data API.
-2. Classify obvious software/non-software projects from metadata.
-3. Download a known `pdf_url` directly without opening a browser.
-4. When no URL is known, resolve the project permalink through
-   `egp-gprocurement.com`, then open its encrypted official e-GP detail URL.
-5. Download the official draft e-Bidding ZIP from `gprocurement.go.th`, safely
-   extract its PDFs, and select the most likely TOR document.
-6. Validate and hash the document, then keep it locally or upload it to GCS.
-7. Extract embedded text per page; OCR scanned/unreadable pages using Thai +
-   English Tesseract, then send page-labelled text chunks to Vertex AI.
-8. Store the summary, qualifications, scope, tech stack, evidence pages, and
-   anomaly signals without overwriting authoritative e-GP metadata.
-
-Long-running processing is represented by MongoDB-backed jobs. API requests
-enqueue work and a separate worker executes it with leases and bounded retries.
-
-## Setup
-
-```bash
-cp .env.example .env
-npm install
-npm run dev
+```mermaid
+flowchart LR
+    A[Ingest e-GP metadata] --> B[Classify software]
+    B --> C[Check tender open]
+    C --> D[Acquire TOR PDF or ZIP]
+    D --> E[Extract text + Thai OCR]
+    E --> F[Vertex AI summary]
+    F --> G[Embedding]
+    G --> H[Dashboard and search]
 ```
 
-At minimum, configure `MONGODB_URI` and `EGP_API_KEY`. Vertex is disabled by
-default so API ingestion and local PDF downloads work without Google Cloud
-credentials.
+Stage details, statuses and failure paths: [docs/pipeline.md](docs/pipeline.md). Actor-by-actor sequence: [docs/tor-flow.md](docs/tor-flow.md).
+
+## Quick start
+
+Requires Node.js 22 and a MongoDB (Atlas or local).
+
+```bash
+cp .env.example .env     # set MONGODB_URI, JWT_SECRET and EGP_API_KEY at minimum
+npm install
+npm run dev              # http://localhost:3000
+```
+
+Vertex AI is off by default, so ingestion and PDF downloads work without Google Cloud credentials. To enable it, set `VERTEX_AI_ENABLED=true`, `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS` (see [Vertex AI](docs/reference.md#vertex-ai)).
 
 ## Run with Docker
 
-For evaluation hardware without a local Node/Mongo/Poppler/Tesseract/Chromium
-setup, the whole stack runs via Compose instead:
-
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build            # app on :3000, local mongo, worker
+curl http://localhost:3000/api/health
 ```
 
-This starts `mongo` (local database, no Atlas/firewall dependency), `app`
-(Next.js on http://localhost:3000), `worker` (polls for queued processing
-jobs), and builds (but does not run) `scraper`. Trigger a scrape on demand:
-
-```bash
-docker compose run --rm scraper
-```
-
-### Docker against MongoDB Atlas (no manual IP allowlisting)
-
-Use this to run the stack against the shared Atlas database instead of the
-local `mongo` container. Before any service connects, a one-shot
-`atlas-allowlist` service adds your current public IP to the Atlas IP Access
-List through the Atlas Admin API. You no longer need to open the Atlas UI and
-allow a new IP whenever your network changes.
-
-**One-time setup**
-
-1. In Atlas, open the project and go to **Project Settings → Access Manager →
-   API Keys → Create API Key**. Give it the **Project Owner** role and copy the
-   public and private keys. The private key is shown only once.
-2. Copy the project ID from the Atlas URL
-   (`cloud.mongodb.com/v2/<PROJECT_ID>#/...`) or from **Project Settings**.
-3. Fill these values in `.env`:
-
-   ```bash
-   MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/
-   ATLAS_PUBLIC_KEY=<public key>
-   ATLAS_PRIVATE_KEY=<private key>
-   ATLAS_PROJECT_ID=<project id>
-   ATLAS_ALLOWLIST_TTL_HOURS=168   # optional, max 168 (one week)
-   ```
-
-**Run**
+Against Atlas, with the machine's IP allowed automatically (needs `ATLAS_PUBLIC_KEY`, `ATLAS_PRIVATE_KEY`, `ATLAS_PROJECT_ID` in `.env`):
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.atlas.yml up --build
 ```
 
-The `atlas-allowlist` service should log `Atlas access list updated` and exit.
-Then `app`, `worker` and `scraper` start against Atlas. To trigger a scrape:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.atlas.yml run --rm scraper
-```
-
-Each IP added this way expires after `ATLAS_ALLOWLIST_TTL_HOURS`, so old
-addresses don't pile up. Running the command again refreshes the current IP.
-
-**Without Docker** (`npm run dev` against Atlas), allowlist the current IP
-first:
-
-```bash
-set -a && . ./.env && set +a && sh scripts/atlas-allow-ip.sh
-npm run dev
-```
-
-If `atlas-allowlist` fails with `401`, the API key or project ID is wrong. If
-it fails with `403`, the key lacks the Project Owner role, or the key has its
-own API access list that doesn't include your IP.
-
-**Do I still need to add IPs in Atlas by hand?** No, not as long as you start
-Docker with `docker-compose.atlas.yml`:
-
-- Every start adds your current IP. If your network changes (home, campus,
-  café), start the stack again and the new IP is allowed.
-- Each entry expires `ATLAS_ALLOWLIST_TTL_HOURS` (default 7 days) after the
-  last start, so old IPs clean themselves up.
-- The IP is only added at startup. If your IP changes while the containers are
-  running, the app loses its connection to Atlas; run the `up` command again.
-- For `npm run dev` without Docker, run `scripts/atlas-allow-ip.sh` first (see
-  above).
-- Plain `docker compose up` (without the Atlas file) uses the local `mongo`
-  container and never touches Atlas, so no IP is needed.
-
-`Dockerfile` builds the Next.js app; `Dockerfile.worker` is shared by
-`scraper` and `worker` and additionally installs Chromium, Poppler, and
-Tesseract (with Thai data) for document acquisition and OCR.
-
-## CI/CD and branch flow
-
-Work goes into feature branches and is merged into `develop` through pull
-requests. `main` is protected: nobody pushes to it directly, and it only
-changes through the automated promotion below.
-
-1. **PR into `develop` or `main`:** `.github/workflows/ci.yml` runs `Build`,
-   `Test (mocked data)` and `API contract`, and `health-check.yml` runs the
-   health check.
-2. **Push to `develop`** (a merged PR): after those jobs pass, the `promote`
-   job opens a `develop → main` PR (or reuses the open one), approves it as
-   `github-actions[bot]`, and enables auto-merge.
-3. **Auto-merge:** when main's required checks pass on that PR, GitHub merges
-   it into `main` with a merge commit.
-
-After each promotion lands, `.github/workflows/sync-develop.yml`
-fast-forwards `develop` to `main`, so the promotion merge commit is on both
-branches and `develop` never shows as behind `main`.
-
-Protection on `main`: pull request required with 1 approval, required checks
-`Build`, `Test (mocked data)`, `API contract` and `health-check`, no force
-pushes, no deletion.
-
-The promotion depends on the `PROMOTE_TO_MAIN_TOKEN` repository secret, a PAT
-with `repo` scope (or a fine-grained token with Contents and Pull requests
-write access). A PR opened with the default `GITHUB_TOKEN` would not trigger
-the required checks. It also depends on the repository setting **Settings →
-Actions → General → Allow GitHub Actions to create and approve pull requests**.
-
-## Run the pipeline
-
-Ingest metadata and enqueue each returned project:
-
-```bash
-curl -X POST http://localhost:3000/api/ingestion/trigger \
-  -H 'Content-Type: application/json' \
-  -d '{"year":"2569","limit":50,"enqueueProcessing":true}'
-```
-
-Alternatively, enqueue one existing project or a small pending batch:
-
-```bash
-curl -X POST http://localhost:3000/api/processing/trigger \
-  -H 'Content-Type: application/json' \
-  -d '{"projectId":"69069021440"}'
-
-curl -X POST http://localhost:3000/api/processing/trigger \
-  -H 'Content-Type: application/json' \
-  -d '{"batchSize":20}'
-```
-
-### Automated ingestion schedule
-
-`npm run scheduler` keeps a background runner that calls
-`/api/ingestion/trigger` and then `/api/scraping/trigger` with the
-`PIPELINE_ADMIN_TOKEN` bearer token. By default it runs at 06:00, 12:00 and
-18:00 Asia/Bangkok (`INGESTION_SCHEDULE`, `INGESTION_TIMEZONE`). Network
-errors, timeouts and e-GP 5xx/429 are retried up to 3 times (~5, 15, 45 min,
-with jitter) unless a retry would overlap the next scheduled run; config and
-auth errors fail immediately. Each run is stored in the `ingestionruns`
-collection and shown under `lastRun` / `recentRuns` in
-`GET /api/ingestion/status`. `npm run scheduler:once` runs one ingestion now.
-
-Run one queued job during development, or keep a worker polling:
-
-```bash
-npm run worker:once
-npm run worker
-```
-
-Create or verify the MongoDB uniqueness and lookup indexes after deployment:
-
-```bash
-npm run db:ensure-indexes
-```
-
-### Normalized schema maintenance
-
-Document, OCR page, and Vertex summary data is stored only in the normalized
-collections. API routes reconstruct the existing client response shape from
-the project pointers, so clients do not need to understand the physical
-storage layout.
-
-For a database that still contains the former embedded project fields, run:
-
-```bash
-npm run db:ensure-indexes
-npm run db:migrate-normalized -- --dry-run
-npm run db:migrate-normalized
-npm run db:reconcile-normalized -- --strict
-npm run db:migrate-normalized -- --finalize-indexes
-npm run db:cleanup-legacy
-npm run db:cleanup-legacy -- --apply
-```
-
-The cleanup command is a dry run unless `--apply` is supplied. It refuses to
-remove legacy fields when a document, OCR page, extraction run, or summary has
-not been linked to normalized storage.
-
-Duplicate prevention is enforced by unique indexes on the government project
-ID and official project document URL. Extracted documents use the compound
-identity `project_id + source_url + entry_name`, because multiple PDFs can
-legitimately come from the same e-GP ZIP. OCR pages and Vertex summaries retain
-their existing idempotent compound unique indexes.
-
-Inspect pipeline coverage and the manual-review queue:
-
-```text
-GET /api/processing/status
-GET /api/processing/status?jobId=<mongo-job-id>
-GET /api/processing/review
-PATCH /api/projects/<project-id>/classification
-```
-
-The classification patch body is `{ "isSoftware": true, "reason": "..." }`.
-
-## Document storage
-
-The TOR resolver uses the third-party aggregator only to map a project ID to an
-encrypted official detail URL. Document metadata and file bytes remain sourced
-from the government Open Data and e-GP domains. It downloads the official
-e-Bidding ZIP and stores it under `storage/tor/<project-id>/`. ZIP downloads are
-kept as the source archive, while valid contained PDFs are safely extracted
-under `storage/tor/<project-id>/extracted/`. The resolver selects the PDF whose
-filename most strongly indicates a TOR or draft e-Bidding document.
-
-`Document.source_url` retains the original remote URL for provenance, even when
-that URL serves a ZIP. `Document.archive` records archive metadata, and each
-valid extracted PDF receives its own `documents` record. A discovered link is
-retained even when downloading the file fails so it can be retried later.
-
-```bash
-# Up to 10 projects whose normalized document is missing
-npm run scrape
-
-# One project
-npm run scrape -- --project-id=67039549408
-
-# A larger batch with a five-second delay between projects
-npm run scrape -- --limit=20 --delay=5000
-```
-
-Set `MONGODB_URI` in `.env`. The batch delay defaults to four seconds and can
-be configured with `SCRAPER_DELAY_MS` or `--delay`. Values below three seconds
-are rejected to avoid overwhelming the e-GP service.
-
-Set `TOR_STORAGE_DIR` to override the temporary working root. Downloads are
-streamed to temporary files and atomically renamed before processing. By
-default, `TOR_RETAIN_SOURCE_FILES=false`: after OCR is committed to MongoDB,
-the ZIP/PDF working files are deleted while their official URL, hashes,
-filenames, sizes, page text, and summaries remain stored. Set it to `true`
-only when durable local/GCS source-file retention is required. The default maximum
-file size is 250 MB; change it with `TOR_MAX_FILE_SIZE_MB`. Large e-GP files
-have a bounded five-minute request timeout, configurable through
-`EGP_DOWNLOAD_TIMEOUT_MS`. In production,
-set `TOR_STORAGE_BACKEND=gcs` and configure `TOR_GCS_BUCKET`. Objects are named
-by fiscal year, project ID, and SHA-256 hash so unchanged PDFs are not sent to
-Vertex repeatedly.
-
-ZIP extraction defaults to 200 entries, 100 MB per PDF, 200 MB total expanded
-PDF data, and a maximum compression ratio of 200. Configure these with
-`TOR_ZIP_MAX_ENTRIES`, `TOR_ZIP_MAX_PDF_MB`,
-`TOR_ZIP_MAX_EXTRACTED_MB`, and `TOR_ZIP_MAX_COMPRESSION_RATIO`.
-
-## Vertex AI
-
-Enable extraction only after Application Default Credentials and GCS access
-are configured:
-
-```env
-TOR_STORAGE_BACKEND=gcs
-TOR_GCS_BUCKET=money-tam-ngan-tor
-GOOGLE_CLOUD_PROJECT=your-project
-GOOGLE_CLOUD_LOCATION=global
-VERTEX_AI_ENABLED=true
-VERTEX_MODEL=gemini-2.5-flash
-VERTEX_TIMEOUT_MS=300000
-```
-
-Vertex now receives text rather than PDF bytes. Long text is split into bounded
-chunks; their Thai summaries are joined and duplicate evidence is removed.
-Each chunk has a bounded five-minute request timeout by default; adjust
-`VERTEX_TIMEOUT_MS` if the deployed model or region has different latency.
-Vertex responses use a fixed JSON schema
-and are validated before database updates. Results below
-`VERTEX_REVIEW_THRESHOLD` enter `review_required` instead of being silently
-accepted.
-
-The versioned risk prompt also returns page-backed procurement risk findings for
-unrealistic tenure or experience requirements, excessive hardware demands, and
-vendor lock-in. Each finding stores the exact clause, severity, explanation,
-short highlight reason, page number, and confidence in the immutable
-`documentsummaries.extraction.risk_findings` array. High-severity findings enter
-`review_required`; they are observations for human review, not legal findings.
-
-Re-run Vertex against OCR pages already stored in MongoDB without scraping,
-downloading, or OCRing the PDF again:
-
-```bash
-npm run vertex:reanalyze -- 66089621504
-```
-
-Add `--full` after the project ID to print the complete structured extraction.
-
-The prompt version is part of the summary identity, so the first run of a new
-prompt creates a historical summary and repeated runs of that version reuse it
-idempotently.
-
-## Thai OCR setup and operation
-
-Install the native tools on every worker host (OCR runs locally):
-
-```bash
-# macOS
-brew install poppler tesseract tesseract-lang
-# Debian/Ubuntu
-sudo apt-get install poppler-utils tesseract-ocr tesseract-ocr-tha tesseract-ocr-eng
-```
-
-The engines use embedded text first, falling back to Tesseract `tha+eng` at
-300 DPI with a 5000-pixel maximum image dimension. Set `OCR_FORCE=true` if a
-PDF has a misleading text layer. Reading order and table reconstruction are
-heuristic, so visually check important clauses. Low-confidence OCR and blank
-or unreadable pages route AI results to review.
-
-OCR quality checks now compare monetary digits (Thai or Arabic) with adjacent
-Thai amount wording. Financial or low-confidence pages receive a second OCR
-pass using segmentation mode 6, in addition to the normal mode 3. Both readings,
-raw text, selected segmentation mode, and warnings are retained in the JSON.
-The code selects a reading but never silently changes an amount to match words.
-
-All OCR pages with recognized financial language require source review, even
-when both readings agree and confidence is high. Conflicts are exposed as
-`ocr.review_pages` (page numbers and warning codes) through the project/status
-APIs. Detailed conflicting values are kept in each page's JSON `warnings`.
-This can over-flag pages and does not validate all dates or qualification terms.
-
-Configure `OCR_DPI` (200–600, default 300) and `OCR_MAX_DIMENSION`
-(3500–10000, default 5000). Rendering respects the requested DPI and reduces it
-for oversized pages. The version/configuration fingerprint prevents older OCR
-artifacts from bypassing the new checks. Old files are retained; the next run
-may re-extract the document. Higher resolution and secondary passes increase
-CPU time. Resolution guidance: [Tesseract quality documentation](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html).
-
-Test a local document without MongoDB or Google credentials:
-
-```bash
-npm run extract:text -- 'storage/tor/68019088742/extracted/001-TOR ERP.pdf'
-```
-
-Add `--force-ocr` to test the OCR path on a digital PDF. Page checkpoints and
-the combined `document.json` are stored in a hash/version-keyed `text/` directory
-beside the PDF. A retry reuses completed pages; changing the PDF, engines, or
-OCR configuration creates a new cache. Raw text stays out of MongoDB. In GCS
-storage mode the combined JSON is also uploaded and `document.text_uri` points
-to it. Keep local storage persistent for page-level resume across worker restarts.
-
-The existing worker now runs download → text extraction → Vertex. With
-`VERTEX_AI_ENABLED=false`, it still produces OCR text and stops at `ai_pending`.
-Enable Vertex using your Google project and Application Default Credentials
-to run summarization. Neither the OCR CLI nor local OCR needs a cloud key.
-
-Inspect `GET /api/processing/status?projectId=<id>` for OCR status, completed
-pages, OCR page count, extraction error, and text location. Re-enqueue with the
-existing processing trigger to resume a failure. The worker renews its lease
-while OCR runs; OCR and AI attempt counters are tracked independently, while
-the job queue retains its existing overall retry limit. Cached completed AI
-results require matching document/text hashes, prompt version, and model.
-
-## Legacy scraper commands
-
-The API equivalents are `POST /api/scraping/trigger` and
-`GET /api/scraping/status`. A trigger body can include `projectId`,
-`batchSize`, `onlyMissing`, and `delayMs`.
-
-The old e-GP search page uses Cloudflare verification, so it is disabled as a
-fallback by default. Set `ENABLE_LEGACY_EGP_SEARCH_FALLBACK=true` only if that
-search flow is usable in the deployment environment. Direct encrypted detail
-URLs do not require the scraper to submit the public search form. The official
-related-document service can intermittently return E1530. The scraper captures
-the official ZIP-list request and resolves the latest archive through the
-approval and upload services in the same browser session. Configure bounded
-retry attempts with `EGP_DETAIL_RETRY_ATTEMPTS` (default 5).
-
-## Verification
-
-```bash
-npm test
-npm run build
-```
+Start, stop and rollback on a demo machine: [docs/local-deployment.md](docs/local-deployment.md).
+
+## Common commands
+
+| Command | What it does |
+|---|---|
+| `npm test` and `npm run test:vitest` | unit, integration and security tests (no network needed) |
+| `npm run build` | production build |
+| `npm run db:ensure-indexes` | create or update MongoDB and Atlas Vector Search indexes |
+| `npm run db:migrate-users` | backfill usernames (dry run; add `-- --apply` to write) |
+| `npm run worker` | process queued TOR jobs |
+| `npm run scrape` | download TOR PDFs (`--limit`, `--delay`, `--project-id`) |
+| `npm run embed -- --limit=50` | create embeddings for semantic search (needs Vertex) |
+| `docker compose run --rm scraper` | one scrape run in Docker |
+
+## Documentation
+
+- [docs/reference.md](docs/reference.md): the full guide (pipeline, ingestion schedule, document storage, Vertex, Thai OCR, scraper commands, CI/CD)
+- [docs/api/openapi.yaml](docs/api/openapi.yaml): API contract
+- [docs/security/](docs/security/README.md): SAST/DAST, threat model, ASVS checklist, BidPrep security
+- [docs/email-password-auth.md](docs/email-password-auth.md): email and username login, migration and rollback
+- [docs/vector-search.md](docs/vector-search.md): embeddings and the Atlas Vector Search index
+- [docs/admin-pipeline-control.md](docs/admin-pipeline-control.md): admin pipeline controls
+- [docs/company-profile.md](docs/company-profile.md): company profile for bids
+- [docs/bid-prep-decisions.md](docs/bid-prep-decisions.md): team decisions on the open SRS questions for the Bid Preparation Assistant
+- [tests/e2e/](tests/e2e/README.md): browser test for username login (Playwright) and its evidence
+
+## Branches and CI
+
+Work goes into feature branches and is merged into `develop` by pull request. CI runs Build, Test (mocked data), API contract, Semgrep and a health check. A green `develop` is promoted to `main` automatically. Details: [CI/CD and branch flow](docs/reference.md#cicd-and-branch-flow).

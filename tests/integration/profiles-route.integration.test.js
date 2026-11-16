@@ -47,7 +47,7 @@ const { BidPrepDraft } = await import('@/models/BidPrepDraft');
 const { GET, PATCH, DELETE } = await import('@/app/api/profiles/route');
 
 function requestWithBody(body) {
-    return { headers: { get: name => name === 'origin' ? 'http://localhost:3000' : null }, json: async () => body };
+    return { headers: { get: name => name === 'origin' ? 'http://localhost:3000' : name === 'content-type' ? 'application/json' : null }, text: async () => JSON.stringify(body), json: async () => body };
 }
 
 const authedRequest = { headers: { get: name => name === 'origin' ? 'http://localhost:3000' : null }, json: async () => ({}) };

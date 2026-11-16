@@ -159,7 +159,7 @@ const ProjectSchema = new mongoose.Schema({
             enum: [
                 'document_not_published', 'temporary_timeout', 'resolver_failed',
                 'anti_bot_blocked', 'unsupported_layout', 'download_failed',
-                'archive_invalid', 'failed',
+                'archive_invalid', 'file_too_large', 'unreadable_pdf', 'text_extraction_failed', 'failed',
             ],
         },
         error: { type: String },

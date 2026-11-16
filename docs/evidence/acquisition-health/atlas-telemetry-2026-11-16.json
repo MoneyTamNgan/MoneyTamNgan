@@ -1,0 +1,71 @@
+{
+  "status": "passed",
+  "fixture": "isolated Atlas telemetry only; no production acquisition/OCR/Vertex success claim",
+  "duplicateDidNotOverwrite": true,
+  "benchmarkExcluded": true,
+  "ttlDays": 90,
+  "healthy": {
+    "status": "healthy",
+    "policy": {
+      "sampleSize": 100,
+      "minimumSample": 20,
+      "targetSuccessRate": 0.9,
+      "consecutiveFailureThreshold": 5,
+      "staleAfterHours": 24
+    },
+    "attempted": 20,
+    "succeeded": 18,
+    "failed": 2,
+    "skipped": 0,
+    "successRate": 0.9,
+    "consecutiveFailures": 2,
+    "lastSuccessAt": "2026-11-16T10:39:04.345Z",
+    "lastAttemptAt": "2026-11-16T10:39:04.496Z",
+    "stale": false,
+    "bySource": {
+      "worker": {
+        "attempted": 20,
+        "succeeded": 18
+      }
+    },
+    "byRun": {
+      "fixture_run": {
+        "attempted": 20,
+        "succeeded": 18
+      }
+    },
+    "scope": "latest acquisition attempts; not OCR, Vertex, or metadata-ingestion success"
+  },
+  "degraded": {
+    "status": "degraded",
+    "policy": {
+      "sampleSize": 100,
+      "minimumSample": 20,
+      "targetSuccessRate": 0.9,
+      "consecutiveFailureThreshold": 5,
+      "staleAfterHours": 24
+    },
+    "attempted": 23,
+    "succeeded": 18,
+    "failed": 5,
+    "skipped": 0,
+    "successRate": 0.782608695652174,
+    "consecutiveFailures": 5,
+    "lastSuccessAt": "2026-11-16T10:39:04.345Z",
+    "lastAttemptAt": "2026-11-16T10:39:05.164Z",
+    "stale": false,
+    "bySource": {
+      "worker": {
+        "attempted": 23,
+        "succeeded": 18
+      }
+    },
+    "byRun": {
+      "fixture_run": {
+        "attempted": 20,
+        "succeeded": 18
+      }
+    },
+    "scope": "latest acquisition attempts; not OCR, Vertex, or metadata-ingestion success"
+  }
+}

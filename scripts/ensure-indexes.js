@@ -14,6 +14,7 @@ import ClassificationOverride from '../models/ClassificationOverride.js';
 import IngestionRun from '../models/IngestionRun.js';
 import AdminPipelineState from '../models/AdminPipelineState.js';
 import PipelineTriggerAudit from '../models/PipelineTriggerAudit.js';
+import AcquisitionAttempt from '../models/AcquisitionAttempt.js';
 import Project from '../models/Project.js';
 import VertexChunk from '../models/VertexChunk.js';
 import { User } from '../models/User.js';
@@ -25,6 +26,7 @@ import { ensureVectorSearchIndex, VECTOR_INDEX_NAME } from '../lib/vector-index.
 const MODELS = [
     NotificationDelivery,
     NotificationBatch,
+    AcquisitionAttempt,
     Project,
     Document,
     ExtractionRun,

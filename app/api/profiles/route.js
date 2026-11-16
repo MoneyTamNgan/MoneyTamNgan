@@ -1,3 +1,4 @@
+import { validateProfileUpdates, publicContractorProfile } from '@/lib/profile-validation';
 import { withRouteSecurity } from "@/lib/route-security";
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
@@ -6,7 +7,7 @@ import { User } from '@/models/User';
 import { SESSION_COOKIE } from '@/lib/auth';
 import { requestPrincipal } from '@/lib/request-authorization';
 import { deleteDraftsForUser } from '@/lib/bid-prep/deletion';
-import { bidPrepError, logBidPrepAudit, profileRateLimitResponse } from '@/lib/bid-prep/security';
+import { bidPrepError, logBidPrepAudit, profileRateLimitResponse, readJson } from '@/lib/bid-prep/security';
 
 function profileFailure(action, error) {
     try {
@@ -21,12 +22,6 @@ async function getAuthUserId(req) {
     return (await requestPrincipal(req))?.session?.sub || null;
 }
 
-// Helper to clean array of strings
-function cleanStringArray(arr) {
-    if (!Array.isArray(arr)) return [];
-    return [...new Set(arr.map(item => String(item).trim()).filter(Boolean))];
-}
-
 // 1. GET: Fetch Current User Profile
 async function handleGET(req) {
     try {
@@ -38,28 +33,12 @@ async function handleGET(req) {
         if (limited) return limited;
 
         await connectDB();
-        const user = await User.findById(userId).select('-googleId').lean();
+        const user = await User.findById(userId).select('-googleId -passwordHash').lean();
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        // Format profile response
-        const profile = {
-            _id: String(user._id),
-            email: user.email,
-            name: user.name || '',
-            company_name: user.company_name || '',
-            skills: user.skills && user.skills.length > 0 ? user.skills : (user.techStack || []),
-            techStack: user.techStack && user.techStack.length > 0 ? user.techStack : (user.skills || []),
-            registered_capital: user.registered_capital ?? null,
-            highest_past_project_value: user.highest_past_project_value ?? null,
-            concurrent_project_capacity: user.concurrent_project_capacity ?? null,
-            certifications: user.certifications || [],
-            email_notifications_enabled: user.email_notifications_enabled ?? false,
-            match_score_threshold: user.match_score_threshold ?? 70,
-            notification_frequency: user.notification_frequency ?? 'IMMEDIATE',
-            updatedAt: user.updatedAt || new Date(),
-        };
+        const profile = publicContractorProfile(user);
 
         return NextResponse.json({ status: 'success', data: profile }, { status: 200 });
     } catch (error) {
@@ -78,89 +57,36 @@ async function handlePATCH(req) {
         const limited = profileRateLimitResponse(userId);
         if (limited) return limited;
 
+        const parsed = await readJson(req, { maxBytes: 128 * 1024 });
+        if (parsed.error) return bidPrepError(parsed.error.code, parsed.error.message, parsed.error.status);
+        const validated = validateProfileUpdates(parsed.value);
+        if (Object.keys(validated.errors).length) return NextResponse.json({ error: {
+            code: 'INVALID_PROFILE', message: 'Please correct the highlighted profile fields.', fields: validated.errors,
+        } }, { status: 400 });
+        const updates = { ...validated.updates, updatedAt: new Date() };
         await connectDB();
-        const body = await req.json();
-
-        const updates = { updatedAt: new Date() };
-
-        if (typeof body.name === 'string') updates.name = body.name.trim();
-        if (typeof body.company_name === 'string') updates.company_name = body.company_name.trim();
-
-        // Support both skills and techStack interchangeably
-        if (Array.isArray(body.skills)) {
-            const cleanedSkills = cleanStringArray(body.skills);
-            updates.skills = cleanedSkills;
-            if (!body.techStack) updates.techStack = cleanedSkills;
-        }
-        if (Array.isArray(body.techStack)) {
-            const cleanedTech = cleanStringArray(body.techStack);
-            updates.techStack = cleanedTech;
-            if (!body.skills) updates.skills = cleanedTech;
-        }
-
-        if (body.registered_capital !== undefined) {
-            updates.registered_capital = body.registered_capital === null || body.registered_capital === '' ? null : Number(body.registered_capital);
-        }
-        if (body.highest_past_project_value !== undefined) {
-            updates.highest_past_project_value = body.highest_past_project_value === null || body.highest_past_project_value === '' ? null : Number(body.highest_past_project_value);
-        }
-        if (body.concurrent_project_capacity !== undefined) {
-            updates.concurrent_project_capacity = body.concurrent_project_capacity === null || body.concurrent_project_capacity === '' ? null : Number(body.concurrent_project_capacity);
-        }
-        if (Array.isArray(body.certifications)) {
-            updates.certifications = cleanStringArray(body.certifications);
-        }
-        if (typeof body.email_notifications_enabled === 'boolean') {
-            updates.email_notifications_enabled = body.email_notifications_enabled;
-        }
-        if (body.match_score_threshold !== undefined) {
-            const t = Number(body.match_score_threshold);
-            if (!Number.isNaN(t) && t >= 0 && t <= 100) {
-                updates.match_score_threshold = t;
-            }
-        }
-        if (body.notification_frequency !== undefined) {
-            if (['IMMEDIATE', 'DAILY_DIGEST'].includes(body.notification_frequency)) {
-                updates.notification_frequency = body.notification_frequency;
-            }
-        }
 
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { $set: updates },
             { new: true, runValidators: true }
-        ).select('-googleId').lean();
+        ).select('-googleId -passwordHash').lean();
 
         if (!updatedUser) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        const profile = {
-            _id: String(updatedUser._id),
-            email: updatedUser.email,
-            name: updatedUser.name || '',
-            company_name: updatedUser.company_name || '',
-            skills: updatedUser.skills && updatedUser.skills.length > 0 ? updatedUser.skills : (updatedUser.techStack || []),
-            techStack: updatedUser.techStack && updatedUser.techStack.length > 0 ? updatedUser.techStack : (updatedUser.skills || []),
-            registered_capital: updatedUser.registered_capital ?? null,
-            highest_past_project_value: updatedUser.highest_past_project_value ?? null,
-            concurrent_project_capacity: updatedUser.concurrent_project_capacity ?? null,
-            certifications: updatedUser.certifications || [],
-            email_notifications_enabled: updatedUser.email_notifications_enabled ?? false,
-            match_score_threshold: updatedUser.match_score_threshold ?? 70,
-            notification_frequency: updatedUser.notification_frequency ?? 'IMMEDIATE',
-            updatedAt: updatedUser.updatedAt || new Date(),
-        };
+        const profile = publicContractorProfile(updatedUser);
 
         return NextResponse.json({ status: 'success', data: profile }, { status: 200 });
     } catch (error) {
         profileFailure('update', error);
-        return NextResponse.json({ error: 'Failed to update profile' }, { status: 400 });
+        return NextResponse.json({ error: { code: error?.name === 'ValidationError' ? 'INVALID_PROFILE' : 'PROFILE_UPDATE_FAILED', message: error?.name === 'ValidationError' ? 'Profile values are invalid.' : 'Unable to save profile. Please try again.' } }, { status: error?.name === 'ValidationError' ? 400 : 500 });
     }
 }
 
 async function handlePUT(req) {
-    return PATCH(req);
+    return handlePATCH(req);
 }
 
 // 3. DELETE: Delete User Account

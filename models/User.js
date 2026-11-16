@@ -1,7 +1,15 @@
 import mongoose from 'mongoose';
+import { PROFILE_LIMITS as LIMITS } from '../lib/profile-validation.js';
 import { USERNAME_MIN, USERNAME_MAX, USERNAME_PATTERN } from '../lib/username.js';
 
 const { Schema, model, models } = mongoose;
+
+const PastProjectSchema = new Schema({
+    name: { type: String, required: true, trim: true, maxlength: LIMITS.projectText },
+    client: { type: String, required: true, trim: true, maxlength: LIMITS.projectText },
+    value: { type: Number, required: true, min: 0, max: LIMITS.maxMoney },
+    year: { type: Number, required: true, min: LIMITS.minYear, max: LIMITS.maxYear, validate: Number.isInteger },
+}, { _id: false });
 
 const UserSchema = new Schema({
     email: { type: String, required: true, unique: true },
@@ -19,8 +27,19 @@ const UserSchema = new Schema({
     passwordHash: { type: String, select: false },
     picture: String,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    // ASVS V7.4.2: a disabled account is refused at sign-in and its live sessions stop working
+    // on the next request (lib/account-status.js). Set with `npm run user:disable`.
+    disabled: { type: Boolean, default: false },
+    disabled_at: { type: Date, default: null },
+    bid_prep_revision: { type: Number, default: 0, select: false },
+    bid_checklist_revision: { type: Number, select: false },
+    bid_checklist_statuses: { type: Map, of: { type: String, enum: ['pass', 'fail', 'manual'] }, select: false },
     techStack: { type: [String], default: [] },
-    company_name: { type: String, default: '' },
+    company_name: { type: String, default: '', trim: true, maxlength: LIMITS.company_name },
+    registration_number: { type: String, default: '', trim: true, maxlength: LIMITS.registration_number },
+    address: { type: String, default: '', trim: true, maxlength: LIMITS.address },
+    authorized_signatory: { type: String, default: '', trim: true, maxlength: LIMITS.authorized_signatory },
+    past_projects: { type: [PastProjectSchema], default: [], validate: value => value.length <= LIMITS.maxProjects },
     skills: { type: [String], default: [] },
     registered_capital: { type: Number, default: null },
     highest_past_project_value: { type: Number, default: null },

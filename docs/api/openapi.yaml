@@ -129,6 +129,7 @@ paths:
                 properties:
                   status: { type: string, enum: [ok] }
                   run: { $ref: '#/components/schemas/AdminPipelineRun' }
+                  acquisitionHealth: { $ref: '#/components/schemas/AcquisitionHealth' }
                   dbStats:
                     type: object
                     nullable: true
@@ -958,6 +959,80 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /profiles:
+    get:
+      summary: Read the authenticated user's company profile
+      description: Identity is session.sub (cookie or scoped Bearer); query user IDs are ignored. Legacy bid fields default to empty strings and an empty history.
+      tags: [Contractor Profile]
+      operationId: getCompanyProfile
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      responses:
+        "200":
+          description: Current profile with no googleId or passwordHash
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
+        "401": { description: Authentication required }
+        "403": { description: Missing profile read permission }
+        "404": { description: User not found }
+        "429": { description: Profile rate limit exceeded }
+    put:
+      summary: Update the authenticated user's company profile
+      description: Partial updates. Unknown fields including role, passwordHash and user IDs are ignored. Strings are trimmed. Replace past_projects with the edited array to remove rows; an empty array clears it. Years are Buddhist Era 2400–2700. Maximum JSON body is 128 KiB. Cookie writes require an approved Origin.
+      tags: [Contractor Profile]
+      operationId: putCompanyProfile
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyProfileUpdate" }
+      responses:
+        "200":
+          description: Saved profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
+        "400":
+          description: Invalid JSON or profile values
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfileValidationError" }
+        "401": { description: Authentication required }
+        "403": { description: Missing profile write permission or invalid Origin }
+        "404": { description: User not found }
+        "413": { description: JSON body exceeds 128 KiB }
+        "415": { description: Content-Type must be application/json }
+        "429": { description: Profile rate limit exceeded }
+    patch:
+      summary: Partially update the authenticated user's company profile
+      description: Same update allowlist, validation, response and ownership rules as PUT /profiles.
+      tags: [Contractor Profile]
+      operationId: patchCompanyProfile
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyProfileUpdate" }
+      responses:
+        "200":
+          description: Saved profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
+        "400":
+          description: Invalid JSON or profile values
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfileValidationError" }
+        "401": { description: Authentication required }
+        "403": { description: Missing profile write permission or invalid Origin }
+        "404": { description: User not found }
+        "413": { description: JSON body exceeds 128 KiB }
+        "415": { description: Content-Type must be application/json }
+        "429": { description: Profile rate limit exceeded }
+
   # ---------------------------------------------------------------------------
   # Planned - Matching (FR-2.3)
   # ---------------------------------------------------------------------------
@@ -1576,16 +1651,25 @@ paths:
 
   /bid-prep/drafts/{id}/export:
     post:
-      summary: Download the caller's draft as DOCX
+      summary: Download the caller's draft and checklist as one DOCX
       description: >
-        Plain-text DOCX. The file says it is an AI draft and that the seller
-        submits to e-GP. Another user's draft returns 404. The audit record
-        stores the user id, time and client address, not the draft text.
+        One plain-text DOCX contains the saved proposal sections and sources plus
+        the current caller-specific checklist (status, reason and TOR page).
+        Missing checklist data is explicitly manual with visible placeholders.
+        The file states it is an AI draft, does not submit to e-GP, and shows created,
+        modified and exported dates. A4 fixed-width tables and Thai-capable fonts
+        are used. Maximum size is 2 MiB. PDF is outside this release (#145).
+        Another user's draft returns 404. Each successful export audits only user,
+        time, IP and draft/project identifiers. Raw HTML, fields and macros are absent.
       operationId: exportBidPrepDraft
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/BidPrepDraftIdParam"
+        - name: version
+          in: query
+          description: Optional saved draft version. A stale version returns 409; the editor supplies it.
+          schema: { type: integer, minimum: 1 }
       responses:
         "200":
           description: DOCX file
@@ -1595,7 +1679,7 @@ paths:
                 type: string
                 format: binary
         "400":
-          description: Draft is empty
+          description: Draft is empty, corrupt, or version is invalid
           content:
             application/json:
               schema:
@@ -1612,6 +1696,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "409":
+          description: Saved draft version changed; reload before exporting
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "413":
+          description: Export exceeds 2 MiB
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "429":
           description: Rate limit exceeded
           content:
@@ -1623,9 +1717,9 @@ paths:
     get:
       summary: Checklist for one TOR using the signed-in user's profile
       description: >
-        A user id in the query is ignored. Items are manual until the
-        comparison engine is allowed to decide; this endpoint does not guess
-        a pass. Missing or unprocessed TORs return 404 or 409.
+        The checklist can automatically check a verified past-project minimum
+        as a separate value-only item. Items include any status overrides saved by the caller.
+        A user id in the query is ignored. Missing or unprocessed TORs return 404 or 409.
       operationId: getBidPrepChecklist
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }]
@@ -1662,6 +1756,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+    patch:
+      summary: Set or clear the caller's checklist item status override
+      operationId: updateBidPrepChecklistStatus
+      tags: [Bid preparation]
+      security: [{ sessionAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/BidPrepProjectIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itemId, status]
+              properties:
+                itemId: { type: string, pattern: "^[a-f0-9]{64}$" }
+                status:
+                  type: string
+                  nullable: true
+                  enum: [pass, fail, manual, null]
+                  description: Use null to restore the automatic status.
+      responses:
+        "200":
+          description: Updated checklist for the caller
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BidPrepChecklist" }
+        "400":
+          description: Invalid checklist item ID or status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: Request origin or scope is not allowed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: TOR or checklist item not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: TOR has not been processed or the caller's Bid Prep data changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "413":
+          description: Request body is too large
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "415":
+          description: Request body must be JSON
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
 components:
   securitySchemes:
@@ -1740,6 +1901,25 @@ components:
         default: 10
 
   schemas:
+    AcquisitionHealth:
+      type: object
+      required: [status]
+      description: Latest 100 production acquisition attempts retained for 90 days. Excludes benchmark probes and OCR/Vertex success. A proposed 90 percent target needs team acceptance.
+      properties:
+        status: { type: string, enum: [healthy, degraded, insufficient_data, unavailable] }
+        attempted: { type: integer, minimum: 0 }
+        succeeded: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        successRate: { type: number, minimum: 0, maximum: 1, nullable: true }
+        consecutiveFailures: { type: integer, minimum: 0 }
+        lastSuccessAt: { type: string, format: date-time, nullable: true }
+        lastAttemptAt: { type: string, format: date-time, nullable: true }
+        stale: { type: boolean }
+        bySource: { type: object, additionalProperties: { type: object } }
+        byRun: { type: object, additionalProperties: { type: object } }
+        policy: { type: object }
+        scope: { type: string }
     AdminPipelineRun:
       type: object
       required: [id, status, phase, startedAt, completedAt, progress, summary, error, errorCode]
@@ -2276,6 +2456,73 @@ components:
           type: string
           enum: [user, admin]
 
+    CompanyPastProject:
+      type: object
+      required: [name, client, value, year]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        client: { type: string, minLength: 1, maxLength: 200 }
+        value: { type: number, minimum: 0, maximum: 1000000000000000 }
+        year: { type: integer, minimum: 2400, maximum: 2700, description: Buddhist Era year; preserved without conversion. }
+    CompanyProfileUpdate:
+      type: object
+      description: All fields are optional. Unknown keys are ignored. Empty bid strings and past_projects=[] clear those fields.
+      properties:
+        name: { type: string, maxLength: 200 }
+        company_name: { type: string, maxLength: 200 }
+        registration_number: { type: string, maxLength: 100 }
+        address: { type: string, maxLength: 2000 }
+        authorized_signatory: { type: string, maxLength: 200 }
+        past_projects:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/CompanyPastProject" }
+        skills:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+        techStack:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+        certifications:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+        registered_capital: { type: number, nullable: true, minimum: 0, maximum: 1000000000000000 }
+        highest_past_project_value: { type: number, nullable: true, minimum: 0, maximum: 1000000000000000 }
+        concurrent_project_capacity: { type: integer, nullable: true, minimum: 0, maximum: 10000 }
+        email_notifications_enabled: { type: boolean }
+        match_score_threshold: { type: number, minimum: 0, maximum: 100 }
+        notification_frequency: { type: string, enum: [IMMEDIATE, DAILY_DIGEST] }
+    CompanyProfileResponse:
+      type: object
+      required: [status, data]
+      properties:
+        status: { type: string, enum: [success] }
+        data:
+          allOf:
+            - $ref: "#/components/schemas/CompanyProfileUpdate"
+            - type: object
+              required: [_id, email, registration_number, address, authorized_signatory, past_projects]
+              properties:
+                _id: { type: string }
+                email: { type: string, format: email }
+                updatedAt: { type: string, format: date-time }
+    ProfileValidationError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            fields:
+              type: object
+              additionalProperties: { type: string }
+
     ContractorProfileInput:
       type: object
       description: "[Planned] FR-2.2.2 - self-reported, no verification required."
@@ -2594,18 +2841,28 @@ components:
       type: object
       required: [heading, body, sources]
       properties:
-        heading: { type: string }
-        body: { type: string }
+        heading: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 8000 }
         sources:
           type: array
-          items: { type: string }
+          maxItems: 20
+          items: { type: string, maxLength: 200 }
+    BidPrepDraftSectionInput:
+      type: object
+      properties:
+        heading: { type: string, maxLength: 200 }
+        body: { type: string, maxLength: 8000 }
+        sources:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 200 }
     BidPrepDraftSummary:
       type: object
       required: [id, projectId, title, version, createdAt, updatedAt, notices]
       properties:
         id: { type: string }
-        projectId: { type: string }
-        title: { type: string }
+        projectId: { type: string, maxLength: 64 }
+        title: { type: string, maxLength: 200 }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -2619,28 +2876,32 @@ components:
           properties:
             sections:
               type: array
+              maxItems: 40
               items:
                 $ref: "#/components/schemas/BidPrepDraftSection"
     BidPrepDraftInput:
       type: object
+      description: Owner comes from session.sub. Unknown fields are ignored. Maximum 40 sections and 100000 total text characters including sources. Overlong fields are rejected, not truncated. At most 50 drafts per user (or a lower configured cap); concurrent creation is serialized transactionally.
       required: [projectId]
       properties:
-        projectId: { type: string }
-        title: { type: string }
+        projectId: { type: string, maxLength: 64 }
+        title: { type: string, maxLength: 200 }
         sections:
           type: array
+          maxItems: 40
           items:
-            $ref: "#/components/schemas/BidPrepDraftSection"
+            $ref: "#/components/schemas/BidPrepDraftSectionInput"
     BidPrepDraftPatch:
       type: object
       required: [version]
       properties:
         version: { type: integer, minimum: 1 }
-        title: { type: string }
+        title: { type: string, maxLength: 200 }
         sections:
           type: array
+          maxItems: 40
           items:
-            $ref: "#/components/schemas/BidPrepDraftSection"
+            $ref: "#/components/schemas/BidPrepDraftSectionInput"
     BidPrepDeletion:
       type: object
       required: [status, draftsDeleted]
@@ -2649,10 +2910,12 @@ components:
         draftsDeleted: { type: integer, minimum: 0 }
     BidPrepChecklistItem:
       type: object
-      required: [requirement, status, reason, evidencePages, needsReview]
+      required: [id, requirement, status, overrideStatus, reason, evidencePages, needsReview]
       properties:
+        id: { type: string, pattern: "^[a-f0-9]{64}$" }
         requirement: { type: string }
         status: { type: string, enum: [pass, fail, manual] }
+        overrideStatus: { type: string, nullable: true, enum: [pass, fail, manual, null] }
         reason: { type: string }
         evidencePages:
           type: array
@@ -2660,7 +2923,7 @@ components:
         needsReview: { type: boolean }
     BidPrepChecklist:
       type: object
-      required: [projectId, notices, summary, missingProfileFields, truncated, items]
+      required: [projectId, notices, summary, missingProfileFields, truncated, items, pastProjectValueComparison]
       properties:
         projectId: { type: string }
         notices:
@@ -2675,6 +2938,23 @@ components:
         missingProfileFields:
           type: array
           items: { type: string }
+        pastProjectValueComparison:
+          type: object
+          required: [status, companyValueBaht, minimumBaht, operator, meetsMinimum, evidence]
+          properties:
+            status: { type: string, enum: [found, not_stated, manual_review, pending_extraction] }
+            companyValueBaht: { type: number, minimum: 0, nullable: true }
+            minimumBaht: { type: number, minimum: 0, nullable: true }
+            operator: { type: string, enum: [">=", ">", null], nullable: true }
+            meetsMinimum: { type: boolean, nullable: true }
+            evidence:
+              type: array
+              items:
+                type: object
+                required: [page, clauseText]
+                properties:
+                  page: { type: integer, minimum: 1 }
+                  clauseText: { type: string }
         truncated: { type: boolean }
         items:
           type: array

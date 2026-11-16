@@ -76,6 +76,9 @@ async function handleGET(request) {
         if (existing?.passwordHash || (existing?.googleId && existing.googleId !== googleUser.id)) {
             return NextResponse.json({ error: 'This email already uses a different sign-in method. Sign in with the original method; automatic account linking is disabled.' }, { status: 409 });
         }
+        if (existing?.disabled === true) {
+            return NextResponse.json({ error: 'This account is disabled.' }, { status: 403 });
+        }
         const updateFields = {
             name: googleUser.name,
             googleId: googleUser.id,
