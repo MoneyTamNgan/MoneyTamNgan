@@ -1,44 +1,35 @@
-# TOR past-project value comparison
+# Past-project minimum from extracted qualifications
 
-The worker reads embedded PDF text or OCR and stores page text in `documentpages`. The TOR extractor scans the readable pages for Thai past-work, minimum and currency cues. It includes likely clauses and adjacent page fragments in the existing Vertex requests. The prompt also asks Vertex to scan for prior-work minimums when there are no keyword hits.
+## Run it
 
-The extractor verifies the reported page, quote, amount in baht and comparison operator against the source text. It supports Thai and Arabic digits, grouping separators, baht and Thai scale words such as ล้านบาท. Amounts expressed as percentages, combined values, conflicting clauses and incomplete evidence require manual review. The procurement budget, reference price and registered capital are separate figures.
+For an existing TOR with a saved `DocumentSummary`, run this from the repo root:
 
-Results are versioned at `documentsummaries.extraction.past_project_requirement`. A successful result contains `minimum_baht`, `operator` and `evidence` with page numbers and quotes. The current project points to the new summary through `latest_summary_id`.
+```powershell
+npm run vertex:past-project -- 69099360837
+```
+
+The command prints the summary ID and the enrichment result. It uses the current summary in the configured MongoDB database. It only calls Vertex if the qualifications contain `มูลค่า` and that summary's qualification set needs enrichment. Use the existing Google Cloud project and Application Default Credentials for that call.
+
+The worker runs the same step automatically after saving or reusing a primary TOR summary when `VERTEX_AI_ENABLED=true`. Restart a running worker after updating the code. `npm run vertex:reanalyze -- PROJECT_ID` also runs the step after the normal analysis and includes the outcome under `pastProjectEnrichment`. If the extra Vertex request fails, the normal summary stays saved. The next processing run or standalone command can retry it.
+
+## How the minimum is extracted
+
+1. Read `DocumentSummary.extraction.qualifications`. Send each full qualification whose `value` contains the literal Thai text `มูลค่า` to Vertex with an ID and its recorded page.
+2. Ask Vertex for the monetary minimum attached to the bidder's past work, the operator (`>=` or `>`), the qualification ID, and the exact supporting quote. Registered capital, net worth, current bid prices, scoring weights, and lookback periods are separate figures.
+3. Verify the quote, amount, and operator against the stored qualification. Copy the page from the qualification record. For TOR `69099360837`, the saved page 6 qualification gives **฿4,500,000 or more**. The five-year lookback is a separate condition.
+4. Save `extraction.past_project_requirement` on the same summary with `source: 'qualifications'`. The enrichment version and hash of the qualification content determine whether a result can be reused.
 
 | Result | Meaning |
 | --- | --- |
-| `found` | The source supports one explicit monetary minimum. |
-| `not_stated` | The qualifications are readable and the scan found no minimum. |
-| `manual_review` | The text, amount or comparison is unclear. A wholly unreadable OCR run is shown for review using the pipeline's existing unreadable status. |
-| `pending_extraction` | The existing summary predates this extractor. |
+| `found` | The extracted qualification supports a single monetary minimum. |
+| `not_stated` | The available qualifications did not yield a prior-work minimum. |
+| `manual_review` | Qualification data is missing or the amount could not be verified. |
+| `pending_extraction` | The comparison is waiting for this enrichment to finish. |
 
-The signed-in checklist request reads the saved amount and compares it to the highest value in the caller’s `past_projects`, using `highest_past_project_value` when no recorded project value is available. Equality meets an inclusive minimum and falls short of a strict minimum. Missing company data leaves the comparison blank. The TOR detail page shows the amounts and cites the PDF. Qualification decisions stay in the manual checklist.
-
-## Run for one existing TOR
-
-Configure `MONGODB_URI`, the intended database, `GOOGLE_CLOUD_PROJECT` and Google Application Default Credentials. Use a TOR that already has a completed OCR run with stored pages.
-
-```powershell
-npm run vertex:reanalyze -- PROJECT_ID
-```
-
-Replace `PROJECT_ID` with the TOR’s ID. The command writes a new versioned summary on its first run for the current OCR and prompt version. It prints the `pastProjectRequirement` result and summary ID. Add `--full` to see the complete extraction. Subsequent runs can reuse the saved version.
-
-If the TOR lacks an OCR run or needs the PDF processed again, queue it through the existing [processing trigger](reference.md) and start the worker with `VERTEX_AI_ENABLED=true` in its environment. The worker reads the original PDF and runs the same extractor.
-
-```powershell
-npm run worker
-```
-
-Start the app with `npm run dev`, sign in, and open `/tors/PROJECT_ID`. The card reads `GET /api/bid-prep/tors/PROJECT_ID/checklist`. Update a past-project value in the company profile and reload the TOR page to verify the comparison changes.
+The company-value comparison uses qualifying enrichment results. Its evidence quotes the extracted qualification and links to its recorded PDF page.
 
 ## Local verification
 
 ```powershell
-node --test tests/unit/past-project-requirement.test.js
-npm test
-npm run test:vitest
+node --test tests/unit/past-project-qualifications.test.js tests/unit/ocr-pipeline.test.js tests/unit/vertex-reanalysis.test.js
 ```
-
-For a live check, select three TORs with stored pages, covering a clear minimum, no stated minimum and a clause that needs review. For each, record the project ID, page, source quote and saved status printed by the command. Confirm the result against the original PDF.

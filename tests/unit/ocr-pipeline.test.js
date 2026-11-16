@@ -187,8 +187,20 @@ for (const needsReview of [false, true]) {
                 model: 'test-model', modelVersion: 'test-version', promptVersion: TOR_PROMPT_VERSION,
                 usage: { inputTokens: 100, outputTokens: 50 } };
         };
+        const saveSummary = dependencies.saveSummaryBundle;
+        dependencies.saveSummaryBundle = async (...args) => ({
+            ...await saveSummary(...args), extraction: args[4].extraction,
+        });
+        dependencies.enrichPastProject = async summary => {
+            assert.equal(normalizedWrites.summary, 1);
+            assert.equal(summary._id, 'summary-test');
+            assert.equal(summary.extraction.qualifications[0].page, 1);
+            if (needsReview) throw new Error('Vertex temporarily unavailable');
+            return { reused: false, requirement: { status: 'not_stated' } };
+        };
         const result = await processProject(record.project_id, {}, dependencies);
         assert.equal(result.status, needsReview ? 'review_required' : 'completed');
+        assert.equal(result.pastProjectEnrichment.status, needsReview ? 'pending_extraction' : 'completed');
         const saved = updates.at(-1).$set;
         assert.equal(normalizedWrites.vertex.extraction.summary, 'สรุปทดสอบ');
         assert.equal(normalizedWrites.vertex.extraction.qualifications[0].page, 1);

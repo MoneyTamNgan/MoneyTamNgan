@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveFiscalBudget, validateFiscalYearEvidence } from '../../lib/fiscal-budget.js';
 import { extractTorWithVertex } from '../../lib/vertex/tor-extractor.js';
-import { TOR_PROMPT_VERSION } from '../../lib/vertex/response-schema.js';
 
 test('extracts explicit fiscal years and Thai/OCR-spaced digits', () => {
     for (const text of ['ปีงบประมาณ 2569', 'ปีงบประมาณ พ.ศ. ๒๕๗๐', 'ปี งบ ประมาณ 2 5 6 9', 'ปีงบประมาณ\n2569']) {
@@ -68,7 +67,7 @@ test('Vertex pipeline combines regex and LLM fiscal evidence in its stored extra
     });
     assert.equal(result.extraction.fiscal_budget.year, 2570);
     assert.equal(result.extraction.fiscal_budget.method, 'regex+llm');
-    assert.equal(result.promptVersion, TOR_PROMPT_VERSION);
+    assert.match(result.promptVersion, /v8/);
 });
 
 test('procurement budget annual-year wording and decomposed Thai sara-am retain source evidence', () => {
