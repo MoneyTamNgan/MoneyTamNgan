@@ -48,3 +48,14 @@ Both email and username are live. A failure uses one message for an unknown iden
 ## Scanners
 
 Semgrep (`p/owasp-top-ten`) fails the build on a High finding. ZAP baseline fails the `main` workflow on a High alert. See `docs/security/README.md`. New BidPrep routes are in the same tree those jobs scan. This change does not commit a fresh scanner artifact; CI is the current result.
+
+## Specification evidence (#192 / #193)
+
+These two rows use the cards' stricter acceptance gate: review by a teammate and merge into develop before the shared ASVS sheet is marked DONE. They do not change the earlier implementation-status rows above.
+
+| Item | Status | Evidence / remaining action |
+| --- | --- | --- |
+| V8.1.1 RBAC specification (#192) | REVIEW PENDING | [RBAC_SPEC.md](RBAC_SPEC.md), [method matrix tests](../../tests/security/rbac-route-matrix.test.js). After approval/merge, link #192 and the merged file/PR in the sheet, then mark DONE. |
+| V2.1.1 API validation dictionary (#193) | REVIEW PENDING | [API_VALIDATION.md](../API_VALIDATION.md), [route/link audit](../../scripts/audit-api-documentation.js). After approval/merge, link #193 and the merged file/PR in the sheet, then mark DONE. Known validation/OpenAPI gaps are listed explicitly. |
+
+Local verification on 2026-11-16 at this implementation: 398 Vitest tests and 280 Node tests passed (678 total), production build passed, both documentation files cover all 58 live method/path pairs with valid local links. Cached Redocly CLI lint passed with nine existing warnings and four ignored problems. OpenAPI coverage audit identified 18 live operations absent from the spec and six spec operations without handlers; all are listed in the validation dictionary. CI, non-author review, merge and shared-sheet completion remain separate release gates.

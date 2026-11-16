@@ -270,3 +270,10 @@ describe('toTorAnomalyReport', () => {
         });
     });
 });
+
+it('never presents a needs-review announcement as open based on an older future deadline', () => {
+    const project = { project_id: 'fixture', project_name: 'Fixture', tender: { closes_at: '2099-01-01T00:00:00Z' },
+        announcement_schedule: { status: 'needs_review' } };
+    expect(toTorDetail(project).bidding.status).toBe('unknown');
+    expect(toTorListItem(project).bidding.status).toBe('unknown');
+});
