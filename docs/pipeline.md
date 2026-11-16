@@ -4,52 +4,139 @@ How a project becomes a summarised, searchable TOR. Each box is one stage; the l
 
 ```mermaid
 flowchart TD
-    A["1. Ingest metadata<br/>e-GP Open Data API and RSS<br/>(scheduler 06:00 / 12:00 / 18:00, or admin run)"] --> B["2. Classify from metadata<br/>software / not software / uncertain"]
-    B -->|not software| X1(["irrelevant"])
-    B -->|uncertain| X2(["review_required<br/>admin decides"])
-    B -->|software| C["3. Check the tender is still open<br/>invitation PDF, extensions, cancellations"]
-    C -->|closed or cancelled| X3(["metadata_only"])
-    C -->|unknown| X2
-    C -->|open| D["4. Acquire the TOR document"]
+    A["1. Ingest metadata<br/>e-GP Open Data API (EGP-CONTRACT)<br/>scheduler 06 / 12 / 18 or admin run"] --> B["2. Triage by project name<br/>keyword classifier"]
+    B -->|not software| X1(["skipped, not stored"])
+    B -->|uncertain| X2(["DiscoveryCandidate: review_required<br/>admin decides"])
+    B -->|software, bid still open or unknown| C["DiscoveryCandidate saved<br/>job verify_candidate queued"]
+    C --> D["3. Verify the tender is open<br/>invitation PDF, then official e-GP page"]
+    D -->|closed, cancelled| X3(["not promoted"])
+    D -->|unknown| X4(["retry_pending<br/>worker retries with backoff"])
+    D -->|open| E["Promote to projects<br/>job process_project queued"]
+    E --> F["4. Acquire the TOR document"]
 
     subgraph ACQ [Acquire]
-        D --> D1{"known pdf_url<br/>or cached file?"}
-        D1 -->|yes| D2["download directly<br/>(URL safety check)"]
-        D1 -->|no| D3["RSS draft-document ZIP<br/>extract PDFs, pick the TOR"]
-        D3 -->|none published| D4["browser fallback (Puppeteer)<br/>retries and circuit breaker"]
+        F --> F1{"cached file or<br/>known pdf_url?"}
+        F1 -->|yes| F2["download directly<br/>(URL safety, size, signature checks)"]
+        F1 -->|no| F3["browser fallback (Puppeteer)<br/>aggregator permalink, official detail page,<br/>e-Bidding ZIP, retries, circuit breaker"]
+        R["RSS route: B0 draft ZIP and D0 invitation<br/>per department (admin run, ingest-open-tenders)"] --> F2
     end
 
-    D2 --> E["document_downloaded<br/>validate, SHA-256, store locally or GCS"]
-    D3 --> E
-    D4 --> E
-    D4 -->|not published| X3
-    D4 -->|retryable failure| X4(["retry_pending<br/>worker retries with backoff"])
+    F2 --> G["document_downloaded<br/>ZIP unpacked safely, TOR PDF chosen,<br/>SHA-256, stored locally / GridFS / GCS"]
+    F3 --> G
+    F3 -->|not published| X5(["metadata_only"])
+    F3 -->|retryable failure| X4
 
-    E --> F["5. Extract text per page<br/>embedded text first, Thai+English OCR for scanned pages<br/>(checkpointed per page)"]
-    F -->|unreadable| X2
-    F --> G["text_extracted"]
-    G --> H["6. Vertex AI (Gemini)<br/>summary, scope, qualifications, tech stack,<br/>evidence pages, anomaly signals"]
-    H -->|failure| X4
-    H -->|low confidence or partial| X2
-    H --> I["completed<br/>summary stored"]
-    I --> J["7. Embedding<br/>text-embedding-005, 768 dims"]
-    J --> K["Dashboard, search, matching and alerts"]
+    G --> H["5. Extract text per page<br/>pdftotext first, Thai+English OCR for unreadable pages"]
+    H -->|unreadable| X2
+    H --> I["text_extracted"]
+    I --> J["6. Vertex AI (Gemini 2.5 Flash)<br/>page-labelled chunks, response schema,<br/>evidence pages validated"]
+    J -->|failure| X4
+    J -->|partial or low confidence| X6(["review_required"])
+    J --> K["completed<br/>summary stored"]
+    K --> L["7. Embedding<br/>text-embedding-005, 768 dims"]
+    L --> M["Dashboard, search, matching and alerts"]
     X2 -->|admin approves or overrides| C
+    X6 -->|admin review| K
 ```
 
-## Stages
+## How each step pulls its data
 
-| # | Stage | Code | Notes |
-|---|---|---|---|
-| 1 | Ingest | `lib/egp-api.js`, `lib/egp-rss.js`, `lib/ingestion-runner.js` | Scheduler calls the trigger endpoints; each run is stored in `ingestionruns` |
-| 2 | Classify | `lib/classifier.js`, `lib/classification.js` | Admin override in `lib/classification-override.js` |
-| 3 | Eligibility | `lib/procurement-eligibility.js`, `lib/egp-announcement.js` | A newer extension or cancellation wins over the older invitation |
-| 4 | Acquire | `lib/document-resolver.js`, `lib/tender-acquisition.js`, `lib/scraper.js` | API first, browser only as the last resort (`ENABLE_BROWSER_FALLBACK`) |
-| 5 | Extract text | `lib/text-extraction.js` | Poppler (`pdftotext`, `pdftoppm`) and Tesseract `tha+eng`; PDFs up to 1000 pages |
-| 6 | Summarise | `lib/vertex/` | Output must match the response schema; TOR text is data, not instructions |
-| 7 | Embed | `lib/vertex/embedding.js`, `docs/vector-search.md` | Worker runs it after a job and a sweep retries failures |
+There are two ways in. The **API route** (steps 1 to 7 below) is the default: the scheduler and the worker use it. The **RSS route** reads the e-GP announcement feeds per department and is used by the admin run (`lib/services/pipeline-runner.js`) and `scripts/ingest-open-tenders.js`; it replaces steps 1 to 3 and step 4's browser work with feed links, then joins the same steps 5 to 7.
 
-Orchestration is `processProject` in `lib/processing-pipeline.js`. API requests only enqueue a job in MongoDB; `scripts/worker.js` runs jobs with leases and bounded retries, so a crashed worker never leaves a job stuck in `running`.
+### 1. Ingest metadata
+
+| | |
+|---|---|
+| Source | e-GP Open Data API, `https://opend.data.go.th/govspending/service/egp-contract` (`lib/egp-api.js`) |
+| Trigger | the scheduler calls `POST /api/ingestion/trigger` at 06:00, 12:00 and 18:00 Asia/Bangkok with `PIPELINE_ADMIN_TOKEN`; admins and `npm run scheduler:once` call the same endpoint |
+| Request | `GET ...?api-key=<EGP_API_KEY>&year=<Thai fiscal year>&limit=<n>&offset=<n>` plus optional `keyword` and `dept_code`; 20 s timeout; the key is redacted from error text |
+| Paging | up to 1000 records per request, 500 records per run unless `limit` is given (max 1000); it keeps asking with a larger `offset` until it has enough or runs out |
+| Year | the current Thai fiscal year (Buddhist Era; the year rolls over in October) unless `year` is sent |
+| Mapping | dates such as `21 มิ.ย. 67` are parsed to UTC dates (BE minus 543); budget is `project_money`, falling back to `price_build`; a SHA-256 of the raw record is stored as `source.payload_hash` |
+| Write | an upsert by `project_id` that refreshes metadata but never touches fields owned by processing or Vertex (`$setOnInsert` sets the initial `metadata_ingested` status) |
+| Failure | HTTP 5xx and 429 are transient and the scheduler retries (about 5, 15 and 45 minutes with jitter); a missing key or a 4xx is not retried |
+
+### 2. Triage by project name
+
+The classifier (`lib/classifier.js`, `lib/classification.js`) counts software and non-software keywords in the project name. Keyword lists come from MongoDB (editable by admins through `/api/admin/keywords`) and fall back to built-in defaults.
+
+- **software:** continues.
+- **not software:** counted in `skipped.notSoftware` and not stored.
+- **uncertain** (no keyword or a tie): stored as a `DiscoveryCandidate` with status `review_required` so a keyword list can never silently discard a relevant TOR. An admin decides through `/api/admin/classification`; a manual override is final and is never overwritten.
+- Records that already show a contract or award, or a closed status, are skipped (`skipped.closed`).
+
+### 3. Verify the tender is still open
+
+Metadata alone never proves a bid is open. For each software candidate the ingest saves a `DiscoveryCandidate` and queues a `verify_candidate` job; the worker runs `verifyDiscoveryCandidate` (`lib/discovery-candidates.js`):
+
+1. Re-run the classifier (or honour the admin override).
+2. **Invitation (ประกาศเชิญชวน):** find the `D0` entry for the project in the department's RSS feed (`lib/project-announcement.js`: department ids come from `tender.rss_dept_id`, `source.rss_dept_id` or `EGP_RSS_DEPT_IDS`; at most 4 departments; one feed request per 4 s; cached 5 minutes), download the PDF, read the text (embedded first, OCR if needed) and parse the submission window, agency and reference price (`lib/announcement-schedule.js`, `lib/egp-announcement.js`).
+3. **Official page:** resolve the project through the aggregator permalink `https://egp-gprocurement.com/p/<project_id>` to the official detail URL on `process5.gprocurement.go.th` (only that host and path are accepted, redirects are refused, the response is capped at 2 MB, requests are spaced 1 s apart), then read the labelled fields (status, bid submission end). If the plain HTML shows no answer, the page is rendered with Puppeteer.
+4. `assessProcurementEligibility` turns that into `open`, `not_yet_open`, `closed` or `unknown`. A bid end without a time of day is **not** proof that bidding is open, and a draft status is `unknown`. A newer official extension or cancellation wins over an older invitation.
+5. `open` promotes the candidate: the project is upserted with `procurement_eligibility`, `tender.invitation_url` and `tender.rss_dept_id`, a `process_project` job is queued, and the candidate becomes `promoted`. `closed` and `not_yet_open` stop here. `unknown` throws, so the job goes back to the queue with backoff.
+
+### 4. Acquire the TOR document
+
+`processProject` (`lib/processing-pipeline.js`) tries these in order and stops at the first that yields a file:
+
+1. **Already stored:** the project's local file or primary document, if it exists and is not empty.
+2. **Known URL:** `document.source_url` and `pdf_url`, checked by `validateRemoteDocumentUrl` and downloaded directly with no browser.
+3. **Browser fallback** (`ENABLE_BROWSER_FALLBACK`, on by default), `scrapeProjectTOR` in `lib/scraper.js`:
+   1. resolve the aggregator permalink to the official detail URL;
+   2. open the official detail page in Puppeteer, wait for it to render, and reload up to a few times when the page comes back empty;
+   3. find the e-Bidding row in the related-documents list and download the latest draft e-Bidding ZIP (an intermittent document-list endpoint is handled by reloading the page);
+   4. if that fails, collect document links on the page (`.pdf`, `.zip`, `.rar`, `.doc`, `.docx`, `.xlsx` and download-style links), prefer PDF, then ZIP, and skip links that do not return a real document;
+   5. if the project has no published document, the outcome is `document_not_published` and the project ends as `metadata_only`.
+
+**RSS route:** `acquireTenderDocuments` (`lib/tender-acquisition.js`) downloads the `D0` invitation first, checks that bidding is open, then downloads the `B0` draft-document ZIP straight from the feed link. Only when the feed has no ZIP does it fall back to the browser.
+
+**Download rules** (`downloadAttachment`, `lib/scraper.js`):
+
+| Rule | Value |
+|---|---|
+| Allowed URLs | `http` or `https`, no embedded credentials, not `localhost`, `.local` or a private address (`lib/url-safety.js`) |
+| Redirects | followed by hand, at most 5, each hop checked again; cookies, `Authorization` and `Referer` are dropped when the origin changes |
+| Size | at most 250 MB (`TOR_MAX_FILE_SIZE_MB`) |
+| Content check | the first bytes must match the type: `%PDF-`, ZIP, RAR or old Office; a mismatch rejects the file |
+| Politeness | a delay of 3 to 60 seconds between browser projects (`SCRAPER_DELAY_MS`, default 4 s) |
+
+**Failures and retries:** browser failures are retried after 15 s and 60 s, a hard 240 s deadline per project relaunches the browser, and five transient failures in a row pause the run for 2 minutes (circuit breaker). Anything classified as retryable becomes `retry_pending`; "not published" becomes `metadata_only`.
+
+### 4b. Unpack and store
+
+- **ZIP safety** (`lib/archive-extractor.js`): at most 200 entries, 100 MB per PDF, 200 MB extracted in total, compression ratio at most 200, encrypted entries and symlinks rejected, file names sanitised, and every extracted file must start with the PDF signature.
+- **Choosing the TOR:** each PDF gets a score from its file name: draft bidding document / e-Bidding (+120), scope of work / terms of reference / "TOR" (+100), specification (+60), reference price / announcement / forms / appendices (-20), plus up to 20 for size in MB. The highest score is the primary document; the others are kept.
+- **Store** (`lib/document-storage.js`): the file is hashed with SHA-256 and kept in the backend chosen by `TOR_STORAGE_BACKEND`: `local` (default), `gridfs` (MongoDB) or `gcs` (needs `TOR_GCS_BUCKET`, object name derived from the hash so re-uploads are idempotent). Status becomes `document_downloaded`.
+
+### 5. Extract text
+
+`extractPdfText` (`lib/text-extraction.js`) works one page at a time, from 1 to 1000 pages:
+
+1. `pdftotext -layout` for the embedded text.
+2. The page counts as readable only if it has at least 40 non-space characters, under 2% broken glyphs and more than half letters or digits (`usableText`).
+3. Otherwise the page is rendered with `pdftoppm` (300 DPI by default, `OCR_DPI` 200 to 600, longest side capped by `OCR_MAX_DIMENSION`) and read with Tesseract `tha+eng` using TSV output.
+4. A second Tesseract pass with another page-segmentation mode runs when the first result has low confidence, is unreadable, or contains money amounts, and the better candidate is kept. Amounts read by OCR are flagged `financial_ocr_requires_review`, and two passes that disagree on an amount add `ocr_amount_disagreement`.
+5. Each page is checkpointed on disk, keyed by the PDF hash and the OCR settings, so a retry never repeats finished pages.
+
+If the project's classification was still `uncertain`, it is re-run on the extracted text (method `ocr_keyword_classifier`). A document with no readable page ends as `review_required` (`document_unreadable`).
+
+### 6. Summarise with Vertex AI
+
+`extractTorWithVertex` (`lib/vertex/tor-extractor.js`):
+
+1. `prepareReadablePages` drops lines and pages with broken fonts and records coverage: `complete`, `partial` or `unreadable`.
+2. `chunkPages` groups pages into chunks of at most 24,000 characters, each page keeping its number; chunks are sent one after another.
+3. Each request goes to `gemini-2.5-flash` (`VERTEX_MODEL`) at `GOOGLE_CLOUD_LOCATION`, with the instructions as the system prompt and the page text as JSON **data**; the prompt says document text is untrusted and must not be obeyed. Temperature 0.1, JSON output forced by a response schema, 300 s timeout (`VERTEX_TIMEOUT_MS`).
+4. HTTP 429, 5xx and network errors are retried up to 4 times (`VERTEX_MAX_ATTEMPTS`, at most 5) with exponential backoff of 1 s doubling, plus jitter, capped at 30 s, and `Retry-After` is honoured.
+5. Every chunk result is cached by a hash of its pages, the model and the prompt version (`VertexChunk`), so a retry reuses finished chunks.
+6. Validation: every evidence page must exist in the chunk, fiscal-year evidence must be supported by the text of the page it cites, and clause quotes that the page does not contain become warnings.
+7. Chunk results are merged without dropping evidence; duplicate risk findings are combined, keeping the higher severity.
+
+It returns the Thai summary, qualifications, scope of work, tech stack, fiscal year and budget evidence, flagged clauses and risk findings (unrealistic tenure, excessive hardware, vendor lock-in, excessive team capacity), each with its page. The project becomes `completed` only when the text needed no review, coverage is complete and the fiscal budget is unambiguous; otherwise it is `review_required`. Authoritative e-GP metadata is never overwritten by the model.
+
+### 7. Embed
+
+`lib/vertex/embedding.js` builds one text from the project name, agency, summary, the first 10 scope items and the tech stack (at most 8,000 characters), and asks `text-embedding-005` for a 768-number vector in `us-central1` (`VERTEX_EMBEDDING_*`). The vector is stored in `projects.vectorEmbedding` with a hash of its source text. It runs right after a job completes; a failure is saved on the project and never fails the job, and the sweep retries after 10 minutes, up to 5 attempts. Details: [vector-search.md](vector-search.md).
 
 ## Where the data comes from
 
