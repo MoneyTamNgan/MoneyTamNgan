@@ -45,10 +45,30 @@ function rateLimit(request, session) {
 }
 
 /**
+ * Permanent redirect to the slash-less path. Next's built-in redirect is skipped
+ * (`skipTrailingSlashRedirect`) so this response can carry securityHeaders().
+ * Root `/` is unchanged and the query string is preserved. The Location must be
+ * absolute: the proxy adapter rejects a relative one. Next then emits a
+ * same-origin relative Location on the wire.
+ */
+function redirectTrailingSlash(request) {
+    const { pathname } = request.nextUrl;
+    if (pathname === '/' || !pathname.endsWith('/')) return null;
+    // Use a standard URL. NextURL.href puts the original trailing slash back.
+    const url = new URL(request.url);
+    url.pathname = pathname.replace(/\/+$/, '') || '/';
+    const response = NextResponse.redirect(url, 308);
+    for (const { key, value } of securityHeaders()) response.headers.set(key, value);
+    return response;
+}
+
+/**
  * Gate account pages behind a valid session, authorize admin/pipeline endpoints,
  * and rate-limit public read API endpoints for guest access (FR-4.2.1, FR-4.2.2).
  */
 export async function proxy(request) {
+    const slashRedirect = redirectTrailingSlash(request);
+    if (slashRedirect) return slashRedirect;
     const { pathname } = request.nextUrl;
     const nonce = randomBytes(16).toString('base64');
     const csp = contentSecurityPolicy({ nonce, upgrade: process.env.NODE_ENV === 'production' && process.env.APP_ORIGIN?.startsWith('https://') });

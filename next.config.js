@@ -3,6 +3,8 @@ import { allowedOrigins, securityHeaders, CORS_METHODS, CORS_HEADERS } from './l
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     poweredByHeader: false,
+    // Next issues this 308 before proxy.js, so it would skip securityHeaders().
+    skipTrailingSlashRedirect: true,
     async headers() {
         const origins = allowedOrigins();
         return [{ source: '/:path*', headers: securityHeaders() }, ...origins.map(origin => ({
