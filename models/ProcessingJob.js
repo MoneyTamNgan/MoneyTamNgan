@@ -21,6 +21,7 @@ const ProcessingJobSchema = new mongoose.Schema({
     completed_at: { type: Date },
     result: { type: mongoose.Schema.Types.Mixed },
     error: { type: String },
+    error_code: { type: String },
 }, {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
 });
