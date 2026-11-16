@@ -1,6 +1,6 @@
 # BidPrep: decisions on the SRS questions
 
-These are the answers the **team** gave on 16 November 2026 to the eight questions in "SRS adhoc requirement" v0.1 (Bid Preparation Assistant). They are the defaults the system ships with. **The customer has not confirmed them in writing yet** (#143); until they do, treat each as an assumption.
+These are the answers to the eight questions in "SRS adhoc requirement" v0.1 (Bid Preparation Assistant), given on 16 November 2026 by the project owner, who reports that the customer has confirmed them. They are what the system ships with. The customer's own message is not stored in this repository; keep it with the delivery documents (#132) and link it from #143.
 
 | # | Question | Decision | Where it shows in the system |
 |---|---|---|---|
@@ -13,4 +13,4 @@ These are the answers the **team** gave on 16 November 2026 to the eight questio
 | 7 | What was agreed with the previous project manager that is not written down? | Unknown whether anything was | Nothing to record; ask the customer to say so if there is |
 | 8 | Real bid documents as templates and test data? | Not supplied. Use the TORs the pipeline already fetches | Tests and demo use fetched TORs, not sellers' own bid documents |
 
-If the customer disagrees with any row, change the row, the code or document it points to, and the matching card.
+If the customer later changes any row, change the row, the code or document it points to, and the matching card.
