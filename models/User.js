@@ -27,6 +27,10 @@ const UserSchema = new Schema({
     passwordHash: { type: String, select: false },
     picture: String,
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    // ASVS V7.4.2: a disabled account is refused at sign-in and its live sessions stop working
+    // on the next request (lib/account-status.js). Set with `npm run user:disable`.
+    disabled: { type: Boolean, default: false },
+    disabled_at: { type: Date, default: null },
     bid_prep_revision: { type: Number, default: 0, select: false },
     bid_checklist_revision: { type: Number, select: false },
     bid_checklist_statuses: { type: Map, of: { type: String, enum: ['pass', 'fail', 'manual'] }, select: false },
