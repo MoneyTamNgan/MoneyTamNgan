@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { compareSkillMatch } from "@/lib/matchingEngine";
 import { getContractorProfile } from "@/lib/services/contractor-profile-service";
 
 const ITEMS_PER_PAGE = 5;
 const emptyProfile = { company_name: "", skills: [] };
-
-function normalizeTech(value) {
-  return String(value).toLocaleLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-}
 
 export default function TechStackComparisonCard({ items }) {
   const [page, setPage] = useState(1);
@@ -17,9 +14,9 @@ export default function TechStackComparisonCard({ items }) {
   const [largestPageHeight, setLargestPageHeight] = useState(null);
   const cardRef = useRef(null);
   const measurementRefs = useRef([]);
-  const requiredTech = useMemo(
-    () => items.filter((item, index) => items.findIndex((candidate) => normalizeTech(candidate) === normalizeTech(item)) === index),
-    [items]
+  const { requirements: requiredTech, matchedCount, score } = useMemo(
+    () => compareSkillMatch(profile.skills, items),
+    [profile.skills, items]
   );
   const pages = useMemo(() => Array.from(
     { length: Math.ceil(requiredTech.length / ITEMS_PER_PAGE) },
@@ -27,12 +24,7 @@ export default function TechStackComparisonCard({ items }) {
   ), [requiredTech]);
   const totalPages = Math.max(1, pages.length);
   const visibleItems = pages[page - 1] ?? [];
-  const companyTech = useMemo(
-    () => new Set(profile.skills.map(normalizeTech).filter(Boolean)),
-    [profile.skills]
-  );
-  const matchedCount = requiredTech.filter((item) => companyTech.has(normalizeTech(item))).length;
-  const matchPercentage = requiredTech.length ? Math.round((matchedCount / requiredTech.length) * 100) : 0;
+  const matchPercentage = requiredTech.length ? score : 0;
 
   useEffect(() => {
     let isCurrent = true;
@@ -90,11 +82,10 @@ export default function TechStackComparisonCard({ items }) {
       {requiredTech.length ? (
         <>
           <ul className="tech-comparison-list" style={pageStyle}>
-            {visibleItems.map((item, index) => {
-              const isMatch = companyTech.has(normalizeTech(item));
+            {visibleItems.map(({ label, isMatch }, index) => {
               return (
-                <li key={`${item}-${(page - 1) * ITEMS_PER_PAGE + index}`}>
-                  <p>{item}</p>
+                <li key={`${label}-${(page - 1) * ITEMS_PER_PAGE + index}`}>
+                  <p>{label}</p>
                   <span className={isLoadingProfile ? "is-pending" : isMatch ? "is-match" : "is-missing"}>
                     {isLoadingProfile ? "กำลังตรวจสอบโปรไฟล์บริษัท" : isMatch ? `มีใน Tech Stack ของ ${companyName}` : "ยังไม่พบใน Tech Stack บริษัท"}
                   </span>
@@ -110,9 +101,9 @@ export default function TechStackComparisonCard({ items }) {
                 key={`measurement-page-${pageIndex}`}
                 ref={(element) => { measurementRefs.current[pageIndex] = element; }}
               >
-                {techPage.map((item, index) => (
-                  <li key={`${item}-${index}`}>
-                    <p>{item}</p>
+                {techPage.map(({ label }, index) => (
+                  <li key={`${label}-${index}`}>
+                    <p>{label}</p>
                     <span>ยังไม่พบใน Tech Stack บริษัท</span>
                   </li>
                 ))}
