@@ -58,3 +58,7 @@ Standard Gmail has a published daily limit of 500 outgoing messages; exceeding p
 The application credentials must be supplied to every deployment privately. No SMTP service account or password is embedded in Docker images or Git. `APP_BASE_URL` must name the reachable frontend origin. The current owner-approved setup remains local-only at `http://localhost:3000`. A phone's localhost does not resolve to the app computer.
 
 Owner response on 18 November: revocation of the previously exposed Resend key is not yet confirmed. This item remains unchecked. Explicit SMTP selection prevents use of the old Resend credential for these sends; it does not revoke the credential in the provider account. Credential owner was subsequently confirmed as Watcharapat; account type remains unconfirmed.
+
+## Approved audit exception — 18 November 2026
+
+The owner approved the specific development-only exception for GHSA-fc5q-39xc-vjpf; [approval is recorded on #219](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/219#issuecomment-6969465502). The full-tree gate now passes while explicitly reporting the accepted risk. [Gate evidence](evidence/dependency-audit-approved-2026-11-18.json). It expires 2 December 2026 at 00:00 UTC. Production/critical/unrelated findings, expired exceptions and audit failures still block. The dependency is not patched; #219 stays open until remediation. This supersedes the earlier audit-blocker status, not the historical raw findings. Non-author PR approval is still required.
