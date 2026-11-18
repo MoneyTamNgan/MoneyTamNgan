@@ -94,3 +94,5 @@ The command sends exactly one marked test message through `sendMatchNotification
 Keep `EMAIL_TRANSPORT=smtp` explicit if an older Resend key exists. Configure the actual provider in `.env.local` on each machine/deployment; another developer's private settings do not arrive through `git pull`. An SMTP capture service is suitable for local inspection, but its acceptance is not evidence of delivery to an external inbox. Never bypass TLS certificate checks to make verification pass.
 
 Evidence and outstanding acceptance: [SMTP verification report](smtp-delivery-verification-2026-11-18.md). Provider limits, credential ownership, exposed-key revocation and a received-email screenshot remain the manual #165 items until independently confirmed.
+
+On 18 November 2026, after the owner saved the updated private SMTP settings, authentication/connection verification passed and the server accepted one authorized marked sample. [Sanitized evidence](evidence/notification-smtp-delivery-2026-11-18.json). Actual inbox receipt remains pending owner confirmation; no automatic repeat was attempted.

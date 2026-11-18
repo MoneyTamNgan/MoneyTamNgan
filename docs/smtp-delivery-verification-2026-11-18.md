@@ -21,19 +21,20 @@ Related: [dispatcher #39](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/39
 | Production build using locked dependencies | Passed |
 | SMTP CLI missing-recipient guard | Refused before connection/send (`TEST_RECIPIENT_REQUIRED`) |
 | Integrate current develop into isolated worktree | Clean merge |
-| SMTP connection using this machine's current private configuration | Failed with sanitized `ESOCKET`; no message sent |
+| SMTP connection using newly saved private configuration | Passed authentication/connection verification |
+| Single authorized sample send | SMTP accepted one marked test email; no automatic retry or subscriber sweep |
 | Live disposable Atlas ledger/transaction test | Passed after IP allowlisting: concurrency, immediate/digest deduplication, transaction rollback, stale-owner fencing; own fixture database removed |
 | Received real inbox message / screenshot | Not verified |
 
-Connection evidence: [sanitized JSON](evidence/notification-smtp-connection-2026-11-18.json). This is failure evidence, not delivery evidence. The previously committed 15 November accepted sample remains historical evidence and was not overwritten.
+Initial connection failure: [sanitized JSON](evidence/notification-smtp-connection-2026-11-18.json). After the owner saved the updated private settings, SMTP verified and accepted one authorized sample: [accepted-send evidence](evidence/notification-smtp-delivery-2026-11-18.json). SMTP acceptance does not prove inbox receipt. Earlier evidence was preserved.
 
-The local SMTP configuration still points to the previously used capture-service host. New real-provider settings must be installed privately on this machine before a real-inbox test can pass. After the owner enabled Atlas access, the disposable test passed. SMTP settings are still awaiting the owner’s update. No credentials are included in this report.
+The owner saved updated private SMTP settings and the live authentication and sample send passed. After the owner enabled Atlas access, the disposable ledger test also passed. Inbox confirmation and a redacted received-email screenshot are still pending. No credentials are included in this report.
 
 ## Remaining before acceptance
 
-1. Install the actual SMTP provider settings privately; confirm allowed sender, credential owner and sending limits. Confirm any previously exposed API key was revoked.
+1. Completed: updated SMTP settings loaded privately and connection/authentication verified. Still confirm provider credential ownership, sending limits and revocation of any previously exposed API key.
 2. Completed: reran the disposable Atlas ledger test after IP access was restored. [Evidence](evidence/notification-atlas-2026-11-18.json). Its transport was mocked; no production users were emailed.
-3. Run the single authorized sample send. SMTP acceptance alone does not complete #165: confirm receipt and attach a redacted screenshot.
+3. Completed: one sample was accepted by SMTP. SMTP acceptance alone does not complete #165: confirm receipt and attach a redacted screenshot. No second send is needed unless the owner requests it.
 4. Check a real TOR link and notification-settings link in the received email.
 5. Obtain non-author review and merge approval. #164 remains a draft; do not infer acceptance from #39's existing Closed/Done status.
 
