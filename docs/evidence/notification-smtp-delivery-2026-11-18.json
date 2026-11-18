@@ -5,6 +5,8 @@
   "connectionVerified": true,
   "sendAttempted": true,
   "providerAccepted": true,
-  "inboxDeliveryConfirmed": false,
-  "recipient": "p***@***"
+  "inboxDeliveryConfirmed": true,
+  "recipient": "p***@***",
+  "confirmationSource": "Owner confirmed receipt in conversation on 2026-11-18",
+  "receivedEmailScreenshotAttached": false
 }
