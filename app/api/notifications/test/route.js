@@ -3,7 +3,7 @@ import { withRouteSecurity } from "@/lib/route-security";
  * POST /api/notifications/test
  *
  * Sends a test match-notification email to the currently authenticated user.
- * Useful for verifying the email template and Resend integration.
+ * Useful for verifying the email template and selected SMTP/Resend transport.
  *
  * Body (optional JSON):
  *   { "matches": [{ "torId", "title", "agency", "budget", "matchScore" }] }
@@ -65,7 +65,7 @@ async function handlePOST(req) {
 
     if (!result) {
         return NextResponse.json(
-            { error: 'Failed to send email. Check RESEND_API_KEY and server logs.' },
+            { error: 'Failed to send email. Check email transport configuration and server logs.' },
             { status: 500 }
         );
     }

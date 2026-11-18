@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-const { smtpSend, createTransport } = vi.hoisted(() => ({ smtpSend: vi.fn(), createTransport: vi.fn() }));
+const { smtpSend, smtpVerify, smtpClose, createTransport } = vi.hoisted(() => ({
+    smtpSend: vi.fn(), smtpVerify: vi.fn(), smtpClose: vi.fn(), createTransport: vi.fn(),
+}));
 vi.mock('nodemailer', () => ({ default: { createTransport } }));
 const send = vi.fn();
 afterEach(() => vi.unstubAllGlobals());
-const { buildMatchNotificationEmail, sendMatchNotificationEmail } = await import('../../lib/email.js');
+const { buildMatchNotificationEmail, sendMatchNotificationEmail, verifySmtpConnection } = await import('../../lib/email.js');
 
-beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal('fetch', send); process.env.EMAIL_TRANSPORT = 'resend'; createTransport.mockReturnValue({ sendMail: smtpSend }); process.env.RESEND_API_KEY = 'mock-key'; process.env.APP_BASE_URL = 'http://localhost:3000'; });
+beforeEach(() => { vi.clearAllMocks(); vi.stubGlobal('fetch', send); process.env.EMAIL_TRANSPORT = 'resend'; createTransport.mockReturnValue({ sendMail: smtpSend, verify: smtpVerify, close: smtpClose }); process.env.RESEND_API_KEY = 'mock-key'; process.env.APP_BASE_URL = 'http://localhost:3000'; });
 describe('Resend template and transport', () => {
     it('escapes TOR/user HTML, encodes path and supplies settings link and configured origin', async () => {
         process.env.APP_BASE_URL = 'https://example.com';
@@ -42,5 +44,27 @@ describe('Resend template and transport', () => {
         smtpSend.mockRejectedValue(new Error('test@example.com mock-password'));
         expect(await sendMatchNotificationEmail({ rendered: { to: 'test@example.com', transport: 'smtp' } })).toBeNull();
         expect(JSON.stringify(log.mock.calls)).not.toMatch(/test@example.com|mock-password/); log.mockRestore();
+    });
+    it('verifies SMTP authentication without sending and closes the connection', async () => {
+        process.env.EMAIL_TRANSPORT = 'smtp';
+        smtpVerify.mockResolvedValue(true);
+        expect(await verifySmtpConnection()).toEqual({ connected: true });
+        expect(smtpVerify).toHaveBeenCalledOnce();
+        expect(smtpClose).toHaveBeenCalledOnce();
+        expect(smtpSend).not.toHaveBeenCalled();
+        expect(send).not.toHaveBeenCalled();
+    });
+    it('returns only a safe SMTP error code and closes on failed authentication', async () => {
+        process.env.EMAIL_TRANSPORT = 'smtp';
+        smtpVerify.mockRejectedValue(Object.assign(new Error('private@example.com secret-password'), { code: 'EAUTH' }));
+        const result = await verifySmtpConnection();
+        expect(result).toEqual({ connected: false, code: 'EAUTH' });
+        expect(JSON.stringify(result)).not.toMatch(/private|secret-password/);
+        expect(smtpClose).toHaveBeenCalledOnce();
+        expect(smtpSend).not.toHaveBeenCalled();
+    });
+    it('does not contact SMTP when a different transport is selected', async () => {
+        expect(await verifySmtpConnection()).toEqual({ connected: false, code: 'SMTP_NOT_SELECTED' });
+        expect(createTransport).not.toHaveBeenCalled();
     });
 });
