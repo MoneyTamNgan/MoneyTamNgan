@@ -49,6 +49,7 @@ Both email and username are live. A failure uses one message for an unknown iden
 
 | Item | Status | What the code does | Evidence |
 |---|---|---|---|
+| V5.2.2 Magic-byte validation | DONE | Downloaded files are checked for `%PDF-` or `PK` magic bytes before parsing or extraction; HTML, empty, and spoofed files are rejected, logged, and deleted without stopping the rest of the run | `lib/scraper.js`, `lib/archive-extractor.js`, `tests/security/file-signature.test.js` |
 | V5.3.2 Zip Slip prevention | DONE | Every ZIP member path is checked against the scoped extraction directory (`../`, absolute paths, drive letters, and null bytes are skipped and logged), symlink entries are rejected, and one bad entry does not crash extraction of remaining valid documents | `lib/archive-extractor.js`, `tests/security/zip-slip.test.js` |
 
 ## Scanners
