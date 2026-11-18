@@ -33,3 +33,9 @@ Residual: rate-limit counters are in memory, and the customer has not yet confir
 | TH-20 | Repudiation / elevation of privilege | Unattributed or unauthorized pipeline triggers | Independent Proxy/handler admin scopes, durable allowed-attempt audit and bounded denial logs | `lib/admin-pipeline-audit.js`, `models/PipelineTriggerAudit.js`, `tests/integration/admin-pipeline.integration.test.js` |
 
 The supplied [STRIDE sheet](https://docs.google.com/spreadsheets/d/1mZCqus4RaeYQnVjN70ffu9_TbxBNA1OslLpimWm1YYU/edit?gid=1505854712#gid=1505854712) was inspected. Its **TH-02 (row 3)** is admin elevation of privilege and maps to repository TH-8 + TH-20. Its **TH-06 (row 7)** is pipeline/public API denial of service and maps to TH-19. Both can reference [the #78 runbook and saved F3/F7 updates](../admin-pipeline-control.md) and [sanitized live response evidence](../evidence/admin-pipeline-http.json). The original sheet opens View only; F3/F7 were saved and verified on 2026-11-13 in the [owner-created editable copy](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?gid=1505854712#gid=1505854712). Existing repository TH-2 (OAuth abuse) and TH-6 (login disclosure) retain their original meanings.
+
+## Zip Slip prevention — STRIDE TH-03 / ASVS V5.3.2
+
+| Id | STRIDE | Threat | Mitigation | Status | Evidence |
+|---|---|---|---|---|---|
+| TH-03 (sheet) | Tampering | Weaponized ZIP containing `../`, absolute paths, drive letters, or symlinks writes outside the extraction folder (Zip Slip) | Every member path is decoded without aborting the archive, resolved and verified to stay inside the scoped extraction directory, symlinks are rejected, and escaping/bad entries are skipped and logged so valid documents still extract | Mitigated | `lib/archive-extractor.js`, `tests/security/zip-slip.test.js` |

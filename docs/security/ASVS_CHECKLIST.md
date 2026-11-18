@@ -45,6 +45,13 @@ Both email and username are live. A failure uses one message for an unknown iden
 | V14 Logs | DONE | Audit allowlist. 500 responses do not include the exception text | `lib/bid-prep/security.js` |
 | V14 Retention period | DECIDED (team default), customer confirmation pending | Decision of 16 Nov 2026: data stays until the user deletes it. The customer has not confirmed in writing (#143). No period is invented here | `docs/security/bid-prep-fr-4.7.md` |
 
+## V5 File handling and storage
+
+| Item | Status | What the code does | Evidence |
+|---|---|---|---|
+| V5.2.2 Magic-byte validation | DONE | Downloaded files are checked for `%PDF-` or `PK` magic bytes before parsing or extraction; HTML, empty, and spoofed files are rejected, logged, and deleted without stopping the rest of the run | `lib/scraper.js`, `lib/archive-extractor.js`, `tests/security/file-signature.test.js` |
+| V5.3.2 Zip Slip prevention | DONE | Every ZIP member path is checked against the scoped extraction directory (`../`, absolute paths, drive letters, and null bytes are skipped and logged), symlink entries are rejected, and one bad entry does not crash extraction of remaining valid documents | `lib/archive-extractor.js`, `tests/security/zip-slip.test.js` |
+
 ## Scanners
 
 Semgrep (`p/owasp-top-ten`) fails the build on a High finding. ZAP baseline fails the `main` workflow on a High alert. See `docs/security/README.md`. New BidPrep routes are in the same tree those jobs scan. This change does not commit a fresh scanner artifact; CI is the current result.
