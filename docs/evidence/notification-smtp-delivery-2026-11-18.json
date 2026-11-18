@@ -8,5 +8,14 @@
   "inboxDeliveryConfirmed": true,
   "recipient": "p***@***",
   "confirmationSource": "Owner confirmed receipt in conversation on 2026-11-18",
-  "receivedEmailScreenshotAttached": false
+  "receivedEmailScreenshotAttached": false,
+  "screenshotProvidedInConversation": true,
+  "visualVerification": {
+    "thaiProjectTitleVisible": true,
+    "budgetVisible": 1000000,
+    "matchScoreVisible": 85,
+    "notificationSettingsLinkVisible": true,
+    "linkNavigationVerified": false,
+    "observation": "Low text contrast is visible in the supplied mobile email-client screenshot."
+  }
 }

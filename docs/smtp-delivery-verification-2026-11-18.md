@@ -25,17 +25,18 @@ Related: [dispatcher #39](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/39
 | Single authorized sample send | SMTP accepted one marked test email; no automatic retry or subscriber sweep |
 | Live disposable Atlas ledger/transaction test | Passed after IP allowlisting: concurrency, immediate/digest deduplication, transaction rollback, stale-owner fencing; own fixture database removed |
 | Received real inbox message | Owner confirmed receipt on 18 November 2026 |
-| Received-email screenshot and detailed display check | Not yet attached/confirmed |
+| Received-email screenshot and visible content | Owner supplied screenshot in conversation: Thai title, budget, 85% and settings link visible; image not yet attached to GitHub |
+| Real TOR/settings navigation | Not verified by screenshot |
 
 Initial connection failure: [sanitized JSON](evidence/notification-smtp-connection-2026-11-18.json). After the owner saved the updated private settings, SMTP verified and accepted one authorized sample: [accepted-send evidence](evidence/notification-smtp-delivery-2026-11-18.json). The owner subsequently confirmed inbox receipt in conversation. A received-email screenshot is not yet attached. Earlier evidence was preserved.
 
-The owner saved updated private SMTP settings and the live authentication and sample send passed. After the owner enabled Atlas access, the disposable ledger test also passed. The owner confirmed inbox receipt; a redacted received-email screenshot and detailed title/score/link display check remain pending. No credentials are included in this report.
+The owner saved updated private SMTP settings and the live authentication and sample send passed. After the owner enabled Atlas access, the disposable ledger test also passed. The owner confirmed inbox receipt; the owner supplied a screenshot in conversation showing the Thai title, budget, 85% score and settings link. Attach the image to GitHub separately; link navigation is not proven by the screenshot. Low text contrast is visible in this mobile client. No credentials are included in this report.
 
 ## Remaining before acceptance
 
 1. Completed: updated SMTP settings loaded privately and connection/authentication verified. Still confirm provider credential ownership, sending limits and revocation of any previously exposed API key.
 2. Completed: reran the disposable Atlas ledger test after IP access was restored. [Evidence](evidence/notification-atlas-2026-11-18.json). Its transport was mocked; no production users were emailed.
-3. Completed: one sample was accepted by SMTP. Owner confirmed inbox receipt. Attach a redacted received-email screenshot to complete that evidence item. No second send is needed unless the owner requests it.
+3. Completed: one sample was accepted by SMTP. Owner confirmed inbox receipt. Owner supplied a received-email screenshot in conversation; attach it to the GitHub card/PR for durable team evidence. No second send is needed unless the owner requests it.
 4. Check a real TOR link and notification-settings link in the received email.
 5. Obtain non-author review and merge approval. #164 remains a draft; do not infer acceptance from #39's existing Closed/Done status.
 
