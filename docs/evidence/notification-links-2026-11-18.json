@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-11-18T04:39:49.293Z",
+  "emailsSent": 0,
+  "applicationWrites": 0,
+  "checks": [
+    {
+      "check": "Generated link to real summarized software TOR",
+      "status": 200,
+      "url": "http://localhost:3000/tors/66089621504"
+    },
+    {
+      "check": "Notification-settings page navigation",
+      "status": 200,
+      "url": "http://localhost:3000/profile"
+    },
+    {
+      "check": "Owner-scoped authenticated notification-preferences read",
+      "status": 200
+    },
+    {
+      "check": "Unauthenticated profile read rejected",
+      "status": 401
+    }
+  ],
+  "project_id": "66089621504"
+}
