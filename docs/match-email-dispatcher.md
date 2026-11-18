@@ -4,7 +4,7 @@ After the worker or admin pipeline processes a TOR, the notification service hyd
 
 ## Scoring dependency
 
-**#96 remains open and unmerged.** The owner explicitly selected the existing `calculateSkillMatchScore` for this change. Deliveries record `score_version: skill-v1`. This is not the weighted overall match formula promised by #96; the dependency acceptance item remains pending. Switch the adapter and version intentionally when #96 is integrated, with threshold regression tests. Already-sent user/project pairs remain deduplicated.
+**#96 is now closed and its scope explicitly uses tech-stack overlap.** The dispatcher uses that same `calculateSkillMatchScore` function, including the latest shared aliases and requirement deduplication. Deliveries record `score_version: skill-v1`. No weighted overall formula is introduced. Change the scoring version intentionally if the formula changes; already-sent user/project pairs remain deduplicated.
 
 ## Persistence and duplicate prevention
 
@@ -57,7 +57,7 @@ For a real inbox test, sign in to the intended test account, open `/profile` and
 
 ## Acceptance state
 
-The implementation preserves the existing match-score API, worker processing and admin pipeline. The #96 merge dependency, a real received-email screenshot, teammate review/approval and merge must be checked separately; do not mark them complete based only on mocked tests. No production ledger is backfilled automatically and no historical users are emailed by migration.
+The implementation preserves the existing match-score API, worker processing and admin pipeline. A real received-email screenshot, teammate review/approval and merge must be checked separately; do not mark them complete based only on mocked tests. No production ledger is backfilled automatically and no historical users are emailed by migration.
 
 ### Verification recorded during implementation
 
@@ -69,3 +69,28 @@ The implementation preserves the existing match-score API, worker processing and
 ### SMTP update
 
 At the owner’s request, SMTP now supports automatic threshold and digest notifications. Local EMAIL_TRANSPORT is set to smtp. The owner confirmed the configured SMTP server, and it accepted the single authorized sample email on 2026-11-15. Sanitized evidence: [notification-smtp.json](evidence/notification-smtp.json). Inbox receipt/screenshot has not yet been confirmed. Production ledger uniqueness and per-user leases remain. SMTP provides no provider idempotency key, so an ambiguous send is not automatically replayed. This favors preventing duplicates over guaranteed delivery after a crash. Provider acceptance still requires a separate inbox check.
+
+
+## SMTP delivery verification follow-up — 18 November 2026
+
+The existing SMTP implementation from this branch is retained. The latest teammate commit, `85d3e01`, updates shared skill matching and profile choices; provider credentials correctly remain outside Git. Current `develop` was integrated without conflicts in an isolated worktree, leaving local diagram work unchanged.
+
+Use the repeatable operator check:
+
+```sh
+npm run notify:test-smtp
+```
+
+This verifies connection/authentication only: it sends no message, touches no database, and prints only sanitized status/error codes. It uses the same SMTP transport configuration as application emails. Successful verification does not prove the configured sender is authorized or a recipient received mail.
+
+For **one explicitly authorized test recipient**, set `NOTIFICATION_TEST_TO` privately in the uncommitted environment, then run:
+
+```sh
+npm run notify:test-smtp -- --send --evidence /tmp/notification-smtp-evidence.json
+```
+
+The command sends exactly one marked test message through `sendMatchNotificationEmail`. It does not invoke the production dispatcher or send to all users. Its sample TOR is fictitious and its test detail link is not an existing project. Check the title, 85% score and URL structure, then use the profile test action or a known real TOR for the real detail-page check. The notification-settings link uses `/profile`. Localhost links open only on the app host. The script never claims inbox receipt; attach a recipient-confirmed screenshot separately.
+
+Keep `EMAIL_TRANSPORT=smtp` explicit if an older Resend key exists. Configure the actual provider in `.env.local` on each machine/deployment; another developer's private settings do not arrive through `git pull`. An SMTP capture service is suitable for local inspection, but its acceptance is not evidence of delivery to an external inbox. Never bypass TLS certificate checks to make verification pass.
+
+Evidence and outstanding acceptance: [SMTP verification report](smtp-delivery-verification-2026-11-18.md). Provider limits, credential ownership, exposed-key revocation and a received-email screenshot remain the manual #165 items until independently confirmed.
