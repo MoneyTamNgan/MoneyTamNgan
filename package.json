@@ -6,6 +6,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "audit:dependencies": "node scripts/check-dependency-audit.js",
     "scrape": "node scripts/scrape.js",
     "ingest:tenders": "node scripts/ingest-open-tenders.js",
     "backfill:history": "node scripts/backfill-history.js",
