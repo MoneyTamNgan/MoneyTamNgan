@@ -14,6 +14,7 @@
     "test:schedule-atlas": "node scripts/test-announcement-schedule-atlas.js",
     "test:bid-prep-atlas": "node scripts/test-bid-prep-atlas.js",
     "test:proposal-draft-atlas": "node scripts/test-proposal-draft-atlas.js",
+    "test:proposal-draft-live": "node scripts/measure-proposal-draft.js",
     "worker": "node scripts/worker.js --watch",
     "worker:once": "node scripts/worker.js",
     "processing:recover": "node scripts/recover-processing.js",
