@@ -112,6 +112,8 @@ Live local checks verified five HTTP security headers, per-request CSP nonces, e
 
 ## Project documents
 
+- [Security presentation](docs/presentation/moneytamngan-security-en-20slides.pptx): 20 English slides with speaker notes, ASVS/STRIDE mappings, test evidence and remaining gaps.
+
 - [MoneyTamNgan_SRS](https://docs.google.com/document/d/1_o6RmB_G54MWgXHGiePvBzy-vLkhECAzDnhtU15rz0A/edit?usp=sharing): official SRS and use case diagram (TOR aggregation, matching, analytics).
 - [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing): short SRS for the Bid Preparation Assistant (epic #135), waiting for customer confirmation (#143).
 - [MoneyTamNgan Testcase doc](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?usp=sharing): automated tests mapped to modules and source files.
