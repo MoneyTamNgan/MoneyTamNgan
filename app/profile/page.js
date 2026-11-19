@@ -5,6 +5,7 @@ import CompanyBidFields from '@/components/profile/CompanyBidFields';
 import { validateProfileUpdates, PROFILE_LIMITS } from '@/lib/profile-validation';
 import AppShell from "@/components/ui/AppShell";
 import NoEgpSubmissionNotice from "@/components/ui/NoEgpSubmissionNotice";
+import { CONTRACTOR_SKILLS } from "@/types/contractor-profile";
 import {
   getContractorProfile,
   saveContractorProfile,
@@ -12,7 +13,6 @@ import {
   deleteCompanyBidData,
 } from "@/lib/services/contractor-profile-service";
 
-const skills = ["React", "Node.js", "Python", "PostgreSQL", "Cloud", "TypeScript", "Docker", "UX/UI", "Data analysis", "Security", "Service Virtualization", "Integration Platforms as a Service (iPaaS)", "MS Project", "MS Excel", "Utility Platform (UTP)", "Enterprise Resource Planning (ERP)", "ระบบคอมพิวเตอร์"];
 const certifications = ["ISO 27001", "ISO 29110", "CMMI", "Cloud certification"];
 const emptyProfile = { company_name: "", registration_number: "", address: "", authorized_signatory: "", past_projects: [], skills: [], registered_capital: null, highest_past_project_value: null, concurrent_project_capacity: null, certifications: [], email_notifications_enabled: false, match_score_threshold: 70, notification_frequency: 'IMMEDIATE' };
 
@@ -237,7 +237,7 @@ export default function ProfilePage() {
             <span>{profile.skills.length} รายการ</span>
           </div>
           <div className="profile-tag-selector">
-            {skills.map((skill) => (
+            {CONTRACTOR_SKILLS.map((skill) => (
               <button
                 className={profile.skills.includes(skill) ? "is-selected" : ""}
                 type="button"

@@ -1,0 +1,15 @@
+[
+  {
+    "advisory": "GHSA-fc5q-39xc-vjpf",
+    "status": "approved",
+    "approved_by": "PhruekCh",
+    "owner": "PhruekCh",
+    "tracking_issue": "https://github.com/MoneyTamNgan/MoneyTamNgan/issues/219",
+    "scope": "development-only",
+    "starts_at": "2026-11-18T00:00:00Z",
+    "expires_at": "2026-12-02T00:00:00Z",
+    "reason": "No published picomatch patch. Current affected nodes are exclusively in Vitest/Vite development tooling; production runtime does not contain them. Test glob patterns are repository-controlled, not TOR/PDF/user input.",
+    "controls": "Keep full audit findings visible. Block critical, other advisories, production occurrences, expired/unapproved exceptions and audit errors. Never run test tooling on untrusted globs or provide secrets to untrusted PR jobs. Replace the affected release as soon as a reviewed patch is published.",
+    "approval_evidence": "https://github.com/MoneyTamNgan/MoneyTamNgan/issues/219#issuecomment-6969465502"
+  }
+]

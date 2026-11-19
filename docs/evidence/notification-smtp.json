@@ -1,0 +1,9 @@
+{
+  "checked_on": "2026-11-15",
+  "transport": "smtp",
+  "providerAccepted": true,
+  "recipient": "p***@***",
+  "sampleOnly": true,
+  "inboxDeliveryConfirmed": false,
+  "log": "[email] Accepted via SMTP"
+}
