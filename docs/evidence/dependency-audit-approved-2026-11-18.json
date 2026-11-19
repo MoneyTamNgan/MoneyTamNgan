@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "findings": [
+    {
+      "package": "fdir",
+      "severity": "high",
+      "outcome": "accepted-temporarily"
+    },
+    {
+      "package": "picomatch",
+      "severity": "high",
+      "outcome": "accepted-temporarily"
+    },
+    {
+      "package": "tinyglobby",
+      "severity": "high",
+      "outcome": "accepted-temporarily"
+    },
+    {
+      "package": "vite",
+      "severity": "high",
+      "outcome": "accepted-temporarily"
+    },
+    {
+      "package": "vitest",
+      "severity": "high",
+      "outcome": "accepted-temporarily"
+    }
+  ],
+  "acceptedExceptions": [
+    {
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "expires_at": "2026-12-02T00:00:00Z",
+      "tracking_issue": "https://github.com/MoneyTamNgan/MoneyTamNgan/issues/219"
+    }
+  ],
+  "approval_evidence": "https://github.com/MoneyTamNgan/MoneyTamNgan/issues/219#issuecomment-6969465502",
+  "checked_on": "2026-11-18",
+  "meaning": "Gate passed with an explicitly accepted development-only risk; the dependency remains vulnerable."
+}

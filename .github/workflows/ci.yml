@@ -35,9 +35,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Fails on high or critical advisories in package-lock.json (ASVS V15.2.1, #188).
-      # Moderate and low are reported but do not block. Needs no install.
-      - run: npm audit --package-lock-only --audit-level=high
+      # Full-tree audit. Only explicitly approved, unexpired development-only
+      # advisory exceptions may pass; production/critical/unknown findings block.
+      - run: node scripts/check-dependency-audit.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-audit-result
+          path: dependency-audit-result.json
+          if-no-files-found: warn
 
   test:
     name: Test (mocked data)

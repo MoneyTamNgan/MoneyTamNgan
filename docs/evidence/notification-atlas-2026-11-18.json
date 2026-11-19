@@ -1,0 +1,11 @@
+{
+  "checked_at": "2026-11-18T04:31:04.084Z",
+  "transport": "mocked; no emails sent",
+  "checks": [
+    "Normalized summary hydration + 5 concurrent processing hooks: 1 immediate send, 1 queued digest, 0 disabled recipients",
+    "Reprocessing and repeat digest create no duplicate user/project emails",
+    "Transaction failure rolls back both batch creation and delivery linking",
+    "Expired lease retries the same immutable batch; stale owner cannot settle newer claim",
+    "Dispatcher logs use masked recipients only"
+  ]
+}

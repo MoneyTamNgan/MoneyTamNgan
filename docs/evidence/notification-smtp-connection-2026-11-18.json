@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-11-18T04:26:16.314Z",
+  "transport": "smtp",
+  "sampleOnly": true,
+  "connectionVerified": false,
+  "sendAttempted": false,
+  "providerAccepted": false,
+  "inboxDeliveryConfirmed": false,
+  "errorCode": "ESOCKET"
+}
