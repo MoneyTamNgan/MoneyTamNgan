@@ -60,6 +60,21 @@ Data in the `mongo-data` volume is kept unless you used `down -v`. If a change a
 
 Not covered here: a logged-in page (no Google OAuth credentials were used), Vertex AI, and the `scraper` and `scheduler` services.
 
+## Trial on the competition machine (19 Nov 2026)
+
+| Item | Result |
+|---|---|
+| Machine | Ubuntu 22.04 (kernel 6.8.0-138), 12 logical CPUs, 7.6 GiB RAM, NVIDIA GTX 1050 Ti 4 GB, Docker 29.9.2, Compose v5.6.1; Node is not installed on the host (Docker only) |
+| Install | clone of `main` at `b053761`, `.env` created on the machine only (mode 600), `docker compose up --build -d` |
+| `GET /api/health` | HTTP 200, `{"status":"ok","database":"connected"}` |
+| Time to healthy after `docker compose restart app worker` | 12 seconds |
+| Real database | `docker-compose.real-db.yml` (kept on the machine, not committed) points `app` and `worker` at the Atlas `MONGODB_URI`; `/api/tors` returned 838 TORs |
+| Local AI | Ollama on the same machine, see [connectivity-test-2026-11-19.md](connectivity-test-2026-11-19.md) |
+
+The `scheduler` service is stopped on the demo machine on purpose: it would ingest new projects at 06:00, 12:00 and 18:00 and process them with the small local model into the real database. Start it with `docker compose up -d scheduler` when that is wanted.
+
+Not yet done on this machine: a screenshot of a logged-in page, the Google OAuth redirect URI for the machine's URL, and a run from a clean clone that follows only this page.
+
 ## Checklist for the competition machine
 
 - [ ] Install from a clean clone using only this page and the README
