@@ -41,7 +41,7 @@ Both email and username are live. A failure uses one message for an unknown iden
 | Item | Status | Evidence |
 |---|---|---|
 | V14 Delete company data | DONE | API and profile button. Success is returned only after a second read shows the fields empty and the caller's drafts gone | `lib/bid-prep/deletion.js`, `app/profile/page.js` |
-| V14 Minimisation toward Vertex | DONE | Allowlist in `buildVertexBidPayload` | `tests/security/bid-prep-privacy.test.js` |
+| V14 Minimisation toward Vertex | DONE | `buildProposalRequest` sends only the `publicProfile` allowlist | `lib/proposal/draft.js`, `tests/unit/proposal-draft.test.js`, `tests/security/bid-prep-privacy.test.js` |
 | V14 Logs | DONE | Audit allowlist. 500 responses do not include the exception text | `lib/bid-prep/security.js` |
 | V14 Retention period | DECIDED (team default), customer confirmation pending | Decision of 16 Nov 2026: data stays until the user deletes it. The customer has not confirmed in writing (#143). No period is invented here | `docs/security/bid-prep-fr-4.7.md` |
 

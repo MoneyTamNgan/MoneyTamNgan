@@ -24,7 +24,7 @@ Tracks software-related TOR (procurement) projects from Thailand's e-GP portal: 
 - [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing): short SRS for the Bid Preparation Assistant (epic #135), waiting for customer confirmation (#143).
 - [MoneyTamNgan Testcase doc](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?usp=sharing): automated tests mapped to modules and source files.
 - [Sprint api planing](https://docs.google.com/spreadsheets/d/1aXUlWRg__PmH6LtbzPxBnOCS7z7v9pk-xxEpwySVCU0/edit?usp=sharing): sprint API plan (ticket, endpoint, expected response, status).
-- [MoneyTamNgan Secure Test](https://docs.google.com/spreadsheets/d/1zl9NWZmycvNj0Brg7PMB2kdizVcQq-ihKPNbVODycvY/edit?usp=sharing): STRIDE and ASVS security catalog with project status.
+- [MoneyTamNgan Secure Test](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?usp=sharing): STRIDE threat catalog and ASVS Level 1 traceability, with the status of each mitigation. Open items are tracked as `[Security]` cards (#105, #106, #189 to #194).
 - [TOR Discovery, Extraction, and Display](docs/tor-flow.md): sequence diagram of the pipeline.
 - [TOR pull pipeline](docs/pipeline.md): stage-by-stage flowchart with statuses and code locations.
 

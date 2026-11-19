@@ -2,7 +2,7 @@
 
 Issue #142. The live Next.js routes are under `/api/bid-prep` and the existing profile routes. Nothing in this surface submits a bid to e-GP. The seller reviews the draft and submits it with their own digital signature. That sentence is on the profile page, the TOR page, every draft and checklist response, and inside the DOCX export.
 
-Draft generation itself is issue #139. Before it calls Vertex it must use `consumeBidPrepLimit('draft-create', session.sub)` and `buildVertexBidPayload` so the hourly quota and the field allowlist stay in one place.
+Draft generation itself is issue #139. `POST /api/tors/{id}/proposal-draft` queues the job. It takes the shared `consumeBidPrepLimit('draft-create', session.sub)` quota, so queued drafts and stored drafts count against the same hourly cap, and the job builds its Vertex request with `buildProposalRequest` in `lib/proposal/draft.js`.
 
 ## Endpoint, control, test
 
@@ -37,7 +37,7 @@ Comparison of TOR qualifications stays `manual` here. Issue #137 owns the rules.
 
 ## Vertex and logs
 
-`buildVertexBidPayload` sends the TOR summary, scope, qualifications and tech stack, plus the company fields a draft needs (including the signatory name and past projects limited to name, client, value and year). Email, username, Google id, picture, role and credentials are dropped. TOR text is wrapped as untrusted data with fixed instructions outside the delimiter.
+`buildProposalRequest` sends the TOR summary, scope, qualifications and tech stack, plus the company fields a draft needs through the `publicProfile` allowlist (including the signatory name and past projects limited to name, client, value and year). Email, username, Google id, picture, role and credentials are dropped. TOR text is wrapped as untrusted data with fixed instructions outside the delimiter, and delimiter characters inside the TOR are escaped. `buildVertexBidPayload` in `lib/bid-prep/vertex-payload.js` applies the same allowlist and has its own test, but the proposal generator does not call it.
 
 `logBidPrepAudit` accepts only `userId`, `draftId`, `projectId`, `scope` and `draftsDeleted`.
 
