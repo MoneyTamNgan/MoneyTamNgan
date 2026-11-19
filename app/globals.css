@@ -3433,7 +3433,7 @@ dd {
   margin-bottom: 38px
 }
 
-.tor-home-button {
+.tor-overview-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3443,14 +3443,14 @@ dd {
   border-radius: 999px;
   background: #a5f0c3;
   color: #092721;
-  font-size: 1.08rem;
+  font-size: calc(1.08rem * var(--page-font-scale, 1));
   font-weight: 900;
   text-decoration: none;
   box-shadow: 0 10px 22px rgba(0, 0, 0, .18);
   transition: transform .2s ease, background .2s ease
 }
 
-.tor-home-button:hover {
+.tor-overview-button:hover {
   background: #d0f9df;
   transform: translateY(-2px)
 }
@@ -3475,10 +3475,10 @@ dd {
     margin-bottom: 28px
   }
 
-  .tor-home-button {
+  .tor-overview-button {
     min-height: 52px;
     padding-inline: 20px;
-    font-size: 1rem
+    font-size: calc(1rem * var(--page-font-scale, 1))
   }
 
   .tor-header-pdf {
@@ -3497,7 +3497,7 @@ dd {
   margin: 22px 0 0
 }
 
-.tor-overview-hero .tor-home-button {
+.tor-overview-hero .tor-overview-button {
   width: 100%;
   padding-inline: 18px
 }
@@ -3516,7 +3516,7 @@ dd {
     margin: 0
   }
 
-  .tor-overview-hero .tor-home-button {
+  .tor-overview-hero .tor-overview-button {
     width: auto
   }
 
@@ -3530,8 +3530,12 @@ dd {
   grid-template-columns: 250px minmax(0, 1fr);
   gap: 26px;
   align-items: start;
-  max-width: 1480px;
   margin: 0 auto
+}
+
+.tor-overview-layout,
+.bid-workspace {
+  max-width: 1480px
 }
 
 .tor-overview-layout .tor-overview {
@@ -3561,7 +3565,7 @@ dd {
   margin: 0
 }
 
-.tor-overview-side .tor-home-button {
+.tor-overview-side .tor-overview-button {
   width: 100%;
   padding-inline: 18px
 }
@@ -3582,7 +3586,7 @@ dd {
     padding-top: 0
   }
 
-  .tor-overview-side .tor-home-button {
+  .tor-overview-side .tor-overview-button {
     width: auto
   }
 
@@ -3591,7 +3595,7 @@ dd {
   }
 }
 
-.app-shell:has(.tor-overview) .page-container {
+.app-shell:has(:is(.tor-overview, .bid-workspace)) .page-container {
   max-width: 1780px;
   padding-inline: clamp(24px, 4vw, 78px)
 }
@@ -3602,7 +3606,7 @@ dd {
 }
 
 @media(max-width:980px) {
-  .app-shell:has(.tor-overview) .page-container {
+  .app-shell:has(:is(.tor-overview, .bid-workspace)) .page-container {
     padding-inline: 24px
   }
 
@@ -3612,7 +3616,7 @@ dd {
 }
 
 .tor-overview-side>p {
-  font-size: 1.35rem;
+  font-size: calc(1.35rem * var(--page-font-scale, 1));
   letter-spacing: .08em
 }
 
@@ -3643,7 +3647,7 @@ dd {
 
 @media(max-width:980px) {
   .tor-overview-side>p {
-    font-size: 1.18rem
+    font-size: calc(1.18rem * var(--page-font-scale, 1))
   }
 
   .tor-overview-side .tor-header-pdf {
@@ -3951,27 +3955,34 @@ dd {
   animation: tor-detail-reveal .48s cubic-bezier(.22, 1, .36, 1) both
 }
 
-.tor-overview-header {
+.tor-overview-header,
+.bid-workspace-header {
   animation: tor-detail-reveal .56s .08s cubic-bezier(.22, 1, .36, 1) both
 }
 
-.tor-lifecycle {
+.tor-lifecycle,
+.bid-workspace-content > :is(.bid-notice, .bid-editor-tabs) {
   animation: tor-detail-reveal .52s .16s cubic-bezier(.22, 1, .36, 1) both
 }
 
-.tor-metrics {
+.tor-metrics,
+:is(.bid-workspace-content, .bid-editor-panel) > .bid-card {
   animation: tor-detail-reveal .52s .24s cubic-bezier(.22, 1, .36, 1) both
 }
 
-.tor-detail-grid {
+.tor-detail-grid,
+.bid-editor-panel > .bid-editor-section,
+.bid-workspace-content > .bid-card:last-child {
   animation: tor-detail-reveal .56s .32s cubic-bezier(.22, 1, .36, 1) both
 }
 
-.tor-anomaly-card {
+.tor-anomaly-card,
+.bid-editor-panel > .tor-bid-checklist {
   animation: tor-detail-reveal .56s .4s cubic-bezier(.22, 1, .36, 1) both
 }
 
-.tor-extracted-data {
+.tor-extracted-data,
+.bid-workspace-content > .bid-card.bid-editor-actions {
   animation: tor-detail-reveal .56s .48s cubic-bezier(.22, 1, .36, 1) both
 }
 
@@ -5346,7 +5357,7 @@ body {
 
 .tor-overview-id,
 .tor-section-kicker,
-.tor-home-button,
+.tor-overview-button,
 .profile-kicker,
 .profile-section-heading p,
 .analytics-hero p,
@@ -5396,7 +5407,7 @@ body {
   color: var(--warning)
 }
 
-.tor-home-button,
+.tor-overview-button,
 .tor-header-pdf,
 .profile-save-button,
 .admin-hero button {
@@ -5405,7 +5416,7 @@ body {
   color: var(--paper)
 }
 
-.tor-home-button:hover,
+.tor-overview-button:hover,
 .tor-header-pdf:hover,
 .profile-save-button:hover,
 .admin-hero button:hover {
@@ -7727,7 +7738,7 @@ body {
   border-radius: 12px;
   background: var(--cream-soft);
   color: var(--ink);
-  font-size: 0.95rem;
+  font-size: calc(0.95rem * var(--page-font-scale, 1));
   line-height: 1.5;
 }
 
@@ -8832,7 +8843,14 @@ body {
 }
 
 .tor-bid-checklist {
+  --checklist-fail: var(--danger);
+  --checklist-fail-soft: color-mix(in srgb, var(--checklist-fail) 15%, var(--paper));
   margin-top: 18px;
+}
+
+.theme-mint .tor-bid-checklist {
+  --checklist-fail: #ffb4a8;
+  --checklist-fail-soft: #482b2e;
 }
 
 .tor-bid-checklist-note,
@@ -8875,6 +8893,7 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 14px 0;
+  border-top: 0;
 }
 
 .tor-bid-checklist-counts > div,
@@ -8899,14 +8918,20 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.tor-bid-checklist :is(.tor-bid-checklist-counts > div, .tor-bid-checklist-item-heading span)[data-status="pass"] {
-  border-color: var(--success);
-  background: var(--success-soft);
+.theme-mint .tor-bid-checklist-counts :is(dt, dd) {
+  color: var(--ink);
 }
 
-.tor-bid-checklist :is(.tor-bid-checklist-counts > div, .tor-bid-checklist-item-heading span)[data-status="fail"] {
-  border-color: var(--danger);
-  background: var(--paper);
+.tor-bid-checklist :is(.tor-bid-checklist-counts > div, .tor-bid-checklist-item-heading span, .tor-bid-checklist-status-control button)[data-status="pass"] {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--ink);
+}
+
+.tor-bid-checklist :is(.tor-bid-checklist-counts > div, .tor-bid-checklist-item-heading span, .tor-bid-checklist-status-control button)[data-status="fail"] {
+  border-color: var(--checklist-fail);
+  background: var(--checklist-fail-soft);
+  color: var(--ink);
 }
 
 .tor-bid-checklist :is(.tor-bid-checklist-counts > div, .tor-bid-checklist-item-heading span)[data-status="manual"] {
@@ -8965,23 +8990,42 @@ body {
 }
 
 .tor-bid-checklist-status-control {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 10px;
   margin-top: 10px;
   color: var(--ink-secondary);
   font-size: .9rem;
 }
 
-.tor-bid-checklist-status-control select {
-  max-width: 100%;
-  padding: 6px 9px;
-  border: 1px solid var(--orange-border);
+.tor-bid-checklist-status-control button {
+  min-height: 44px;
+  min-width: 0;
+  padding: 6px 12px;
+  border: 1px solid transparent;
   border-radius: 8px;
-  background: var(--paper);
-  color: var(--ink);
   font: inherit;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.tor-bid-checklist-status-control [role="status"] {
+  grid-column: 1 / -1;
+}
+
+.tor-bid-checklist-status-control button[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--cream-input), 0 0 0 4px var(--ink);
+}
+
+.tor-bid-checklist-status-control button:focus-visible {
+  outline: 2px solid var(--orange-primary);
+  outline-offset: 3px;
+}
+
+.tor-bid-checklist-status-control button:disabled {
+  opacity: .55;
+  cursor: default;
 }
 
 @media (max-width: 480px) {
@@ -9047,41 +9091,186 @@ body {
 }
 
 /* Personal proposal draft workspace and editor (#140/#141). */
-.bid-workspace { max-width: 1100px; margin: 0 auto; padding-bottom: 40px; color: var(--ink); }
-.bid-workspace h1 { font-size: clamp(1.8rem, 4vw, 2.7rem); }
+.bid-workspace {
+  --page-font-scale: 1.1;
+  margin: 0 auto;
+  padding-bottom: 40px;
+  color: var(--ink);
+  font-size: calc(1em * var(--page-font-scale));
+  overflow-wrap: anywhere;
+  line-height: 1.6
+}
+
 .bid-card { min-width: 0; padding: 24px; margin: 20px 0; background: var(--paper); border: 1px solid var(--orange-border); border-radius: 16px; }
-.bid-workspace label { display: block; margin: 16px 0 8px; font-weight: 700; }
+.bid-workspace .bid-card label { display: block; margin: 16px 0 8px; font-weight: 700; }
 .bid-workspace input, .bid-workspace textarea { width: 100%; box-sizing: border-box; min-width: 0; padding: 12px; border: 1px solid var(--orange-border); border-radius: 8px; background: var(--cream-input); color: var(--ink); font: inherit; }
 .bid-workspace textarea { resize: vertical; }
 .bid-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
-.bid-workspace button { padding: 10px 16px; border: 1px solid var(--orange-border); border-radius: 9px; background: var(--orange-primary); color: #fff; font: inherit; cursor: pointer; }
+:where(.bid-workspace) button { padding: 10px 16px; border: 1px solid var(--orange-border); border-radius: 9px; background: var(--orange-primary); color: #fff; font: inherit; cursor: pointer; }
 .bid-workspace button:disabled { opacity: .5; cursor: default; }
 .bid-workspace .bid-secondary { background: var(--cream-input); color: var(--ink); }
 .bid-workspace .bid-danger { background: #b42318; }
 .bid-notice { padding: 16px; border: 1px solid var(--orange-border); background: var(--cream-soft); border-radius: 12px; margin: 16px 0; }
-.bid-notice p { margin-bottom: 0; }
-.bid-sticky-notice { position: sticky; top: 8px; z-index: 5; }
 .bid-preview { white-space: pre-wrap; overflow-wrap: anywhere; }
 .bid-workspace mark { background: #ffed99; color: #713600; padding: 1px 3px; }
 .bid-error { color: #b42318; overflow-wrap: anywhere; }
-.bid-incomplete { color: #875100; font-weight: 600; }
+.bid-incomplete { color: var(--warning); font-weight: 600; }
 .bid-draft-list { padding-left: 20px; }
 .bid-draft-list li { margin: 15px 0; }
-.bid-draft-list span { display: block; font-size: .88rem; margin-top: 5px; }
+.bid-draft-list span { display: block; font-size: calc(.88rem * var(--page-font-scale, 1)); margin-top: 5px; }
 .bid-sources { overflow-wrap: anywhere; }
-.bid-table-scroll { overflow-x: auto; }
-.bid-workspace table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-.bid-workspace th, .bid-workspace td { border: 1px solid var(--orange-border); text-align: left; padding: 10px; vertical-align: top; overflow-wrap: anywhere; }
 .bid-modal-backdrop { position: fixed; inset: 0; z-index: 50; background: #0008; display: grid; place-items: center; padding: 18px; }
 .bid-modal { max-width: 520px; max-height: 85vh; overflow: auto; }
-.tor-bid-prep-entry { padding: 14px 0; font-weight: 700; }
 
-.theme-orange .tor-bid-prep-entry > a {
-  color: var(--orange-deep);
+.bid-workspace .tor-overview-button {
+  white-space: nowrap
 }
 
-.theme-orange .tor-bid-prep-entry > a:hover {
-  color: var(--warning);
+.bid-workspace-content {
+  min-width: 0
+}
+
+.bid-workspace-header {
+  padding: clamp(20px, 4vw, 42px);
+  border: 1px solid var(--orange-border);
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--cream-soft), var(--paper));
+  box-shadow: 0 10px 22px var(--shadow)
+}
+
+.bid-workspace-header h1 {
+  margin: 0;
+  font-size: calc(clamp(1.75rem, 4vw, 3rem) * var(--page-font-scale));
+  line-height: 1.25
+}
+
+.bid-workspace-meta {
+  margin: 12px 0 0;
+  color: var(--ink-secondary)
+}
+
+.bid-workspace .bid-card {
+  border-radius: 18px;
+  box-shadow: 0 10px 22px var(--shadow)
+}
+
+.bid-workspace h2 {
+  margin: 0;
+  font-size: calc(clamp(1.2rem, 2.2vw, 1.55rem) * var(--page-font-scale));
+  line-height: 1.4
+}
+
+.bid-workspace .bid-card p:not(.bid-incomplete) {
+  margin-bottom: 0;
+  color: var(--ink-secondary)
+}
+
+.bid-editor-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--orange-border);
+  border-radius: 14px;
+  background: var(--cream-input)
+}
+
+.bid-workspace .bid-editor-tabs button {
+  min-width: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink);
+  text-wrap: balance
+}
+
+.bid-workspace .bid-editor-tabs button:hover {
+  background: var(--cream-soft);
+  color: var(--ink)
+}
+
+.bid-workspace .bid-editor-tabs button[aria-selected="true"] {
+  border-color: var(--orange-primary);
+  background: var(--cream-soft);
+  color: var(--ink)
+}
+
+.bid-editor-section details {
+  margin-top: 12px
+}
+
+.bid-editor-section .bid-actions {
+  margin-bottom: 0
+}
+
+.bid-editor-actions .bid-actions {
+  margin-top: 0
+}
+
+.bid-workspace input,
+.bid-workspace textarea,
+.bid-workspace button {
+  min-height: 44px;
+  border-radius: 11px
+}
+
+.bid-workspace #draft-project-id {
+  max-width: 26rem
+}
+
+.bid-workspace button {
+  font-weight: 800
+}
+
+.bid-workspace .bid-primary {
+  border-color: var(--orange-primary)
+}
+
+.bid-workspace .bid-primary:enabled:hover {
+  background: var(--orange-primary-hover)
+}
+
+.bid-workspace .bid-secondary:enabled:hover {
+  background: var(--cream-soft)
+}
+
+.bid-workspace :is(a, button, input, select, textarea, summary, .bid-editor-panel):focus-visible {
+  outline: 3px solid var(--orange-primary);
+  outline-offset: 3px
+}
+
+.bid-workspace .bid-draft-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none
+}
+
+.bid-workspace .bid-draft-list li {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--orange-border-soft);
+  border-radius: 11px;
+  background: var(--cream-input)
+}
+
+.bid-workspace .bid-draft-list a,
+.bid-workspace .bid-error a {
+  color: var(--ink);
+  font-weight: 700;
+  text-underline-offset: 3px
+}
+
+.bid-workspace .bid-draft-list span {
+  color: var(--ink-secondary)
+}
+
+.bid-workspace .bid-error {
+  padding: 12px 14px;
+  border: 1px solid var(--orange-border);
+  border-radius: 11px;
+  background: var(--warning-soft);
+  color: var(--ink)
 }
 
 @media(max-width:760px) {
@@ -9089,7 +9278,6 @@ body {
   .app-shell:has(.bid-workspace) .page-container { padding-inline: 12px; }
   .bid-card { padding: 16px; }
   .bid-actions { flex-direction: column; }
-  .bid-workspace table { min-width: 550px; }
 }
 /* Company bid identity and editable project history (#136). */
 .profile-field-wide { grid-column: 1 / -1; }
