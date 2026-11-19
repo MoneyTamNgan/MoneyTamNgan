@@ -46,7 +46,7 @@ Government availability, anti-bot pages, OCR quality and AI accuracy can limit r
 
 ### 3. Security features mapped to OWASP ASVS
 
-Mapping uses [OWASP ASVS 5.0.0](https://asvs.owasp.org/). These are selected implemented controls, not an exhaustive Level 1 checklist. [The audit](docs/security-assignment-audit-2026-11-19.md#5-selected-owasp-asvs-mapping) also maps gaps and [OWASP Top 10:2025](https://top10.owasp.org/2025/).
+Mapping uses [OWASP ASVS 5.0.0](https://asvs.owasp.org/). These are selected implemented controls, not an exhaustive Level 1 checklist. [The audit](docs/security-assignment-audit-2026-11-19.md#3-security-features-mapped-to-owasp-asvs-security-requirements) also maps gaps and [OWASP Top 10:2025](https://top10.owasp.org/2025/).
 
 | Security feature | Selected ASVS 5.0.0 reference | Implementation/evidence |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ Mapping uses [OWASP ASVS 5.0.0](https://asvs.owasp.org/). These are selected imp
 
 The project uses [STRIDE](docs/security/THREAT_MODEL.md) across browser/API, worker/database, external-document, AI and SMTP trust boundaries. Existing threats include forged sessions, admin escalation, cross-user access, malicious files, SSRF, abusive expensive operations and sensitive-data disclosure.
 
-The [audit's prioritized threat checklist](docs/security-assignment-audit-2026-11-19.md#7-threat-model-and-prioritized-mitigation-checklist) maps mitigations and residual risks. Its priorities are recommendations awaiting team adoption:
+The [audit's prioritized threat checklist](docs/security-assignment-audit-2026-11-19.md#4-threat-modeling-performed-for-this-project) maps mitigations and residual risks. Its priorities are recommendations awaiting team adoption:
 
 | Priority | Examples | Current state |
 | --- | --- | --- |
@@ -87,7 +87,7 @@ The report marks incomplete mitigations explicitly. It does not assume every his
 | Data minimization | Password hashes are hidden; Vertex payloads and security logs use field allowlists. |
 | Resource containment | Password-hash concurrency, bounded auth bodies, archive checks and pipeline leases limit damage. |
 
-Source mappings and exceptions are documented in the [security report](docs/security-assignment-audit-2026-11-19.md#6-security-principles-mapped-to-implementation).
+Source mappings and exceptions are documented in the [security report](docs/security-assignment-audit-2026-11-19.md#5-security-principles-followed-in-the-implementation).
 
 ### 6. Security test process
 
@@ -104,7 +104,7 @@ node scripts/audit-api-documentation.js
 
 Fresh verification on **19 November 2026**, baseline `b053761`: **800 tests passed**, production build passed, and raw npm audit reported zero findings. The documentation audit **failed**: two documents omit the checklist PATCH method; OpenAPI lacks 18 live operations and contains six operations without handlers. Green contract tests do not prove full API coverage.
 
-CI runs Semgrep SAST and an OWASP ZAP passive baseline. Latest same-code evidence has **0 High / 50 Warning SAST findings**, and **0 High / 1 Medium / 3 Low / 4 Informational DAST alerts**. See [saved evidence and test process](docs/security-assignment-audit-2026-11-19.md#9-security-test-process-and-results), [scanner workflows/reports](docs/security/README.md) and [vulnerability policy](docs/security/VULNERABILITY_MGMT.md). Passive, unauthenticated DAST does not prove authenticated authorization safety; dedicated ownership/scope tests cover those cases separately.
+CI runs Semgrep SAST and an OWASP ZAP passive baseline. Latest same-code evidence has **0 High / 50 Warning SAST findings**, and **0 High / 1 Medium / 3 Low / 4 Informational DAST alerts**. See [saved evidence and test process](docs/security-assignment-audit-2026-11-19.md#6-security-test-process), [scanner workflows/reports](docs/security/README.md) and [vulnerability policy](docs/security/VULNERABILITY_MGMT.md). Passive, unauthenticated DAST does not prove authenticated authorization safety; dedicated ownership/scope tests cover those cases separately.
 
 Live local checks verified five HTTP security headers, per-request CSP nonces, exact-origin preflights and 401/403 denial behavior. The team should show the custom header configuration and DevTools Network response headers during the presentation. This audit did not verify production HTTPS, perform a fresh Google login, send another email or run paid Vertex processing.
 

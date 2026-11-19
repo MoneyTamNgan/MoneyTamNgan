@@ -5,9 +5,11 @@
 **Code baseline:** `b053761a9222f4300f4519ead308ccd67514b191`, latest fetched `develop` and `main`. PR #164 is merged.  
 **Submission:** Sunday 22 November 2026, 23:59 Bangkok time. Presentation: Monday 23 November 2026, 13:00 Bangkok time.
 
-## 1. Conclusion and scope
+## Overview and audit scope
 
 **The project addresses all 18 rubric topics, but it is not accurate to call every criterion fully complete.** This assessment rates **13 covered and 5 partial**. “Covered” means a demonstrable implementation or required documentation exists, not a full ASVS certification, a guarantee of security, or a predicted grade. The five partial areas are threat prioritization, consistent validation/injection protection, credential lifecycle assurance, error handling, and security logging.
+
+The six numbered sections below follow the requested project-document structure; the rubric assessment and supporting checklists are retained as appendices.
 
 The four advanced features required by criterion 18 are present: scoped authorization, login-attempt limiting, backend API limiting, and JWT expiration checking. MFA is not needed to reach four; it is not implemented. Session expiration must not be counted a second time as an inactivity timeout.
 
@@ -15,7 +17,7 @@ Fresh checks passed **340 Node tests + 460 Vitest tests = 800**, and the product
 
 This was a read-only assessment of application behavior. A separate local server used dummy credentials on port 3119; no production database writes, real users, new emails, paid Vertex calls or government scraping were required. Fresh SAST/DAST results were downloaded from successful CI runs, not falsely described as new local scans. Detailed results are in [verification-summary.json](evidence/security-assignment-2026-11-19/verification-summary.json).
 
-## 2. Application, team and functional features
+## 1. Application name and all team members
 
 **Application:** MoneyTamNgan, a Thai software procurement/TOR discovery and bid-preparation web application.
 
@@ -26,48 +28,23 @@ Team roster confirmed by the owner on 19 November 2026:
 - Peerawat Theerasakul
 - Napat Sirichan
 
-Implemented functional areas include government/e-GP discovery, software classification, bidding-status assessment, PDF/ZIP retrieval, embedded-text extraction and Thai OCR, Vertex summaries and restrictive-condition analysis, fiscal-year and announcement-schedule extraction, search/analytics, company profiles, skill matching, immediate/digest notifications, bid drafts/checklists/DOCX export, and protected admin pipeline/review tools. External anti-bot availability, OCR accuracy and model output remain functional limitations; this audit does not claim every external pipeline succeeds.
+## 2. Functional features
+
+Implemented features:
+
+- Government/e-GP discovery, software classification and bidding-status assessment.
+- PDF/ZIP acquisition, embedded-text extraction and Thai OCR with document provenance.
+- Vertex summaries, restrictive-condition analysis, fiscal-year and announcement-schedule extraction.
+- Project search, filters, procurement analytics and profile skill matching.
+- Company profiles, immediate notifications and daily email digests.
+- Bid drafts, checklists and DOCX export, with no automated bid submission.
+- Protected admin pipeline, classification and review tools.
+
+External anti-bot availability, OCR accuracy and model output remain functional limitations; this audit does not claim every external pipeline succeeds.
 
 The stack is Next.js/React, Node.js route handlers and workers, MongoDB/Mongoose, Puppeteer/HTTP retrieval, Tesseract/Poppler and Vertex AI. [README](../README.md) supplies installation instructions; [pipeline](pipeline.md) and [reference guide](reference.md) explain the functional architecture.
 
-## 3. Assessment against all 18 criteria
-
-| # | Assignment criterion | Assessment | Evidence and qualification |
-| --- | --- | --- | --- |
-| 1 | List of ASVS requirements followed | **Covered, selected scope** | [ASVS checklist](security/ASVS_CHECKLIST.md), selected versioned mapping below and [validation dictionary](API_VALIDATION.md). The existing checklist is selective; it is not a complete Level 1 assessment. |
-| 2 | Threat modeling, priorities and mitigations | **Partial** | [STRIDE model](security/THREAT_MODEL.md) identifies threats and mitigations. It has no consistent explicit priority/likelihood/impact column. Section 7 proposes priorities, but team adoption and reconciliation with the external sheet remain necessary. |
-| 3 | Map security design principles | **Covered in this report and README** | Section 6 links least privilege, mediation, fail-closed behavior, defense in depth and minimization to actual controls. This is a retrospective mapping, not evidence of when design decisions were made. |
-| 4 | Password authentication | **Covered** | [Password handler](../lib/password-auth-handler.js), [KDF](../lib/password-auth.js), [tests](../tests/integration/password-auth.integration.test.js): register/login by email or username, random salt, scrypt, generic wrong-password response and hidden hash. No password reset/change or breached-password screening. |
-| 5 | Social OAuth/OpenID sign-in | **Covered at implementation/test level** | Google authorization-code flow, state cookie, verified email and shared JWT session. [Callback](../app/api/auth/google/callback/route.js), [OAuth tests](../tests/integration/google-oauth-security.integration.test.js). A new real Google account consent/login was not performed in this audit. |
-| 6 | Role-based authorization | **Covered** | [Role/scope definitions](../lib/auth.js), [request authorization](../lib/request-authorization.js), [RBAC tests](../tests/security/rbac-route-matrix.test.js). User, admin and machine principals have distinct permissions. |
-| 7 | Prevent access to another user's data | **Covered for tested user resources** | Queries bind profiles/drafts/checklists to `session.sub`; another owner's draft returns 404. [Draft service](../lib/bid-prep/drafts.js), [ownership tests](../tests/security/bid-prep-access.test.js). This is evidence for these resources, not every future endpoint. |
-| 8 | Input validation and injection protection | **Partial** | Type checks, allowlists, bounded auth bodies, controlled Mongo queries and escaping exist. Legacy `/api/projects?search=` uses raw regex; analytics category uses inherited-property membership; notification test input lacks schema/body bounds. Mongoose alone does not prove NoSQL-injection safety. SQL is not used. |
-| 9 | Environment variables and credentials | **Partial** | `.env.example`, ignored private configuration and server-only credentials exist. The bounded history pattern scan found no candidates, but does not certify every secret format/ref. Revocation of the previously exposed Resend key was not confirmed by the owner. |
-| 10 | CORS without wildcard origins | **Covered** | [Origin policy](../lib/security-policy.js), [Next config](../next.config.js), Proxy and route guards enforce exact origins. Live preflight accepted the configured loopback origin and rejected foreign, `*` and `null` origins. |
-| 11 | Error handling | **Partial** | Password/BidPrep paths return generic errors, but public health, TOR/project and other handlers return `error.message`; Google callback returns an unfiltered provider error payload and exception message. No claim that secrets were observed leaking is made. |
-| 12 | Security/event logging | **Partial** | Structured OAuth rejection, pipeline, BidPrep and notification logging exists. Password registration/login success/failure and logout lack consistent auth-audit calls. Central retention/alerting and complete access-denial coverage are not established. |
-| 13 | HTTP security headers | **Covered in code and live HTTP checks** | CSP nonce, HSTS, DENY, nosniff and referrer policy verified. [Saved headers](evidence/security-assignment-2026-11-19/live-http.json). The team must show custom configuration in the presentation; a browser DevTools screenshot is still useful. HTTP localhost does not verify HTTPS enforcement. |
-| 14 | SAST tool and report | **Covered** | Latest [Semgrep run](https://github.com/MoneyTamNgan/MoneyTamNgan/actions/runs/44472921630), [saved JSON](evidence/security-assignment-2026-11-19/sast-report.json): 0 ERROR/High, 50 WARNING, two warning-level parsing errors. Green is not warning-free. |
-| 15 | DAST tool and report | **Covered, baseline scope** | Latest [ZAP run](https://github.com/MoneyTamNgan/MoneyTamNgan/actions/runs/44472812671), [saved JSON](evidence/security-assignment-2026-11-19/zap-dast-report.json): 0 High, 1 Medium, 3 Low, 4 Informational. Passive unauthenticated scan, not an authenticated penetration test. |
-| 16 | Map mitigation implementation back to threats | **Covered as a checklist** | Existing STRIDE evidence plus Section 7 explicitly distinguish tested controls, partial controls and residual risk. The assignment permits incomplete mitigations when honestly listed. External sheet alignment still needs checking. |
-| 17 | Map implementation to ASVS and Top 10 | **Covered, selected scope** | Sections 5 and 8 provide versioned ASVS and Top 10:2025 mappings. They do not imply every requirement/category is fully mitigated. Earlier broad chapter labels must not be presented as exact verified requirement IDs. |
-| 18 | Four advanced features | **Covered** | Four distinct controls are identified in Section 4. Additional MFA, inactivity timeout and compromised-password checking are absent. |
-
-## 4. Advanced features: what can be claimed
-
-| Course option | Current state | Demonstrable evidence / limit |
-| --- | --- | --- |
-| Authorization with scopes | **Implemented — count 1** | Signed, role-bounded scopes; read-only tokens cannot mutate; machine credentials cannot become admin. `lib/auth.js`, `lib/request-authorization.js`, scope tests. |
-| Login-attempt rate limit | **Implemented — count 2** | Auth IP 30/15 minutes; identifier and resolved account 10/15 minutes; Google start/callback 5/15 minutes. Fixed-window counters are process-local. |
-| Backend API rate limit | **Implemented — count 3** | Public reads default 60/minute guest, 300/minute signed-in; BidPrep has per-user limits. It is not a universal limiter for every endpoint. |
-| JWT expiration checking/management | **Implemented with limits — count 4** | Signed HS256 tokens expire after 86,400 seconds; expired and non-allowlisted algorithms rejected; disabled/deleted real accounts refused. [Offline verification](evidence/security-assignment-2026-11-19/jwt.json). Copied-token revocation on logout is missing. |
-| Login inactivity timeout | **Not implemented as a distinct feature** | Absolute 24-hour JWT lifetime is not an idle timer. Do not double-count it. |
-| Compromised-password checking | **Not implemented** | No registration blocklist/breached-password lookup was found. Length and scrypt do not provide this control. |
-| MFA / OTP / verification | **Not implemented by this application** | Local registration signs in immediately; no local email verification or OTP. The app does not require Google MFA. A TOR notification email is not authentication or MFA. |
-
-Forwarded-IP headers require a trusted reverse proxy. A directly reachable app can accept client-supplied forwarding headers; counters also reset on restart and are not shared between replicas. These limits must be explained during the demo.
-
-## 5. Selected OWASP ASVS mapping
+## 3. Security features mapped to OWASP ASVS security requirements
 
 Use **ASVS 5.0.0**, the current stable release linked by [OWASP](https://asvs.owasp.org/). IDs and levels were checked against the [official versioned catalogue](https://github.com/OWASP/ASVS/blob/v5.0.0/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.csv). Short labels below are paraphrases. This selection is not a full catalogue assessment.
 
@@ -95,18 +72,7 @@ Other concrete gaps include password change (`v5.0.0-6.2.2`), common-password re
 
 The repository's “V6.2 password storage” row is a chapter-level implementation note; the precise KDF reference is `v5.0.0-11.4.2`. Reserved username rejection alone is not proof that default accounts are disabled under `6.3.2`.
 
-## 6. Security principles mapped to implementation
-
-| Principle | Concrete implementation | Residual limitation |
-| --- | --- | --- |
-| Least privilege | User/admin/pipeline/cron scopes are separated; registration fixes role=user; minimal owner-qualified queries. | JWT-signing secret and database credentials remain high-trust assets. |
-| Complete mediation | Proxy plus independent route guards; profile/draft operations use signed identity. | New endpoints must use the same guards and ownership tests. |
-| Fail-safe defaults | Unknown protected mutations require permission; foreign origins and invalid sessions are rejected. | Legacy error envelopes and validation are inconsistent. |
-| Defense in depth | Authorization, ownership, validation, CSP, origin checks, rate limits and CI scanning operate at different layers. | Scanners do not prove complete safety; missing controls remain explicit. |
-| Minimize exposed data | Hash hidden from serialization; private configuration ignored; Vertex payload and audit fields allowlisted. | Old key revocation and retention/customer decisions remain open. |
-| Limit resources and isolate work | Hash concurrency cap, bounded auth bodies, ZIP extraction protections, job leases and isolated test databases. | Rate-limit counters are not distributed; some legacy bodies remain unbounded. |
-
-## 7. Threat model and prioritized mitigation checklist
+## 4. Threat modeling performed for this project
 
 Trust boundaries: untrusted browser → Next.js API/Proxy; API/worker → MongoDB; worker → government document hosts; OCR/text → Vertex; mail helper → SMTP. Incoming PDFs, archive names and model output are untrusted data. Admin and machine credentials cross different authorization boundaries.
 
@@ -130,24 +96,18 @@ The following priorities are **audit recommendations**, not a claim that the ori
 
 Some original rows say “Mitigated” more broadly than this audit supports, especially TH-10 and logging. Reconcile those statuses and the separate STRIDE sheet instead of copying them as unconditional pass claims.
 
-## 8. OWASP Top 10 mapping
+## 5. Security principles followed in the implementation
 
-This report uses [OWASP Top 10:2025](https://top10.owasp.org/2025/), the current release. The Semgrep ruleset name `p/owasp-top-ten` does not itself establish a complete version-specific mapping.
-
-| 2025 category | Implemented controls | Remaining qualification |
+| Principle | Concrete implementation | Residual limitation |
 | --- | --- | --- |
-| A01 Broken Access Control | Roles/scopes, owner queries, origin rules. | Keep new route coverage current. |
-| A02 Security Misconfiguration | Security headers, exact CORS, private cookies, non-root container. | Inline styles, missing isolation headers, HTTP-only local setup and secure cookie prefix gaps. |
-| A03 Software Supply Chain Failures | Lockfile, full audit, expiring risk gate, SAST. | Actions pinned by mutable tags; container/action dependency coverage is incomplete. |
-| A04 Cryptographic Failures | scrypt, salts, JWT MAC/algorithm checks. | Credential lifecycle confirmation, HTTPS deployment and key-management evidence. |
-| A05 Injection | Typed queries, escaping, validation, safe DOCX output. | Raw legacy regex, category allowlist bug, input-bound gaps and URL-helper weakness. |
-| A06 Insecure Design | STRIDE, bounded expensive work, pipeline leases and user ownership. | Team-adopted priorities and confirmed retention requirements. |
-| A07 Authentication Failures | Password and Google login, limits, token expiry and disabled-account checks. | Password change/recovery, common/breached-password checks, MFA and logout revocation. |
-| A08 Software or Data Integrity Failures | Controlled structured parsing, document hashes, provenance, archive checks and transactions. | Model output is not independently proven factual; full software provenance is not established. |
-| A09 Security Logging and Alerting Failures | Structured security-event helpers and pipeline audit records. | Missing full authentication trail, retention and alerting. |
-| A10 Mishandling of Exceptional Conditions | Generic errors in selected services, bounded work and recovery logic. | Raw exception/provider details and inconsistent legacy handling. |
+| Least privilege | User/admin/pipeline/cron scopes are separated; registration fixes role=user; minimal owner-qualified queries. | JWT-signing secret and database credentials remain high-trust assets. |
+| Complete mediation | Proxy plus independent route guards; profile/draft operations use signed identity. | New endpoints must use the same guards and ownership tests. |
+| Fail-safe defaults | Unknown protected mutations require permission; foreign origins and invalid sessions are rejected. | Legacy error envelopes and validation are inconsistent. |
+| Defense in depth | Authorization, ownership, validation, CSP, origin checks, rate limits and CI scanning operate at different layers. | Scanners do not prove complete safety; missing controls remain explicit. |
+| Minimize exposed data | Hash hidden from serialization; private configuration ignored; Vertex payload and audit fields allowlisted. | Old key revocation and retention/customer decisions remain open. |
+| Limit resources and isolate work | Hash concurrency cap, bounded auth bodies, ZIP extraction protections, job leases and isolated test databases. | Rate-limit counters are not distributed; some legacy bodies remain unbounded. |
 
-## 9. Security test process and results
+## 6. Security test process
 
 1. Pin the audited commit/tree; use an isolated worktree and locked dependency install.
 2. Read security specifications and follow their source/test links. Confirm behavior in code rather than accepting DONE labels.
@@ -179,7 +139,61 @@ ZAP's Medium is `style-src unsafe-inline`; Low alerts concern COEP/COOP/CORP. Th
 
 The secret check excluded ignored/untracked private env files, binary content and refs not fetched locally, and recognizes only selected patterns. The owner previously stated Resend-key revocation was uncertain; this audit did not enter any provider account or use the old key.
 
-## 10. What to finish before submission
+## Appendix A. Assessment against all 18 criteria
+
+| # | Assignment criterion | Assessment | Evidence and qualification |
+| --- | --- | --- | --- |
+| 1 | List of ASVS requirements followed | **Covered, selected scope** | [ASVS checklist](security/ASVS_CHECKLIST.md), selected versioned mapping below and [validation dictionary](API_VALIDATION.md). The existing checklist is selective; it is not a complete Level 1 assessment. |
+| 2 | Threat modeling, priorities and mitigations | **Partial** | [STRIDE model](security/THREAT_MODEL.md) identifies threats and mitigations. It has no consistent explicit priority/likelihood/impact column. Section 4 proposes priorities, but team adoption and reconciliation with the external sheet remain necessary. |
+| 3 | Map security design principles | **Covered in this report and README** | Section 5 links least privilege, mediation, fail-closed behavior, defense in depth and minimization to actual controls. This is a retrospective mapping, not evidence of when design decisions were made. |
+| 4 | Password authentication | **Covered** | [Password handler](../lib/password-auth-handler.js), [KDF](../lib/password-auth.js), [tests](../tests/integration/password-auth.integration.test.js): register/login by email or username, random salt, scrypt, generic wrong-password response and hidden hash. No password reset/change or breached-password screening. |
+| 5 | Social OAuth/OpenID sign-in | **Covered at implementation/test level** | Google authorization-code flow, state cookie, verified email and shared JWT session. [Callback](../app/api/auth/google/callback/route.js), [OAuth tests](../tests/integration/google-oauth-security.integration.test.js). A new real Google account consent/login was not performed in this audit. |
+| 6 | Role-based authorization | **Covered** | [Role/scope definitions](../lib/auth.js), [request authorization](../lib/request-authorization.js), [RBAC tests](../tests/security/rbac-route-matrix.test.js). User, admin and machine principals have distinct permissions. |
+| 7 | Prevent access to another user's data | **Covered for tested user resources** | Queries bind profiles/drafts/checklists to `session.sub`; another owner's draft returns 404. [Draft service](../lib/bid-prep/drafts.js), [ownership tests](../tests/security/bid-prep-access.test.js). This is evidence for these resources, not every future endpoint. |
+| 8 | Input validation and injection protection | **Partial** | Type checks, allowlists, bounded auth bodies, controlled Mongo queries and escaping exist. Legacy `/api/projects?search=` uses raw regex; analytics category uses inherited-property membership; notification test input lacks schema/body bounds. Mongoose alone does not prove NoSQL-injection safety. SQL is not used. |
+| 9 | Environment variables and credentials | **Partial** | `.env.example`, ignored private configuration and server-only credentials exist. The bounded history pattern scan found no candidates, but does not certify every secret format/ref. Revocation of the previously exposed Resend key was not confirmed by the owner. |
+| 10 | CORS without wildcard origins | **Covered** | [Origin policy](../lib/security-policy.js), [Next config](../next.config.js), Proxy and route guards enforce exact origins. Live preflight accepted the configured loopback origin and rejected foreign, `*` and `null` origins. |
+| 11 | Error handling | **Partial** | Password/BidPrep paths return generic errors, but public health, TOR/project and other handlers return `error.message`; Google callback returns an unfiltered provider error payload and exception message. No claim that secrets were observed leaking is made. |
+| 12 | Security/event logging | **Partial** | Structured OAuth rejection, pipeline, BidPrep and notification logging exists. Password registration/login success/failure and logout lack consistent auth-audit calls. Central retention/alerting and complete access-denial coverage are not established. |
+| 13 | HTTP security headers | **Covered in code and live HTTP checks** | CSP nonce, HSTS, DENY, nosniff and referrer policy verified. [Saved headers](evidence/security-assignment-2026-11-19/live-http.json). The team must show custom configuration in the presentation; a browser DevTools screenshot is still useful. HTTP localhost does not verify HTTPS enforcement. |
+| 14 | SAST tool and report | **Covered** | Latest [Semgrep run](https://github.com/MoneyTamNgan/MoneyTamNgan/actions/runs/44472921630), [saved JSON](evidence/security-assignment-2026-11-19/sast-report.json): 0 ERROR/High, 50 WARNING, two warning-level parsing errors. Green is not warning-free. |
+| 15 | DAST tool and report | **Covered, baseline scope** | Latest [ZAP run](https://github.com/MoneyTamNgan/MoneyTamNgan/actions/runs/44472812671), [saved JSON](evidence/security-assignment-2026-11-19/zap-dast-report.json): 0 High, 1 Medium, 3 Low, 4 Informational. Passive unauthenticated scan, not an authenticated penetration test. |
+| 16 | Map mitigation implementation back to threats | **Covered as a checklist** | Existing STRIDE evidence plus Section 4 explicitly distinguish tested controls, partial controls and residual risk. The assignment permits incomplete mitigations when honestly listed. External sheet alignment still needs checking. |
+| 17 | Map implementation to ASVS and Top 10 | **Covered, selected scope** | Section 3 and Appendix C provide versioned ASVS and Top 10:2025 mappings. They do not imply every requirement/category is fully mitigated. Earlier broad chapter labels must not be presented as exact verified requirement IDs. |
+| 18 | Four advanced features | **Covered** | Four distinct controls are identified in Appendix B. Additional MFA, inactivity timeout and compromised-password checking are absent. |
+
+## Appendix B. Advanced features and limitations
+
+| Course option | Current state | Demonstrable evidence / limit |
+| --- | --- | --- |
+| Authorization with scopes | **Implemented — count 1** | Signed, role-bounded scopes; read-only tokens cannot mutate; machine credentials cannot become admin. `lib/auth.js`, `lib/request-authorization.js`, scope tests. |
+| Login-attempt rate limit | **Implemented — count 2** | Auth IP 30/15 minutes; identifier and resolved account 10/15 minutes; Google start/callback 5/15 minutes. Fixed-window counters are process-local. |
+| Backend API rate limit | **Implemented — count 3** | Public reads default 60/minute guest, 300/minute signed-in; BidPrep has per-user limits. It is not a universal limiter for every endpoint. |
+| JWT expiration checking/management | **Implemented with limits — count 4** | Signed HS256 tokens expire after 86,400 seconds; expired and non-allowlisted algorithms rejected; disabled/deleted real accounts refused. [Offline verification](evidence/security-assignment-2026-11-19/jwt.json). Copied-token revocation on logout is missing. |
+| Login inactivity timeout | **Not implemented as a distinct feature** | Absolute 24-hour JWT lifetime is not an idle timer. Do not double-count it. |
+| Compromised-password checking | **Not implemented** | No registration blocklist/breached-password lookup was found. Length and scrypt do not provide this control. |
+| MFA / OTP / verification | **Not implemented by this application** | Local registration signs in immediately; no local email verification or OTP. The app does not require Google MFA. A TOR notification email is not authentication or MFA. |
+
+Forwarded-IP headers require a trusted reverse proxy. A directly reachable app can accept client-supplied forwarding headers; counters also reset on restart and are not shared between replicas. These limits must be explained during the demo.
+
+## Appendix C. OWASP Top 10 mapping
+
+This report uses [OWASP Top 10:2025](https://top10.owasp.org/2025/), the current release. The Semgrep ruleset name `p/owasp-top-ten` does not itself establish a complete version-specific mapping.
+
+| 2025 category | Implemented controls | Remaining qualification |
+| --- | --- | --- |
+| A01 Broken Access Control | Roles/scopes, owner queries, origin rules. | Keep new route coverage current. |
+| A02 Security Misconfiguration | Security headers, exact CORS, private cookies, non-root container. | Inline styles, missing isolation headers, HTTP-only local setup and secure cookie prefix gaps. |
+| A03 Software Supply Chain Failures | Lockfile, full audit, expiring risk gate, SAST. | Actions pinned by mutable tags; container/action dependency coverage is incomplete. |
+| A04 Cryptographic Failures | scrypt, salts, JWT MAC/algorithm checks. | Credential lifecycle confirmation, HTTPS deployment and key-management evidence. |
+| A05 Injection | Typed queries, escaping, validation, safe DOCX output. | Raw legacy regex, category allowlist bug, input-bound gaps and URL-helper weakness. |
+| A06 Insecure Design | STRIDE, bounded expensive work, pipeline leases and user ownership. | Team-adopted priorities and confirmed retention requirements. |
+| A07 Authentication Failures | Password and Google login, limits, token expiry and disabled-account checks. | Password change/recovery, common/breached-password checks, MFA and logout revocation. |
+| A08 Software or Data Integrity Failures | Controlled structured parsing, document hashes, provenance, archive checks and transactions. | Model output is not independently proven factual; full software provenance is not established. |
+| A09 Security Logging and Alerting Failures | Structured security-event helpers and pipeline audit records. | Missing full authentication trail, retention and alerting. |
+| A10 Mishandling of Exceptional Conditions | Generic errors in selected services, bounded work and recovery logic. | Raw exception/provider details and inconsistent legacy handling. |
+
+## Appendix D. What to finish before submission
 
 ### Implementation/security priorities
 
@@ -204,7 +218,7 @@ The secret check excluded ignored/untracked private env files, binary content an
 
 This audit supplies the requested Markdown project/security report and README material. It does not silently implement the identified gaps, certify full ASVS Level 1, claim active penetration testing, or replace a teammate/instructor review.
 
-## 11. Evidence and document index
+## Appendix E. Evidence and document index
 
 - [Fresh verification summary](evidence/security-assignment-2026-11-19/verification-summary.json)
 - [Live headers/logout](evidence/security-assignment-2026-11-19/live-http.json) and [JWT checks](evidence/security-assignment-2026-11-19/jwt.json)
