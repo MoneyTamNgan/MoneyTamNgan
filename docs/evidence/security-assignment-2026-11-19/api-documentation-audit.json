@@ -1,0 +1,36 @@
+{
+  "implementedOperations": 59,
+  "documentsChecked": 2,
+  "coverageErrors": [
+    "docs/API_VALIDATION.md: missing PATCH /api/bid-prep/tors/[projectId]/checklist",
+    "docs/security/RBAC_SPEC.md: missing PATCH /api/bid-prep/tors/[projectId]/checklist"
+  ],
+  "openApiMissingLiveOperations": [
+    "DELETE /api/profile",
+    "DELETE /api/profiles",
+    "GET /api/ingestion/status",
+    "GET /api/notifications/digest",
+    "GET /api/processing/review",
+    "GET /api/processing/status",
+    "GET /api/projects",
+    "GET /api/projects/{id}",
+    "GET /api/scraping/status",
+    "GET /api/test-db",
+    "PATCH /api/profile",
+    "PATCH /api/projects/{id}/classification",
+    "POST /api/admin/classification/run",
+    "POST /api/ingestion/trigger",
+    "POST /api/notifications/digest",
+    "POST /api/notifications/test",
+    "POST /api/processing/trigger",
+    "POST /api/scraping/trigger"
+  ],
+  "openApiWithoutHandlers": [
+    "GET /api/admin/ingestion/runs",
+    "GET /api/matches",
+    "GET /api/tors/{id}/match",
+    "POST /api/admin/ingestion/runs",
+    "POST /api/profile",
+    "POST /api/tors/{id}/report"
+  ]
+}
