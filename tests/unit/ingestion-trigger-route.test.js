@@ -91,6 +91,19 @@ it('carries an explicit RSS department hint through default candidate ingestion'
     expect(enqueueProject).toHaveBeenCalledWith('pending', { type: 'verify_candidate' });
 });
 
+it('reports a Cloudflare block as permanent and distinct from a bad key', async () => {
+    const error = Object.assign(new Error('Cloudflare blocked this client before the API key was checked'), {
+        status: 403, code: 'EGP_UPSTREAM_BLOCKED', retryable: false,
+    });
+    fetchAllFromEGP.mockRejectedValue(error);
+    const response = await POST(new Request('http://localhost/api/ingestion/trigger', { method: 'POST', body: JSON.stringify({}) }));
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error.code).toBe('EGP_UPSTREAM_BLOCKED');
+    expect(body.error.retryable).toBe(false);
+    expect(body.error.message).toMatch(/API key was checked/);
+});
+
 it('rejects malformed RSS hints without requesting government data', async () => {
     const response = await POST(new Request('http://localhost/api/ingestion/trigger', { method: 'POST',
         body: JSON.stringify({ rssDeptId: 'bad' }) }));

@@ -177,10 +177,13 @@ async function handlePOST(request) {
         // Tell the scheduler whether retrying can help (e-GP 5xx/429, network)
         // or not (missing API key, bad config).
         const retryable = isTransientError(error);
+        // The edge block and a rejected key are permanent, and the caller needs
+        // to tell them apart. Other failures keep the generic ingestion codes.
+        const diagnosed = error.code === 'EGP_UPSTREAM_BLOCKED' || error.code === 'EGP_AUTH_FAILED';
         return NextResponse.json({
             status: 'failed',
             error: {
-                code: retryable ? 'INGESTION_UPSTREAM_UNAVAILABLE' : 'INGESTION_FAILED',
+                code: diagnosed ? error.code : (retryable ? 'INGESTION_UPSTREAM_UNAVAILABLE' : 'INGESTION_FAILED'),
                 message: error.message,
                 retryable,
             },

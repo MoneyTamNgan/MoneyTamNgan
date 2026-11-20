@@ -34,7 +34,12 @@ env:
 jobs:
   ingest:
     name: Ingest e-GP metadata
-    runs-on: ubuntu-latest
+    # opend.data.go.th answers GitHub-hosted Azure US runners with a Cloudflare
+    # "Access Denied" page and never checks EGP_API_KEY. Leave INGESTION_RUNNER
+    # unset to keep ubuntu-latest. Set it to one label of a self-hosted runner
+    # whose traffic exits in Thailand. This workflow has no pull_request
+    # trigger; do not add one while that runner is selected (the repo is public).
+    runs-on: ${{ vars.INGESTION_RUNNER || 'ubuntu-latest' }}
     # Covers the build plus the longest retry chain (~5 + 15 + 45 min).
     timeout-minutes: 120
     steps:
@@ -43,6 +48,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # No API key is sent. A Cloudflare block fails here, before the build.
+      # A missing-key response from the origin means this network is allowed.
+      - name: Check e-GP is reachable from this runner
+        run: node scripts/check-egp-edge.js
+
       - run: npm ci
 
       - name: Allow this runner's IP on Atlas
