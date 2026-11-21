@@ -32,6 +32,7 @@ async function handleGET(request) {
     cookieStore.delete(OAUTH_STATE_COOKIE);
 
     if (!code) {
+        logAuthAudit(request, 'oauth_callback_failed', 'missing_code');
         return NextResponse.json({ error: 'Authorization code is missing' }, { status: 400 });
     }
     if (!state || !expectedState || state !== expectedState) {
@@ -54,8 +55,9 @@ async function handleGET(request) {
         });
         const tokenData = await tokenResponse.json();
         if (!tokenResponse.ok) {
+            logAuthAudit(request, 'oauth_callback_failed', 'token_exchange_failed');
             return NextResponse.json(
-                { error: 'Token exchange failed', details: tokenData },
+                { error: 'Token exchange failed' },
                 { status: 400 }
             );
         }
@@ -67,16 +69,19 @@ async function handleGET(request) {
         const googleUser = await userResponse.json();
         const email = normalizeEmail(googleUser?.email);
         if (!userResponse.ok || !email || !googleUser.id || googleUser.verified_email !== true) {
+            logAuthAudit(request, 'oauth_callback_failed', 'invalid_profile');
             return NextResponse.json({ error: 'Could not read Google profile' }, { status: 400 });
         }
 
         // 3. Upsert the user.
         await connectToDatabase();
-        const existing = await User.findOne(emailFilter(email)).select('+passwordHash');
+        const existing = await User.findOne(emailFilter(email)).select('+passwordHash +session_version');
         if (existing?.passwordHash || (existing?.googleId && existing.googleId !== googleUser.id)) {
+            logAuthAudit(request, 'oauth_callback_conflict', 'method_conflict');
             return NextResponse.json({ error: 'This email already uses a different sign-in method. Sign in with the original method; automatic account linking is disabled.' }, { status: 409 });
         }
         if (existing?.disabled === true) {
+            logAuthAudit(request, 'oauth_callback_denied', 'account_disabled', { userId: String(existing._id) });
             return NextResponse.json({ error: 'This account is disabled.' }, { status: 403 });
         }
         const updateFields = {
@@ -101,16 +106,23 @@ async function handleGET(request) {
             sub: user._id.toString(),
             email: user.email,
             role: user.role,
+            sv: existing?.session_version ?? user?.session_version ?? 0,
         });
+
+        logAuthAudit(request, 'oauth_login_success', 'authenticated', { userId: user._id.toString(), role: user.role });
 
         const destination = safeAuthDestination(next);
         const response = NextResponse.redirect(new URL(destination, request.url));
         response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
         return response;
     } catch (error) {
-        if (error?.code === 11000) return NextResponse.json({ error: 'Account already exists. Use your original sign-in method.' }, { status: 409 });
+        if (error?.code === 11000) {
+            logAuthAudit(request, 'oauth_callback_conflict', 'account_exists');
+            return NextResponse.json({ error: 'Account already exists. Use your original sign-in method.' }, { status: 409 });
+        }
+        logAuthAudit(request, 'oauth_callback_failed', 'internal_error');
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: 'Internal Server Error' },
             { status: 500 }
         );
     }

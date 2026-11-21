@@ -225,7 +225,7 @@ async function handlePOST(request) {
             status: 'failed',
             error: {
                 code: 'SCRAPING_FAILED',
-                message: error.message,
+                message: 'Failed to trigger scraping',
             },
         }, { status: 500 });
     }

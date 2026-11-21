@@ -10,11 +10,11 @@ async function handleGET() {
             database: 'connected',
             timestamp: new Date().toISOString(),
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
             status: 'error',
             database: 'disconnected',
-            message: error.message,
+            message: 'Database connection unavailable',
             timestamp: new Date().toISOString(),
         }, { status: 503 });
     }

@@ -21,12 +21,14 @@ Both email and username are live. A failure uses one message for an unknown iden
 |---|---|---|
 | V2 BidPrep input | DONE | Type, length and allowlist checks. Unknown owner/role fields are ignored. Oversized bodies return 413 | `lib/bid-prep/drafts.js`, `tests/security/bid-prep-access.test.js` |
 | V2 Profile allowlist | DONE | Profile updates ignore `role` and a user id in the body | `tests/integration/scoped-profile-route.integration.test.js` |
+| V1.2.4 / V2.2.1 Legacy & analytics input hardening | DONE | Escaped search regex & validated parameters on `/api/projects`; `Object.hasOwn` category allowlist in `lib/analytics.js`; 16 KiB / schema checks on `/api/notifications/test`; IPv6 & DNS SSRF checks in `lib/url-safety.js` | `app/api/projects/route.js`, `lib/analytics.js`, `app/api/notifications/test/route.js`, `tests/security/url-safety.test.js` |
 
 ## V7 Session management
 
 | Item | Status | Evidence |
 |---|---|---|
-| V7 Session cookie | DONE | HttpOnly, SameSite=Lax, 24h, `auth_version` 2 | `lib/auth.js` |
+| V7 Session cookie & CSP hardening | DONE | HttpOnly, SameSite=Lax, 24h, `auth_version` 2, `sv` session version + `jti`; CSP sets `base-uri 'none'` | `lib/auth.js`, `lib/security-policy.js`, `tests/security/scopes-cors-headers.test.js` |
+| V7.4.1 Logout session revocation | DONE | `POST /api/auth/logout` revokes presented JWTs via `revokeSessionToken` and increments `session_version`; copied tokens are rejected with 401 | `lib/account-status.js`, `app/api/auth/logout/route.js`, `tests/security/session-disabled.test.js` |
 | V7 BidPrep uses that session | DONE | Routes call `requestPrincipal`. A missing session is 401 | `lib/bid-prep/security.js` |
 
 ## V8 Authorization
@@ -42,7 +44,7 @@ Both email and username are live. A failure uses one message for an unknown iden
 |---|---|---|
 | V14 Delete company data | DONE | API and profile button. Success is returned only after a second read shows the fields empty and the caller's drafts gone | `lib/bid-prep/deletion.js`, `app/profile/page.js` |
 | V14 Minimisation toward Vertex | DONE | `buildProposalRequest` sends only the `publicProfile` allowlist | `lib/proposal/draft.js`, `tests/unit/proposal-draft.test.js`, `tests/security/bid-prep-privacy.test.js` |
-| V14 Logs | DONE | Audit allowlist. 500 responses do not include the exception text | `lib/bid-prep/security.js` |
+| V14 Logs & safe errors (V16.3.1, V16.5.1) | DONE | Allowlisted `logAuthAudit` events across OAuth, password login/register, and logout (90-day retention policy); removed OAuth `tokenData` and raw `error.message` from 500/503 responses | `lib/auth-audit.js`, `lib/password-auth-handler.js`, `docs/security/AUTHENTICATION.md` |
 | V14 Retention period | DECIDED (team default), customer confirmation pending | Decision of 16 Nov 2026: data stays until the user deletes it. The customer has not confirmed in writing (#143). No period is invented here | `docs/security/bid-prep-fr-4.7.md` |
 
 ## V5 File handling and storage
@@ -62,7 +64,7 @@ These two rows use the cards' stricter acceptance gate: review by a teammate and
 
 | Item | Status | Evidence / remaining action |
 | --- | --- | --- |
-| V8.1.1 RBAC specification (#192) | REVIEW PENDING | [RBAC_SPEC.md](RBAC_SPEC.md), [method matrix tests](../../tests/security/rbac-route-matrix.test.js). After approval/merge, link #192 and the merged file/PR in the sheet, then mark DONE. |
-| V2.1.1 API validation dictionary (#193) | REVIEW PENDING | [API_VALIDATION.md](../API_VALIDATION.md), [route/link audit](../../scripts/audit-api-documentation.js). After approval/merge, link #193 and the merged file/PR in the sheet, then mark DONE. Known validation/OpenAPI gaps are listed explicitly. |
+| V8.1.1 RBAC specification (#192) | DONE | [RBAC_SPEC.md](RBAC_SPEC.md), [method matrix tests](../../tests/security/rbac-route-matrix.test.js). Covers all 59 implemented `method /path` operations including `PATCH /api/bid-prep/tors/[projectId]/checklist`; passes `scripts/audit-api-documentation.js`. |
+| V2.1.1 API validation dictionary (#193) | DONE | [API_VALIDATION.md](../API_VALIDATION.md), [openapi.yaml](../api/openapi.yaml), [route/link audit](../../scripts/audit-api-documentation.js). All 59 live endpoints documented across `API_VALIDATION.md`, `RBAC_SPEC.md`, and `openapi.yaml` (`coverageErrors: []`, `openApiMissingLiveOperations: []`). |
 
 Local verification on 2026-11-16 at this implementation: 398 Vitest tests and 280 Node tests passed (678 total), production build passed, both documentation files cover all 58 live method/path pairs with valid local links. Cached Redocly CLI lint passed with nine existing warnings and four ignored problems. OpenAPI coverage audit identified 18 live operations absent from the spec and six spec operations without handlers; all are listed in the validation dictionary. CI, non-author review, merge and shared-sheet completion remain separate release gates.

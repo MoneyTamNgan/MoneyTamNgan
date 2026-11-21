@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { SESSION_COOKIE, signSession } from '@/lib/auth';
 import { proxy } from '@/proxy';
-import { setAccountLookup, sessionAccountActive } from '@/lib/account-status';
+import { setAccountLookup, sessionAccountActive, clearRevokedSessions } from '@/lib/account-status';
+import { POST as logout } from '@/app/api/auth/logout/route';
 
 // ASVS V7.4.2 (#191): a valid, unexpired JWT stops working once its account is disabled or deleted.
 const SUB = '64b7f0f0f0f0f0f0f0f0f0f0';
@@ -13,7 +14,10 @@ const request = (path, { token, bearer, headers = {} } = {}) => new NextRequest(
 });
 const token = (sub = SUB) => signSession({ sub, role: 'user' });
 
-afterEach(() => setAccountLookup());
+afterEach(() => {
+    setAccountLookup();
+    clearRevokedSessions();
+});
 
 describe('session invalidation for disabled accounts', () => {
     it('lets an active account through and looks it up by its id', async () => {
@@ -74,5 +78,36 @@ describe('session invalidation for disabled accounts', () => {
         expect((await proxy(request('/api/tors'))).status).toBe(200);
         expect(await sessionAccountActive({ sub: 'user-1' })).toBe(true);
         expect(lookup).not.toHaveBeenCalled();
+    });
+
+    it('revokes a copied JWT immediately when POST /api/auth/logout is called (ASVS V7.4.1)', async () => {
+        setAccountLookup(async () => ({ exists: true, disabled: false, sessionVersion: 0 }));
+        const jwt = await token();
+        expect((await proxy(request('/api/auth/me', { bearer: jwt }))).status).toBe(200);
+
+        const logoutResponse = await logout(new NextRequest('http://localhost:3000/api/auth/logout', {
+            method: 'POST',
+            headers: {
+                origin: 'http://localhost:3000',
+                authorization: `Bearer ${jwt}`,
+            },
+        }));
+        expect(logoutResponse.status).toBe(200);
+        expect(logoutResponse.headers.get('set-cookie')?.toLowerCase()).toContain('max-age=0');
+
+        // Replaying the copied bearer token or cookie after logout must fail with 401.
+        const replayBearer = await proxy(request('/api/auth/me', { bearer: jwt }));
+        expect(replayBearer.status).toBe(401);
+        const replayCookie = await proxy(request('/api/auth/me', { token: jwt }));
+        expect(replayCookie.status).toBe(401);
+    });
+
+    it('rejects a token whose sv claim no longer matches the user sessionVersion', async () => {
+        const jwt = await signSession({ sub: SUB, role: 'user', sv: 1 });
+        setAccountLookup(async () => ({ exists: true, disabled: false, sessionVersion: 1 }));
+        expect((await proxy(request('/api/auth/me', { bearer: jwt }))).status).toBe(200);
+
+        setAccountLookup(async () => ({ exists: true, disabled: false, sessionVersion: 2 }));
+        expect((await proxy(request('/api/auth/me', { bearer: jwt }))).status).toBe(401);
     });
 });

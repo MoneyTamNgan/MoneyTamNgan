@@ -27,6 +27,8 @@ describe('parseAnalyticsFilter', () => {
 
     it('rejects invalid ranges and categories', () => {
         expect(parseAnalyticsFilter(params('category=hardware')).error.code).toBe('INVALID_CATEGORY');
+        expect(parseAnalyticsFilter(params('category=constructor')).error.code).toBe('INVALID_CATEGORY');
+        expect(parseAnalyticsFilter(params('category=toString')).error.code).toBe('INVALID_CATEGORY');
         expect(parseAnalyticsFilter(params('budgetMin=10&budgetMax=1')).error.code).toBe('INVALID_BUDGET_RANGE');
         expect(parseAnalyticsFilter(params('dateFrom=2026-02-01&dateTo=2026-01-01')).error.code).toBe('INVALID_DATE_RANGE');
         expect(parseAnalyticsFilter(params('dateFrom=nope')).error.code).toBe('INVALID_DATE_FROM');

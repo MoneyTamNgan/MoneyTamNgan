@@ -31,11 +31,11 @@ async function handleGET(request, { params }) {
                 'Content-Type': 'application/json; charset=utf-8',
             },
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
             error: {
                 code: 'GET_PROJECT_FAILED',
-                message: error.message,
+                message: 'Failed to load project',
             },
         }, { status: 500 });
     }

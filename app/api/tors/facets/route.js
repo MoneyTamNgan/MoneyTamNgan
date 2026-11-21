@@ -51,9 +51,9 @@ async function handleGET(request) {
             total: totalResult[0]?.total ?? 0,
             agencies: agencies.map(({ _id, count }) => ({ name: _id, count })),
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
-            error: { code: 'LIST_TOR_FACETS_FAILED', message: error.message },
+            error: { code: 'LIST_TOR_FACETS_FAILED', message: 'Failed to list TOR facets' },
         }, { status: 500 });
     }
 }

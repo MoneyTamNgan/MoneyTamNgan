@@ -43,12 +43,12 @@ async function handleGET() {
         }, {
             headers: { 'Content-Type': 'application/json; charset=utf-8' },
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
             status: 'error',
             error: {
                 code: 'STATUS_CHECK_FAILED',
-                message: error.message,
+                message: 'Failed to check scraping status',
             },
         }, { status: 500 });
     }

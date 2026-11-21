@@ -39,10 +39,10 @@ async function handleGET(request) {
             jobs: Object.fromEntries(jobCounts.map(item => [item._id, item.count])),
             projects: Object.fromEntries(projectCounts.map(item => [item._id || 'untracked', item.count])),
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
             status: 'failed',
-            error: { code: 'PROCESSING_STATUS_FAILED', message: error.message },
+            error: { code: 'PROCESSING_STATUS_FAILED', message: 'Failed to load processing status' },
         }, { status: 500 });
     }
 }

@@ -78,10 +78,10 @@ async function handlePOST(request) {
             reused: jobs.filter(job => job.reused).length,
             jobs,
         }, { status: 202 });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
             status: 'failed',
-            error: { code: 'PROCESSING_ENQUEUE_FAILED', message: error.message },
+            error: { code: 'PROCESSING_ENQUEUE_FAILED', message: 'Failed to enqueue processing jobs' },
         }, { status: 500 });
     }
 }

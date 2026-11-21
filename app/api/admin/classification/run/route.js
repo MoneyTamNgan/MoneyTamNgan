@@ -74,9 +74,9 @@ async function handlePOST() {
             remaining: pending.length - updated,
             jobsQueued, jobsReused, queueFailures, queueErrors,
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json(
-            { error: { code: 'CLASSIFICATION_RUN_FAILED', message: error.message } },
+            { error: { code: 'CLASSIFICATION_RUN_FAILED', message: 'Failed to run classification' } },
             { status: 500 }
         );
     }
