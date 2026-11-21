@@ -285,32 +285,29 @@ Single project/candidate cannot include any dryRun/scanLimit/afterId/retryFailed
 
 ### POST /api/notifications/test
 
-[Handler](../app/api/notifications/test/route.js): optional JSON body ≤16 KiB (413 `PAYLOAD_TOO_LARGE`); non-object roots or malformed JSON return 400 `INVALID_BODY`. Optional `matches` array must contain 1..20 objects, each validating `torId` (nonempty string ≤64), `title` (nonempty string ≤300), `agency` (string ≤200), `budget` (finite number 0..1e15), and `matchScore` (finite number 0..100), returning 400 `INVALID_MATCHES` on invalid items. Omitting `matches` sends sample matches. Recipient comes strictly from the authenticated User record. Failure returns generic 500 error. Proof: [notification route integration](../tests/integration/notifications-test-route.integration.test.js).
+[Handler](../app/api/notifications/test/route.js): optional JSON body ≤16 KiB (413 `PAYLOAD_TOO_LARGE`); non-object roots or malformed JSON return 400 `INVALID_BODY`. Optional `matches` array must contain 1..20 objects, each validating `torId` (nonempty string ≤64), `title` (nonempty string ≤300), `agency` (string ≤200), `budget` (finite number 0..1e15), and `matchScore` (finite number 0..100), returning 400 `INVALID_MATCHES` on invalid items. Omitting `matches` or sending null uses sample matches. Recipient comes strictly from the authenticated User record. Failure returns generic 500 error. Proof: [notification route integration](../tests/integration/notifications-test-route.integration.test.js).
 
 ### POST /api/notifications/digest and GET /api/notifications/digest
 
-[Handler](../app/api/notifications/digest/route.js): POST accepts optional `projects` array with **no item/count/body-size validation**; malformed/missing/nonarray body falls back to DB selection (latest200 legacy-compatible processed projects). GET has no business inputs and invokes digest service. Both are mutations protected by notifications:send/admin session or cron principal, including Origin checks on GET. Unknown fields ignored. [Guard proof](../tests/security/scopes-cors-headers.test.js), [service tests](../tests/unit/notification-service.test.js). No live delivery claimed.
+[Handler](../app/api/notifications/digest/route.js): both methods dispatch persisted pending matches. Neither method takes project input, and POST ignores the request body. Both are treated as mutations by the Origin policy. They require an admin session or scoped JWT with `notifications:send`, or the configured cron bearer credential. [Guard proof](../tests/security/scopes-cors-headers.test.js), [service tests](../tests/unit/notification-service.test.js).
 
 ### GET /api/health and GET /api/test-db
 
 [Health](../app/api/health/route.js) is public; [test-db](../app/api/test-db/route.js) admin-only. No business query/body. DB failure 503 on health and 500 on test-db return generic status messages without exposing raw database exception details. [Access proof](../tests/security/rbac-route-matrix.test.js).
 
-## OpenAPI reconciliation and known gaps
+## OpenAPI reconciliation
 
-[OpenAPI](api/openapi.yaml) is a mixed implemented/planned contract. [Contract tests](../tests/contract/openapi-contract.test.ts) check selected endpoints/shapes; green lint or contract tests do not prove route completeness. The following differences were verified against the current source. This documentation change records them without changing runtime behavior or silently replacing planned definitions.
+[OpenAPI](api/openapi.yaml) describes the current routes. The route audit compares the handler list against OpenAPI, this dictionary, and the RBAC matrix. The [contract tests](../tests/contract/openapi-contract.test.ts) check selected response shapes.
 
-| Area | Difference / follow-up |
+| Area | Verified behavior |
 | --- | --- |
-| Planned-only routes | `/admin/ingestion/runs` GET/POST, `/matches` GET, `/tors/{id}/match` GET, `/tors/{id}/report` POST, and `/profile` POST have no matching handlers in `app/api`. Do not call them as implemented endpoints. |
-| Live endpoints documented | All 59 implemented `method /path` operations (including `/profile` PATCH/DELETE, `/profiles` DELETE, `/projects/*`, `/admin/classification/run`, `/ingestion/*`, `/processing/*`, `/scraping/*`, `/notifications/*`, `/test-db`) are documented in `docs/api/openapi.yaml`, `docs/API_VALIDATION.md`, and `docs/security/RBAC_SPEC.md`. |
-| TOR search | `q`, `budgetMin`, `budgetMax` are implemented on `/tors`. `q` is clipped to 200 characters; `/projects` search now also enforces a 200-char limit and regex escaping. |
-| Analytics search | OpenAPI advertises `isSoftware` and `limit` (default10); implementation ignores both, uses `category` (`Object.hasOwn` checked) and `pageSize` (default20). |
-| Analytics overview export | Runtime accepts budgetMin/budgetMax/page/limit/pageSize; operation parameters omit these. Pagination is validated but export remains unpaginated. |
-| Bearer authorization | Several session-only OpenAPI operations (BidPrep, me, planned profile alias etc.) do not list the implemented scoped JWT Bearer alternative. Schemes describe scopes in prose, not an OAuth scope map. |
-| Body and field semantics | OpenAPI does not universally encode byte caps, UTF-8 password cap, Unicode-code-point password length, aggregate draft text cap, username reserved names, sanitizer behavior, or every fallback/coercion described above. `maxLength` alone is not equivalent to these rules. |
-| Error variants | 401/403 guards apply even when an operation omits them; legacy string-error envelopes differ. Permissive dates are weaker than `format: date`/ISO wording. Planned schema/response requirements should not be treated as backend validators. |
+| Live endpoints | All 59 `method /path` operations are listed, including the 18 operations added in [PR #229](https://github.com/MoneyTamNgan/MoneyTamNgan/pull/229). |
+| TOR search | `/tors` accepts `q`, `budgetMin`, and `budgetMax`. The handler uses the first 200 characters of the trimmed `q`. Legacy `/projects` validates and escapes its `search` parameter. |
+| Analytics | Search uses `category` and `pageSize`. Overview and overview export use `limit` or its `pageSize` alias. Overview export validates pagination but exports up to 10,000 matching records without paging. |
+| Authorization | The spec lists the applicable cookie, scoped JWT, pipeline bearer, or cron bearer credentials. Operation descriptions identify the required permission scope and, where applicable, the admin role. |
+| Validation and errors | Operation responses describe structured error codes and legacy response variants. The rules above give additional details on runtime validation, including byte limits, date coercion and text sanitization. |
 
-Priority hardening follow-up: use an own-property/set allowlist for analytics category, replace legacy `/projects` raw regex with bounded escaped search, standardize strict calendar parsing, bound keyword and notification arrays/body bytes, reject malformed root JSON consistently, validate operator target IDs and cap pagination arithmetic. These are observable gaps and deserve separate behavior-changing work with regression tests; #193 does not claim they are fixed.
+Remaining runtime limits are documented above. Date parsing is permissive, keyword replacement has no application-level body or array cap, and some older operator routes use defaults when JSON cannot be parsed. Pagination can also exceed downstream database bounds.
 
 ## Verification and ASVS evidence
 

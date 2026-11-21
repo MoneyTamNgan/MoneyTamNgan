@@ -1560,28 +1560,17 @@ dd {
   line-height: 1.7
 }
 
-.information-link {
+.information-copy strong {
   display: inline-flex;
   gap: 10px;
   margin-top: 19px;
   color: #a5f0c3;
-  font-size: .91rem;
-  font-weight: 800;
-  text-underline-offset: 4px
+  font-size: .91rem
 }
 
-.information-link:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 4px
-}
-
-.information-link i {
+.information-copy strong i {
   font-size: 1.2rem;
   font-style: normal
-}
-
-.tor-feed :is(#tor-search, #tor-list) {
-  scroll-margin-top: 5rem
 }
 
 .information-image {
@@ -5305,7 +5294,7 @@ body {
 }
 
 .information-copy p,
-.information-link {
+.information-copy strong {
   color: var(--orange-primary)
 }
 
@@ -5733,7 +5722,7 @@ body {
 }
 
 .sidebar-layout.theme-orange .information-copy>p,
-.sidebar-layout.theme-orange .information-link,
+.sidebar-layout.theme-orange .information-copy strong,
 .sidebar-layout.theme-orange .information-image {
   color: var(--orange-primary)
 }

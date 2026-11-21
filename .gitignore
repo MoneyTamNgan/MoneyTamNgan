@@ -23,6 +23,7 @@ node_modules
 dist/
 build/
 coverage/
+/.vitest/
 dependency-audit-result.json
 .next/
 out/
