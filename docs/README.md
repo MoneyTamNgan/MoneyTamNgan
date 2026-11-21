@@ -1,5 +1,8 @@
 # Documentation index
 
+## Audit
+- [audit/README.md](audit/README.md): audit pack (architecture, ER diagram, design patterns, controls and evidence)
+
 ## Start here
 - [handover.md](handover.md): owner, external services, rotating secrets, known limitations
 - [user-guide.md](user-guide.md): short guide for end users
