@@ -22,8 +22,8 @@ function scheduleInfo() {
     try {
         const { spec, schedule, timeZone } = ingestionScheduleConfig();
         return { spec, timeZone, nextRunAt: nextRunAt(schedule, new Date(), timeZone) };
-    } catch (error) {
-        return { error: error.message };
+    } catch {
+        return { error: 'Schedule configuration unavailable' };
     }
 }
 async function handleGET() {
@@ -55,12 +55,12 @@ async function handleGET() {
             lastRun: recentRuns[0] || null,
             recentRuns,
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
             status: 'error',
             error: {
                 code: 'STATUS_CHECK_FAILED',
-                message: error.message,
+                message: 'Failed to check ingestion status',
             },
         }, { status: 500 });
     }

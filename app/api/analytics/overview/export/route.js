@@ -63,8 +63,8 @@ async function handleGET(request) {
                     'Content-Disposition': `attachment; filename="${filename}"`,
             },
         });
-    } catch (error) {
-        return NextResponse.json({ error: { code: 'ANALYTICS_EXPORT_FAILED', message: error.message } }, { status: 500 });
+    } catch {
+        return NextResponse.json({ error: { code: 'ANALYTICS_EXPORT_FAILED', message: 'Analytics export failed' } }, { status: 500 });
     }
 }
 

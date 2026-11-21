@@ -29,9 +29,9 @@ async function handleGET(_request, { params }) {
         }
 
         return NextResponse.json(toTorDetail(await hydrateProjectCompatibility(project)));
-    } catch (error) {
+    } catch {
         return NextResponse.json({
-            error: { code: 'GET_TOR_FAILED', message: error.message },
+            error: { code: 'GET_TOR_FAILED', message: 'Failed to load TOR' },
         }, { status: 500 });
     }
 }

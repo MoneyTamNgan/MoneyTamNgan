@@ -73,7 +73,7 @@ async function handlePATCH(request, { params }) {
         return NextResponse.json(detail);
     } catch (error) {
         if (error instanceof OverrideError) return errorResponse(error.code, error.message, error.status);
-        return errorResponse('CLASSIFICATION_OVERRIDE_FAILED', error.message, 500);
+        return errorResponse('CLASSIFICATION_OVERRIDE_FAILED', 'Failed to update TOR classification override', 500);
     }
 }
 
@@ -87,8 +87,8 @@ async function handleGET(_request, { params }) {
         const items = await ClassificationOverride.find({ project_id: projectId })
             .sort({ created_at: -1 }).limit(100).lean();
         return NextResponse.json({ items: items.map(toOverrideHistoryItem) });
-    } catch (error) {
-        return errorResponse('CLASSIFICATION_HISTORY_FAILED', error.message, 500);
+    } catch {
+        return errorResponse('CLASSIFICATION_HISTORY_FAILED', 'Failed to load classification override history', 500);
     }
 }
 

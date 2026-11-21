@@ -11,7 +11,7 @@ import { DELETE_COMPANY_DATA_CONFIRMATION } from '@/lib/bid-prep/notices';
 import { POST as createDraft, GET as listDrafts } from '@/app/api/bid-prep/drafts/route';
 import { GET as readDraft, PATCH as updateDraft } from '@/app/api/bid-prep/drafts/[id]/route';
 import { POST as exportDraft } from '@/app/api/bid-prep/drafts/[id]/export/route';
-import { GET as checklist } from '@/app/api/bid-prep/tors/[projectId]/checklist/route';
+import { GET as checklist, PATCH as updateChecklist } from '@/app/api/bid-prep/tors/[projectId]/checklist/route';
 import { DELETE as deleteData } from '@/app/api/bid-prep/data/route';
 
 const database = process.env.MONGODB_DB_NAME || '';
@@ -149,6 +149,14 @@ it('enforces BOLA, export notices and verified deletion on Atlas', async () => {
     const checklistBody = await checklistResponse.json();
     expect(JSON.stringify(checklistBody)).not.toContain('VictimCo-atlas-marker');
     expect(checklistBody.items[0].status).toBe('manual');
+    expect((await call(exportDraft, `http://localhost:3000/api/bid-prep/drafts/${createdBody.id}/export`, {
+        method: 'POST', token: attackerToken, params: { id: createdBody.id },
+    })).status).toBe(409);
+    for (const item of checklistBody.items) {
+        expect((await call(updateChecklist, `http://localhost:3000/api/bid-prep/tors/${projectId}/checklist`, {
+            method: 'PATCH', token: attackerToken, params: { projectId }, body: { itemId: item.id, status: 'pass' },
+        })).status).toBe(200);
+    }
 
     expect((await listDrafts(new Request('http://localhost:3000/api/bid-prep/drafts'))).status).toBe(401);
 

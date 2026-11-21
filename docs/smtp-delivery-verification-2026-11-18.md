@@ -34,7 +34,7 @@ The owner saved updated private SMTP settings and the live authentication and sa
 
 ## Remaining before acceptance
 
-1. Completed: updated SMTP settings loaded privately and connection/authentication verified. Still confirm provider credential ownership, sending limits and revocation of any previously exposed API key.
+1. Completed: updated SMTP settings loaded privately, connection/authentication verified, credential ownership (Watcharapat) recorded, and the owner confirmed revocation of the previously exposed Resend API key on 21 November 2026.
 2. Completed: reran the disposable Atlas ledger test after IP access was restored. [Evidence](evidence/notification-atlas-2026-11-18.json). Its transport was mocked; no production users were emailed.
 3. Completed: one sample was accepted by SMTP. Owner confirmed inbox receipt. Owner supplied a received-email screenshot in conversation; attach it to the GitHub card/PR for durable team evidence. No second send is needed unless the owner requests it.
 4. Completed for the local app: generated links were checked against actual summarized TOR `66089621504` and `/profile`; the owner-scoped preferences API returned 200 and anonymous access returned 401. [Read-only check evidence](evidence/notification-links-2026-11-18.json). The received fixture email intentionally points to TEST-SMTP-001; its URL cannot be changed after sending. Localhost URLs work only on the app computer. Mobile/public reachability remains outside this local-only setup.
@@ -57,7 +57,7 @@ Standard Gmail has a published daily limit of 500 outgoing messages; exceeding p
 
 The application credentials must be supplied to every deployment privately. No SMTP service account or password is embedded in Docker images or Git. `APP_BASE_URL` must name the reachable frontend origin. The current owner-approved setup remains local-only at `http://localhost:3000`. A phone's localhost does not resolve to the app computer.
 
-Owner response on 18 November: revocation of the previously exposed Resend key is not yet confirmed. This item remains unchecked. Explicit SMTP selection prevents use of the old Resend credential for these sends; it does not revoke the credential in the provider account. Credential owner was subsequently confirmed as Watcharapat; account type remains unconfirmed.
+Owner response on 21 November 2026: Watcharapat (confirmed credential owner) confirmed revocation of the previously exposed Resend API key. Explicit SMTP selection also prevents use of any legacy Resend credential.
 
 ## Approved audit exception — 18 November 2026
 

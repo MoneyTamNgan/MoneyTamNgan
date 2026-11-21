@@ -1,0 +1,61 @@
+{
+  "audit_date": "2026-11-19",
+  "timezone": "Asia/Bangkok",
+  "baseline": "b053761a9222f4300f4519ead308ccd67514b191",
+  "code_tree": "c5e04d758dc84b691b9a3dcfba0c6f3dc7599ef9",
+  "tests": {
+    "node_passed": 340,
+    "vitest_passed": 460,
+    "total": 800,
+    "failed": 0
+  },
+  "production_build": "passed with dummy credentials",
+  "openapi_lint": {
+    "passed": true,
+    "warnings": 9,
+    "explicitly_ignored": 4
+  },
+  "documentation_audit": {
+    "passed": false,
+    "implemented_operations": 59,
+    "missing_method_in_each_of_two_documents": "PATCH /api/bid-prep/tors/[projectId]/checklist",
+    "openapi_missing_live_operations": 18,
+    "openapi_without_handlers": 6
+  },
+  "sast": {
+    "source": "downloaded existing successful CI artifact; not newly scanned locally",
+    "run": 44472921630,
+    "commit": "b053761a9222f4300f4519ead308ccd67514b191",
+    "high": 0,
+    "warning": 50,
+    "info": 0,
+    "warning_scan_errors": 2
+  },
+  "dast": {
+    "source": "downloaded existing successful CI artifact; passive unauthenticated baseline",
+    "run": 44472812671,
+    "commit": "38849ab85033b97914a8e781db70c7b158a35535",
+    "same_code_tree_as_baseline": true,
+    "high": 0,
+    "medium": 1,
+    "low": 3,
+    "informational": 4
+  },
+  "dependency_audit": {
+    "raw_findings": 0,
+    "policy_passed": true,
+    "historical_advisory": "GHSA-fc5q-39xc-vjpf withdrawn 2026-11-18; existing exception remains in repo"
+  },
+  "additional_checks": {
+    "ipv6_loopback_accepted_by_url_validation_helper": true,
+    "no_network_request_for_ssrf_check": true,
+    "logout_clears_cookie_but_copied_jwt_still_verifies": true
+  },
+  "scope_limits": [
+    "No paid Vertex/OCR/government acquisition tests",
+    "No new real SMTP messages",
+    "No live Google login or production database writes",
+    "No active/authenticated DAST or HTTPS deployment verification",
+    "Secret history check is heuristic, not certification"
+  ]
+}

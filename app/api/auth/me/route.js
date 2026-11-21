@@ -27,8 +27,8 @@ async function handleGET(request) {
                 role: user.role,
             },
         });
-    } catch (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch {
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 

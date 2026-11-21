@@ -41,16 +41,16 @@ The date parser's error message says ISO 8601, but enforcement accepts other Jav
 
 ### GET /api/projects
 
-[Handler](../app/api/projects/route.js): legacy pagination/filter behavior, deliberately documented separately from `/tors`.
+[Handler](../app/api/projects/route.js): legacy pagination/filter endpoint hardened with search length/regex escaping and date/boolean parameter validation.
 
 | Input | Actual behavior | Invalid result |
 | --- | --- | --- |
 | `page` | `parseInt(value) || 1`, clamped to ≥1; accepts numeric prefixes and truncates decimals; no maximum | No explicit 400 |
 | `pageSize` | Same parsing, default20, clamped1..100 | No explicit 400 |
-| `isSoftware` | Any present nonempty string is converted using `=== 'true'`; other strings mean false | No explicit 400 |
+| `isSoftware` | Optional exact `true` / `false`; empty ignored | 400 `INVALID_IS_SOFTWARE` |
 | `agency`, `status` | Exact string match, no maximum/enum/trim | No explicit 400 |
-| `dateFrom`, `dateTo` | `new Date`, no validity or ordering checks; dateTo has no end-of-day expansion | Downstream error may be 500 `LIST_PROJECTS_FAILED` |
-| `search` | Raw MongoDB regex string, case-insensitive; no escaping or maximum | Invalid regex may fail as 500 `LIST_PROJECTS_FAILED` |
+| `dateFrom`, `dateTo` | Validated via `parseDate` and ordered (`dateFrom <= dateTo`) | 400 `INVALID_DATE_RANGE` |
+| `search` | Trimmed, bounded ≤200 characters, regex metacharacters escaped before `$regex` | 400 `INVALID_SEARCH` |
 
 GET /api/projects/[id]: [handler](../app/api/projects/[id]/route.js) uses raw path `id` as project_id; no format/length validation. Missing project: 404 `PROJECT_NOT_FOUND`; lookup failure: 500 `GET_PROJECT_FAILED`. No accepted query/body. These legacy routes lack equivalent strict validation tests; central [RBAC proof](../tests/security/rbac-route-matrix.test.js) only proves access control, not legacy input hardening.
 
@@ -64,7 +64,7 @@ GET /api/projects/[id]: [handler](../app/api/projects/[id]/route.js) uses raw pa
 | --- | --- | --- |
 | `dateFrom`, `dateTo`, `budgetMin`, `budgetMax` | Same parse/order rules and lack of strict date validation as TOR list | Same `INVALID_DATE_*`, `INVALID_BUDGET_*` codes |
 | `agency` | Exact string match; no max/trim | None |
-| `category` | Intended `software` / `non-software`; empty ignored. Current `in` membership check also accepts inherited Object keys such as `constructor` / `toString` (gap) | Other unrecognized values: `INVALID_CATEGORY` |
+| `category` | Exact `software` / `non-software` via `Object.hasOwn`; inherited Object keys like `constructor` / `toString` are rejected | `INVALID_CATEGORY` |
 | `page` (search only) | Integer1..MAX_SAFE_INTEGER, default1 | `INVALID_PAGE` |
 | `pageSize` (search only) | Integer1..100, default20 | `INVALID_PAGE_SIZE` |
 | `format` (export only) | **Required** exact `csv` / `json` | `INVALID_FORMAT` |
@@ -169,9 +169,9 @@ Text sanitized to plain text by [sanitizePlainText](../lib/bid-prep/text.js); co
 
 Same owned draft ID rule; optional query `version` converted with Number, must be positive safe integer (400 `INVALID_DRAFT`); mismatch409 `DRAFT_CONFLICT`. No accepted body. Empty stored section bodies400 `EMPTY_DRAFT`; corrupt stored draft400 `INVALID_DRAFT`; generated DOCX>2MiB413 `PAYLOAD_TOO_LARGE`. Exports DOCX only; `format` ignored. [Handler](../app/api/bid-prep/drafts/[id]/export/route.js), [proof](../tests/integration/bid-draft-editor-export.integration.test.js).
 
-### GET /api/bid-prep/tors/[projectId]/checklist
+### GET /api/bid-prep/tors/[projectId]/checklist and PATCH /api/bid-prep/tors/[projectId]/checklist
 
-[Handler](../app/api/bid-prep/tors/[projectId]/checklist/route.js), [service](../lib/bid-prep/checklist.js): projectId same1..64 regex as draft creation, invalid/nonexistent404 `TOR_NOT_FOUND`; no summary409 `TOR_NOT_READY`; missing caller profile404 `USER_NOT_FOUND`. No business query/body; userId ignored. Output bounded100 requirements; this is an output cap, not request validation. [Proof](../tests/security/bid-prep-access.test.js).
+[Handler](../app/api/bid-prep/tors/[projectId]/checklist/route.js), [service](../lib/bid-prep/checklist.js): projectId same 1..64 regex as draft creation, invalid/nonexistent 404 `TOR_NOT_FOUND`; unreadable 409 `TOR_DOCUMENT_UNREADABLE`; no summary 409 `TOR_NOT_READY`; missing caller profile 404 `USER_NOT_FOUND`. GET has no business query/body; userId ignored. Output bounded 100 requirements. PATCH reads JSON ≤1024 bytes via `readJson`, requiring `itemId` (64 lowercase hex characters) and `status` (`pass`, `fail`, `manual`, or `null` to clear override), returning 400 `INVALID_CHECKLIST_STATUS`, 404 `CHECKLIST_ITEM_NOT_FOUND`, or 409 `CHECKLIST_CHANGED`. Proof: [BidPrep access](../tests/security/bid-prep-access.test.js), [checklist tests](../tests/unit/bid-prep-checklist.test.js).
 
 ### DELETE /api/bid-prep/data
 
@@ -285,7 +285,7 @@ Single project/candidate cannot include any dryRun/scanLimit/afterId/retryFailed
 
 ### POST /api/notifications/test
 
-[Handler](../app/api/notifications/test/route.js): optional JSON `matches` array; no item schema, count, string lengths or body-byte cap. Each item is consumed as torId/title/agency/budget/matchScore by email rendering, without route validation. Nonarray/malformed/missing body→sample matches. Recipient from caller User, not request. No Content-Type enforcement. No dedicated send rate limit in this handler beyond infrastructure; do not use to send unbounded input. No user404 string error; provider send failure500 string error. Proof: [notification route integration](../tests/integration/notifications-test-route.integration.test.js). These are mock-provider tests, not inbox delivery evidence.
+[Handler](../app/api/notifications/test/route.js): optional JSON body ≤16 KiB (413 `PAYLOAD_TOO_LARGE`); non-object roots or malformed JSON return 400 `INVALID_BODY`. Optional `matches` array must contain 1..20 objects, each validating `torId` (nonempty string ≤64), `title` (nonempty string ≤300), `agency` (string ≤200), `budget` (finite number 0..1e15), and `matchScore` (finite number 0..100), returning 400 `INVALID_MATCHES` on invalid items. Omitting `matches` sends sample matches. Recipient comes strictly from the authenticated User record. Failure returns generic 500 error. Proof: [notification route integration](../tests/integration/notifications-test-route.integration.test.js).
 
 ### POST /api/notifications/digest and GET /api/notifications/digest
 
@@ -293,7 +293,7 @@ Single project/candidate cannot include any dryRun/scanLimit/afterId/retryFailed
 
 ### GET /api/health and GET /api/test-db
 
-[Health](../app/api/health/route.js) is public; [test-db](../app/api/test-db/route.js) admin-only. No business query/body. DB failure503 on health,500 on test-db; currently responses may include exception messages. [Access proof](../tests/security/rbac-route-matrix.test.js). No credentials should be included in test output or issue evidence.
+[Health](../app/api/health/route.js) is public; [test-db](../app/api/test-db/route.js) admin-only. No business query/body. DB failure 503 on health and 500 on test-db return generic status messages without exposing raw database exception details. [Access proof](../tests/security/rbac-route-matrix.test.js).
 
 ## OpenAPI reconciliation and known gaps
 
@@ -301,12 +301,10 @@ Single project/candidate cannot include any dryRun/scanLimit/afterId/retryFailed
 
 | Area | Difference / follow-up |
 | --- | --- |
-| Planned-only routes | `/admin/ingestion/runs` GET/POST, `/matches` GET, `/tors/{id}/match` GET, `/tors/{id}/report` POST have no app/api handlers. Do not call them as implemented endpoints. |
-| Singular profile | OpenAPI `/profile` has planned GET/POST/PUT. Runtime is alias GET/PUT/PATCH/DELETE, partial-update semantics and current profile response. POST is not implemented. |
-| Missing profile operations | `/profiles` DELETE and `/profile` PATCH/DELETE are not described. |
-| Missing live endpoint definitions | `/projects` GET, `/projects/{id}` GET, `/projects/{id}/classification` PATCH; `/admin/classification/run` POST; `/ingestion/trigger` POST, `/ingestion/status` GET; `/processing/trigger` POST, `/processing/status` GET, `/processing/review` GET; `/scraping/trigger` POST, `/scraping/status` GET; `/notifications/test` POST, `/notifications/digest` GET/POST; `/test-db` GET. |
-| TOR search | `q`, `budgetMin`, `budgetMax` are implemented but absent from `/tors` query parameters. Implementation limits q by slicing, not rejection. |
-| Analytics search | OpenAPI advertises `isSoftware` and `limit` (default10); implementation ignores both, uses category and `pageSize`(default20). |
+| Planned-only routes | `/admin/ingestion/runs` GET/POST, `/matches` GET, `/tors/{id}/match` GET, `/tors/{id}/report` POST, and `/profile` POST have no matching handlers in `app/api`. Do not call them as implemented endpoints. |
+| Live endpoints documented | All 59 implemented `method /path` operations (including `/profile` PATCH/DELETE, `/profiles` DELETE, `/projects/*`, `/admin/classification/run`, `/ingestion/*`, `/processing/*`, `/scraping/*`, `/notifications/*`, `/test-db`) are documented in `docs/api/openapi.yaml`, `docs/API_VALIDATION.md`, and `docs/security/RBAC_SPEC.md`. |
+| TOR search | `q`, `budgetMin`, `budgetMax` are implemented on `/tors`. `q` is clipped to 200 characters; `/projects` search now also enforces a 200-char limit and regex escaping. |
+| Analytics search | OpenAPI advertises `isSoftware` and `limit` (default10); implementation ignores both, uses `category` (`Object.hasOwn` checked) and `pageSize` (default20). |
 | Analytics overview export | Runtime accepts budgetMin/budgetMax/page/limit/pageSize; operation parameters omit these. Pagination is validated but export remains unpaginated. |
 | Bearer authorization | Several session-only OpenAPI operations (BidPrep, me, planned profile alias etc.) do not list the implemented scoped JWT Bearer alternative. Schemes describe scopes in prose, not an OAuth scope map. |
 | Body and field semantics | OpenAPI does not universally encode byte caps, UTF-8 password cap, Unicode-code-point password length, aggregate draft text cap, username reserved names, sanitizer behavior, or every fallback/coercion described above. `maxLength` alone is not equivalent to these rules. |

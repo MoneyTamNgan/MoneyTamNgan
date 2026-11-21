@@ -30,8 +30,8 @@ async function handleGET() {
         await seedKeywordsIfEmpty();
         const items = await Keyword.find().sort({ category: 1, keyword: 1 }).lean();
         return NextResponse.json(items.map(toApiShape));
-    } catch (error) {
-        return errorResponse('LIST_KEYWORDS_FAILED', error.message, 500);
+    } catch {
+        return errorResponse('LIST_KEYWORDS_FAILED', 'Failed to list classification keywords', 500);
     }
 }
 
@@ -88,8 +88,8 @@ async function handlePUT(request) {
         }
         const items = await Keyword.find().sort({ category: 1, keyword: 1 }).lean();
         return NextResponse.json(items.map(toApiShape));
-    } catch (error) {
-        return errorResponse('REPLACE_KEYWORDS_FAILED', error.message, 500);
+    } catch {
+        return errorResponse('REPLACE_KEYWORDS_FAILED', 'Failed to replace classification keywords', 500);
     }
 }
 

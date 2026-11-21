@@ -49,9 +49,9 @@ async function handlePATCH(request, { params }) {
             }
         }
         return NextResponse.json(project);
-    } catch (error) {
+    } catch {
         return NextResponse.json({
-            error: { code: 'CLASSIFICATION_UPDATE_FAILED', message: error.message },
+            error: { code: 'CLASSIFICATION_UPDATE_FAILED', message: 'Failed to update classification' },
         }, { status: 500 });
     }
 }

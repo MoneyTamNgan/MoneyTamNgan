@@ -101,7 +101,8 @@ it('reports a Cloudflare block as permanent and distinct from a bad key', async 
     const body = await response.json();
     expect(body.error.code).toBe('EGP_UPSTREAM_BLOCKED');
     expect(body.error.retryable).toBe(false);
-    expect(body.error.message).toMatch(/API key was checked/);
+    expect(body.error.message).toBe('The e-GP edge blocked this client before the API key was checked. Run ingestion from a Thailand network.');
+    expect(body.error.message).not.toContain('Cloudflare blocked this client');
 });
 
 it('rejects malformed RSS hints without requesting government data', async () => {

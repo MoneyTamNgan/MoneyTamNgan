@@ -8,6 +8,10 @@ BidPrep FR-4.7 (issue #142) is recorded in [bid-prep-fr-4.7.md](bid-prep-fr-4.7.
 - [API input validation dictionary](../API_VALIDATION.md) (#193 / ASVS V2.1.1): field limits, actual error behavior and explicit OpenAPI gaps.
 - Run `node scripts/audit-api-documentation.js` to check route coverage and local evidence links. Sheet completion for these two cards remains pending teammate review and merge into develop.
 
+## Current coursework audit — 19 November 2026
+
+The [18-criterion audit and project report](../security-assignment-audit-2026-11-19.md) reviews the latest merged code, maps the assignment requirements and records fresh tests and same-code CI scanner evidence. Its dated evidence supersedes the older counts below for the current submission; the older snapshots remain historical. README now includes the six required project-document sections and confirmed team roster.
+
 ## Automated in CI (issue #106)
 
 | Workflow | Runs | What it does | Fails the build when |

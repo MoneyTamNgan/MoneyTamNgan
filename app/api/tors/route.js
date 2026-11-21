@@ -216,8 +216,8 @@ async function handleGET(request) {
             total,
             data: hydratedProjects.map(project => toTorListItem(project, userDoc)),
         });
-    } catch (error) {
-        return errorResponse('LIST_TORS_FAILED', error.message, 500);
+    } catch {
+        return errorResponse('LIST_TORS_FAILED', 'Failed to list TORs', 500);
     }
 }
 

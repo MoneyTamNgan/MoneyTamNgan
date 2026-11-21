@@ -9,6 +9,7 @@ const navigationItems = [
   { href: "/dashboard", label: "หน้าหลัก", icon: "⌂" },
   { href: "/profile", label: "โปรไฟล์", icon: "◉", signedIn: true },
   { href: "/analytics", label: "วิเคราะห์", icon: "⌁" },
+  { href: "/bid-prep", label: "เตรียมข้อเสนอ", icon: "▤", signedIn: true },
   { href: "/admin", label: "ผู้ดูแลระบบ", icon: "⚿", restricted: true, signedIn: true },
 ];
 
@@ -58,12 +59,12 @@ export default function SidebarLayout({ children }) {
         : <Link className="sidebar-profile-editor" href="/profile" title="แก้ไขโปรไฟล์"><span aria-hidden="true">✎</span><strong>แก้ไขโปรไฟล์</strong><i aria-hidden="true">›</i></Link>}</section>
       <nav className="sidebar-nav">{navigationItems
         .filter((item) => {
-          if (isGuest && item.signedIn) return false;
+          if (item.signedIn && !account) return false;
           if (item.restricted && account?.role !== "admin") return false;
           return true;
         })
         .map((item) => {
-          const active = item.href === "/dashboard" ? isHome : pathname === item.href;
+          const active = item.href === "/dashboard" ? isHome : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return <Link className={active ? "is-active" : ""} href={item.href} key={item.href} title={item.label}><span className="sidebar-icon" aria-hidden="true">{item.icon}</span><span className="sidebar-label">{item.label}</span>{item.restricted && <span className="sidebar-restricted">Admin</span>}</Link>;
         })}<div className="sidebar-nav-divider" aria-hidden="true" /><button className="sidebar-nav-control sidebar-toggle" type="button" onClick={() => setIsOpen((open) => !open)} aria-label={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"} aria-expanded={isOpen} title={isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"}><span className="sidebar-icon" aria-hidden="true">{isOpen ? "‹" : "›"}</span><span className="sidebar-label">{isOpen ? "ย่อเมนูด้านข้าง" : "ขยายเมนูด้านข้าง"}</span></button><button className="sidebar-nav-control sidebar-theme-toggle" type="button" onClick={() => setIsOrangeTheme((orange) => !orange)} aria-label={isOrangeTheme ? "เปลี่ยนเป็นธีมมิ้นต์" : "เปลี่ยนเป็นธีมส้มครีม"} title={isOrangeTheme ? "เปลี่ยนเป็นธีมมิ้นต์" : "เปลี่ยนเป็นธีมส้มครีม"}><span className="sidebar-icon" aria-hidden="true">{isOrangeTheme ? "◐" : "◑"}</span><span className="sidebar-label">{isOrangeTheme ? "Light mode" : "Dark mode"}</span></button></nav>
       <div className="sidebar-bottom">

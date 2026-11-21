@@ -12,6 +12,7 @@ export function useTorChecklist() {
 export default function TorChecklistProvider({ projectId, children }) {
     const [attempt, setAttempt] = useState(0);
     const [result, setResult] = useState(null);
+    const [pendingSaves, setPendingSaves] = useState(0);
     const url = `/api/bid-prep/tors/${encodeURIComponent(projectId)}/checklist`;
 
     useEffect(() => {
@@ -29,14 +30,19 @@ export default function TorChecklistProvider({ projectId, children }) {
 
     const current = result && result.projectId === projectId && result.attempt === attempt ? result : null;
     async function saveStatus(itemId, status) {
-        const checklist = await bidPrepRequest(url, { method: 'PATCH', body: { itemId, status } });
-        setResult(previous => previous?.projectId === projectId && previous?.attempt === attempt
-            ? { ...previous, checklist }
-            : previous);
+        setPendingSaves(count => count + 1);
+        try {
+            const checklist = await bidPrepRequest(url, { method: 'PATCH', body: { itemId, status } });
+            setResult(previous => previous?.projectId === projectId && previous?.attempt === attempt
+                ? { ...previous, checklist }
+                : previous);
+        } finally {
+            setPendingSaves(count => count - 1);
+        }
     }
 
     return (
-        <TorChecklistContext.Provider value={{ current, saveStatus, retry: () => setAttempt(value => value + 1) }}>
+        <TorChecklistContext.Provider value={{ current, saveStatus, isSaving: pendingSaves > 0, retry: () => setAttempt(value => value + 1) }}>
             {children}
         </TorChecklistContext.Provider>
     );

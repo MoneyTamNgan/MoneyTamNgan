@@ -9,10 +9,10 @@ async function handleGET() {
             status: 'connected',
             message: 'Successfully connected to MongoDB Atlas!'
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
             status: 'error',
-            message: error.message
+            message: 'Database connection failed'
         }, { status: 500 });
     }
 }
