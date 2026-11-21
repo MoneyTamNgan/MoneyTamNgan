@@ -168,6 +168,27 @@ Against Atlas, with the machine's IP allowed automatically (needs `ATLAS_PUBLIC_
 docker compose -f docker-compose.yml -f docker-compose.atlas.yml up --build
 ```
 
+### Local database vs live database (Atlas)
+
+| | Local | Live (Atlas) |
+|---|---|---|
+| Command | `docker compose up --build` | `docker compose -f docker-compose.yml -f docker-compose.atlas.yml up --build` |
+| Database | bundled `mongo` container, data in the `mongo-data` volume | MongoDB Atlas from `MONGODB_URI` |
+| Extra setup | none | machine IP on the Atlas access list (`atlas-allowlist` does it with `ATLAS_*` keys) |
+| Data | empty until you ingest | real data; everything you do writes to it |
+| Reset | `docker compose down -v` deletes the local data | never reset; check `MONGODB_URI` first |
+
+Keep the `scheduler` service off on a live database unless you want it to ingest at 06:00, 12:00 and 18:00. Open the app at `http://localhost:3000` (the session cookie is `Secure`, so login does not work over plain http by IP).
+
+**Test the demo** after either start:
+
+```bash
+curl http://localhost:3000/api/health          # 200, database: connected
+python3 tests/e2e/smoke-api.py                 # 32 steps; creates and deletes 2 test accounts
+```
+
+Then follow the [BidPrep demo script](docs/demo-script-bidprep.md). The smoke test is safe on a live database because it removes its own accounts, but the AI draft step takes 1 to 2 minutes. On an empty local database the TOR-dependent steps (detail, checklist, draft) return 404 because there is no TOR yet: 21 of 25 steps pass and those 4 fail until you ingest data or use Atlas.
+
 Start, stop and rollback on a demo machine: [docs/local-deployment.md](docs/local-deployment.md).
 
 ## Common commands
