@@ -4,8 +4,12 @@ info:
   description: >
     HTTP API implemented by the MoneyTamNgan Next.js application.
     Browser mutations require an allowed Origin. Requests with an invalid explicit
-    bearer credential may receive 401 even on public routes. A disallowed Origin
-    may receive 403 on any route.
+    bearer credential can receive 401 even on public routes. A disallowed Origin
+    can receive 403 on any route. Authenticated requests are checked for account
+    status and session revocation. Responses carry the application security headers,
+    including a Content-Security-Policy with `base-uri 'none'`.
+    Date filters accept ISO dates and timestamps. A date-only upper bound includes
+    the entire UTC day. The handlers use JavaScript date parsing.
   version: "0.2.0-draft"
   license:
     name: UNLICENSED
@@ -67,6 +71,10 @@ paths:
                 allowBrowser: { type: boolean, default: true }
                 force: { type: boolean, default: false }
                 sync: { type: boolean, enum: [false], default: false, description: Retained for existing clients; true is rejected }
+            example:
+              limit: 1
+              projectIds: ["69110000001"]
+              allowBrowser: false
       responses:
         "202":
           description: Run reserved and audited; background work is scheduled
@@ -83,18 +91,35 @@ paths:
                   statusUrl: { type: string, enum: [/api/admin/pipeline/status] }
                   message: { type: string }
                   run: { $ref: '#/components/schemas/AdminPipelineRun' }
+              example:
+                status: accepted
+                jobId: pipe_1795248000000_308a8381-5191-49a3-9cc5-466c71f5e976
+                runId: pipe_1795248000000_308a8381-5191-49a3-9cc5-466c71f5e976
+                startedAt: "2026-11-21T08:00:00.000Z"
+                statusUrl: /api/admin/pipeline/status
+                message: Data pipeline run started in background
+                run:
+                  id: pipe_1795248000000_308a8381-5191-49a3-9cc5-466c71f5e976
+                  status: running
+                  phase: starting
+                  startedAt: "2026-11-21T08:00:00.000Z"
+                  completedAt: null
+                  progress: { current: 0, total: 0, percent: 5, stage: initializing, message: Pipeline starting }
+                  summary: { discovered: 0, candidates: 0, documentsAcquired: 0, processed: 0, notified: 0, errors: [] }
+                  error: null
+                  errorCode: null
         "400":
-          description: 'Invalid JSON, body over 8 KiB, invalid parameters or sync=true'
+          description: "Invalid JSON, body over 8 KiB, invalid parameters or sync=true. Code `INVALID_PIPELINE_REQUEST`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
         "401":
-          description: Missing or invalid authentication
+          description: "Missing or invalid authentication. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Non-admin or insufficient scope or forbidden Origin
+          description: "Non-admin or insufficient scope or forbidden Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -115,7 +140,7 @@ paths:
                       message: { type: string }
                   currentRun: { $ref: '#/components/schemas/AdminPipelineRun' }
         "503":
-          description: 'Database, audit or scheduling unavailable; work is not launched'
+          description: "Database, audit or scheduling unavailable; work is not launched. Code `PIPELINE_TRIGGER_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
@@ -124,7 +149,7 @@ paths:
     get:
       tags: [Admin - Ingestion]
       summary: Read persisted admin pipeline status and last start time
-      description: An expired 90-second lease is recovered to failed/PIPELINE_INTERRUPTED. No bearer owner token or credentials are returned.
+      description: Requires the admin role and admin:read. An expired 90-second lease is recovered to failed/PIPELINE_INTERRUPTED. Credentials and lease owner tokens are excluded.
       operationId: getAdminPipelineStatus
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
@@ -145,25 +170,39 @@ paths:
                     properties:
                       totalProjects: { type: integer }
                       withSummary: { type: integer }
+              example:
+                status: ok
+                run:
+                  id: null
+                  status: idle
+                  phase: idle
+                  startedAt: null
+                  completedAt: null
+                  progress: { current: 0, total: 0, percent: 0, stage: idle, message: Pipeline ready }
+                  summary: { discovered: 0, candidates: 0, documentsAcquired: 0, processed: 0, notified: 0, errors: [] }
+                  error: null
+                  errorCode: null
+                acquisitionHealth: { status: unavailable }
+                dbStats: { totalProjects: 186, withSummary: 120 }
         "401":
-          description: Missing or invalid authentication
+          description: "Missing or invalid authentication. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Admin role and admin:read are required
+          description: "Admin role and admin:read are required. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: Status database is unavailable
+          description: "Status database is unavailable. Code `STATUS_CHECK_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
     delete:
       tags: [Admin - Ingestion]
       summary: Reset terminal pipeline status to idle
-      description: 'Requires admin:write and an allowed browser Origin. Cannot cancel or unlock a live run; preserves last startedAt.'
+      description: Requires the admin role and admin:write. Cookie mutations require an allowed Origin. Resets terminal state and preserves last startedAt; a live run returns 409.
       operationId: resetAdminPipelineStatus
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
@@ -179,12 +218,12 @@ paths:
                   message: { type: string }
                   run: { $ref: '#/components/schemas/AdminPipelineRun' }
         "401":
-          description: Missing or invalid authentication
+          description: "Missing or invalid authentication. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Non-admin or insufficient scope or forbidden Origin
+          description: "Non-admin or insufficient scope or forbidden Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -201,13 +240,13 @@ paths:
                       status: { type: string, enum: [conflict] }
                       currentRun: { $ref: '#/components/schemas/AdminPipelineRun' }
         "500":
-          description: Reset database is unavailable
+          description: "Reset database is unavailable. Code `STATUS_RESET_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
 
   # ---------------------------------------------------------------------------
-  # Current - build now
+  # Current - Health and TOR routes
   # ---------------------------------------------------------------------------
   /health:
     get:
@@ -253,6 +292,7 @@ paths:
           description: Filter by classification result. Omit to include all (including pending/null).
           schema:
             type: boolean
+          example: true
         - name: agency
           in: query
           description: Filter by exact issuing agency name.
@@ -278,14 +318,28 @@ paths:
           in: query
           description: Inclusive lower bound on releaseDate (ISO 8601 date).
           schema:
-            type: string
-            format: date
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: dateTo
           in: query
-          description: Inclusive upper bound on releaseDate (ISO 8601 date).
+          description: Inclusive upper bound on releaseDate. A date-only value includes the entire UTC day.
           schema:
-            type: string
-            format: date
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
+        - name: q
+          in: query
+          description: Searches project IDs or indexed project text. The handler trims the input and uses its first 200 characters.
+          schema: { type: string }
+        - name: budgetMin
+          in: query
+          description: Inclusive minimum project budget in THB.
+          schema: { type: number, minimum: 0 }
+        - name: budgetMax
+          in: query
+          description: Inclusive maximum project budget in THB. Must be at least budgetMin if both are supplied.
+          schema: { type: number, minimum: 0 }
         - $ref: "#/components/parameters/PageParam"
         - $ref: "#/components/parameters/LimitParam"
       responses:
@@ -298,7 +352,7 @@ paths:
               example:
                 status: success
                 page: 1
-                limit: 10
+                limit: 1
                 total: 186
                 data:
                   - id: "TOR-2569-014"
@@ -325,7 +379,7 @@ paths:
                     techStack: [React, Node.js, Cloud]
                     anomaly: { highBudgetFlag: false, budgetDeviationMultiplier: 1 }
         "400":
-          description: Invalid filter parameters
+          description: "Invalid filter parameters. Codes `INVALID_DATE_FROM`, `INVALID_DATE_TO`, `INVALID_DATE_RANGE`, `INVALID_BUDGET_MIN`, `INVALID_BUDGET_MAX`, `INVALID_BUDGET_RANGE`, `INVALID_PAGE`, `INVALID_LIMIT`, `INVALID_IS_SOFTWARE`, `INVALID_STAGE`, `INVALID_BIDDING_STATUS`."
           content:
             application/json:
               schema:
@@ -334,7 +388,7 @@ paths:
         "403": { $ref: '#/components/responses/Forbidden' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to list TORs"
+          description: "Failed to list TORs. Code `LIST_TORS_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -369,7 +423,7 @@ paths:
                         name: { type: string }
                         count: { type: integer, minimum: 1 }
         "400":
-          description: "isSoftware must be true or false"
+          description: "isSoftware must be true or false. Code `INVALID_IS_SOFTWARE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -377,7 +431,7 @@ paths:
         "403": { $ref: '#/components/responses/Forbidden' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to list TOR facets"
+          description: "Failed to list TOR facets. Code `LIST_TOR_FACETS_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -397,21 +451,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/TorDetail"
         "400":
-          description: "Missing TOR id"
+          description: "Missing TOR id. Code `INVALID_TOR_ID`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: TOR not found
+          description: "TOR not found. Code `TOR_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to load TOR details"
+          description: "Failed to load TOR details. Code `GET_TOR_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -420,9 +474,10 @@ paths:
     post:
       summary: Queue a sourced technical proposal draft
       description: >
+        Requires `profile:read`.
         Builds a draft from the TOR's extracted summary, scope, qualifications
         and technology plus the signed-in user's company profile. The request
-        only enqueues a job and returns immediately. Vertex output is checked
+        body is unused. The handler enqueues a job and returns immediately. Vertex output is checked
         against a response schema. Company facts missing from the profile stay
         as placeholders. The result is an AI draft the user must review; this
         endpoint does not submit a bid.
@@ -438,33 +493,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProposalDraftAccepted"
+              example:
+                status: accepted
+                jobId: 6550f1b2d4e6a7c809123456
+                jobStatus: queued
+                reused: false
         "400":
-          description: Invalid TOR id
+          description: "Invalid TOR id. Code `INVALID_TOR_ID`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: TOR not found
+          description: "TOR not found. Code `TOR_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: TOR has no extracted facts to draft from
+          description: "TOR has no extracted facts to draft from. Code `TOR_NOT_EXTRACTED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429":
-          description: This user exceeded the proposal draft limit (default 5 per hour)
+          description: "This user exceeded the proposal draft limit (default 5 per hour). Code `PROPOSAL_DRAFT_RATE_LIMITED`."
           headers:
             Retry-After:
               description: Seconds until the caller can queue another draft
@@ -476,13 +536,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
         "500":
-          description: "Failed to queue the proposal draft"
+          description: "Failed to queue the proposal draft. Code `PROPOSAL_DRAFT_ENQUEUE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     get:
       summary: Read the caller's proposal draft job
       description: >
+        Requires `profile:read`.
         Returns status for a job this signed-in user queued for this TOR.
         Another user's job is not revealed. A completed job includes the
         sanitized draft, the AI-draft warning, and the model and prompt version.
@@ -497,6 +558,7 @@ paths:
           schema:
             type: string
             pattern: "^[a-fA-F0-9]{24}$"
+          example: 6550f1b2d4e6a7c809123456
       responses:
         "200":
           description: Job status and, when finished, the sanitized draft
@@ -504,27 +566,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProposalDraftJob"
+              example:
+                jobId: 6550f1b2d4e6a7c809123456
+                status: running
+                error: null
         "400":
-          description: Invalid TOR id or job id
+          description: "Invalid TOR id or job id. Codes `INVALID_TOR_ID`, `INVALID_JOB_ID`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: No such draft for this caller and TOR
+          description: "No such draft for this caller and TOR. Code `PROPOSAL_DRAFT_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "500":
-          description: "Failed to read the proposal draft job"
+          description: "Failed to read the proposal draft job. Code `PROPOSAL_DRAFT_READ_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -533,7 +599,7 @@ paths:
     get:
       summary: List TORs with confidence strictly below 70 percent
       description: >
-        Admin-only read. Scores use the 0..1 scale; 0.70 is excluded and missing
+        Requires the admin role and `admin:read`. Scores use the 0..1 scale; 0.70 is excluded and missing
         scores are not treated as zero. By default either classification or the
         current primary TOR summary may qualify a record. Does not invoke OCR or AI.
       tags: [Admin - Classification]
@@ -542,7 +608,9 @@ paths:
         - sessionAuth: []
         - scopedJwtBearer: []
       parameters:
-        - $ref: "#/components/parameters/PageParam"
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 1000000, default: 1 }
         - $ref: "#/components/parameters/PageSizeParam"
         - name: confidenceType
           in: query
@@ -555,23 +623,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/LowConfidenceReviewPage"
         "401":
-          description: Missing, invalid or expired admin authentication
+          description: "Missing, invalid or expired admin authentication. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Authenticated session is not an admin
+          description: "Authenticated session is not an admin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "400":
-          description: Invalid pagination parameters
+          description: "Invalid pagination or confidenceType. Code `INVALID_REVIEW_QUERY`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "500":
-          description: "Failed to load the low-confidence queue"
+          description: "Failed to load the low-confidence queue. Code `LOW_CONFIDENCE_REVIEW_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -599,7 +667,7 @@ paths:
                     items:
                       $ref: "#/components/schemas/ClassificationOverride"
         "400":
-          description: Missing TOR id
+          description: "Missing TOR id. Code `INVALID_TOR_ID`."
           content:
             application/json:
               schema:
@@ -607,7 +675,7 @@ paths:
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "500":
-          description: "Failed to load classification override history"
+          description: "Failed to load classification override history. Code `CLASSIFICATION_HISTORY_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -632,7 +700,11 @@ paths:
           application/json:
             schema:
               type: object
-              minProperties: 1
+              anyOf:
+                - required: [isSoftware]
+                - required: [tags]
+                - required: [processingStatus]
+                - required: [documentStatus]
               properties:
                 isSoftware:
                   type: boolean
@@ -642,7 +714,8 @@ paths:
                   items: { type: string, minLength: 1, maxLength: 50 }
                 processingStatus:
                   type: string
-                  description: Project processing status, e.g. review_required or document_pending.
+                  description: Processing status for a published TOR.
+                  enum: [metadata_ingested, classification_pending, irrelevant, document_pending, document_downloaded, ai_pending, text_extraction_pending, text_extracted, completed, metadata_only, review_required, retry_pending, failed]
                 documentStatus:
                   type: string
                   description: Primary document's processing status, returned as `documents.tor.status`.
@@ -670,7 +743,7 @@ paths:
                       status: { type: string }
                       classification: { type: object }
         "400":
-          description: Invalid override body
+          description: "Invalid override body. Codes `INVALID_TOR_ID`, `INVALID_BODY`, `INVALID_OVERRIDE`."
           content:
             application/json:
               schema:
@@ -678,19 +751,19 @@ paths:
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: TOR not found
+          description: "TOR not found. Code `TOR_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: Document status requested but the TOR has no stored document, or the id is an unpublished candidate
+          description: "Document status requested but the TOR has no stored document, or the id is an unpublished candidate. Codes `NO_DOCUMENT`, `NOT_PUBLISHED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "500":
-          description: "Failed to save the classification override"
+          description: "Failed to save the classification override. Code `CLASSIFICATION_OVERRIDE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -714,7 +787,7 @@ paths:
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "500":
-          description: "Failed to list classification keywords"
+          description: "Failed to list classification keywords. Code `LIST_KEYWORDS_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -748,7 +821,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/ClassificationKeyword"
         "400":
-          description: Invalid keyword list (e.g. empty keyword string)
+          description: "Invalid keyword list (e.g. empty keyword string). Codes `INVALID_BODY`, `EMPTY_KEYWORD`, `BAD_CATEGORY`."
           content:
             application/json:
               schema:
@@ -756,7 +829,7 @@ paths:
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "500":
-          description: "Failed to replace classification keywords"
+          description: "Failed to replace classification keywords. Code `REPLACE_KEYWORDS_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -781,21 +854,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/TorApiSummary"
         "400":
-          description: "Missing TOR id"
+          description: "Missing TOR id. Code `INVALID_TOR_ID`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: TOR not found
+          description: "TOR not found. Code `TOR_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to load TOR summary"
+          description: "Failed to load TOR summary. Code `GET_TOR_SUMMARY_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -814,6 +887,8 @@ paths:
       responses:
         "200":
           description: When Accept is application/json, returns the Google authorization URL for browser navigation; sets the same state cookie and counts one attempt.
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/OAuthStateCookie' }
           content:
             application/json:
               schema:
@@ -823,10 +898,13 @@ paths:
                   authorizationUrl: { type: string, format: uri }
         "307":
           description: Redirect to Google consent screen
+          headers:
+            Location: { $ref: '#/components/headers/GoogleConsentLocation' }
+            Set-Cookie: { $ref: '#/components/headers/OAuthStateCookie' }
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "429":
-          description: OAuth attempt limit exceeded
+          description: "OAuth attempt limit exceeded. Code `RATE_LIMITED`."
           headers:
             Retry-After:
               schema: { type: integer, minimum: 1 }
@@ -867,7 +945,7 @@ paths:
               schema: { $ref: '#/components/schemas/MessageError' }
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403":
-          description: Account disabled or disallowed Origin
+          description: "Account disabled or disallowed Origin. Code `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
@@ -882,7 +960,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MessageError' }
         "429":
-          description: OAuth attempt limit exceeded
+          description: "OAuth attempt limit exceeded. Code `RATE_LIMITED`."
           headers:
             Retry-After:
               schema: { type: integer, minimum: 1 }
@@ -903,6 +981,8 @@ paths:
       responses:
         "200":
           description: "Authorization URL for JSON clients"
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/OAuthStateCookie' }
           content:
             application/json:
               schema:
@@ -912,10 +992,13 @@ paths:
                   authorizationUrl: { type: string, format: uri }
         "307":
           description: Redirect to Google consent screen
+          headers:
+            Location: { $ref: '#/components/headers/GoogleConsentLocation' }
+            Set-Cookie: { $ref: '#/components/headers/OAuthStateCookie' }
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "429":
-          description: OAuth attempt limit exceeded
+          description: "OAuth attempt limit exceeded. Code `RATE_LIMITED`."
           headers:
             Retry-After:
               schema: { type: integer, minimum: 1 }
@@ -942,43 +1025,47 @@ paths:
                 name: { type: string, maxLength: 100, description: Optional; not requested by the sign-up page }
                 email: { type: string, format: email, maxLength: 254 }
                 username: { type: string, minLength: 3, maxLength: 30, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{1,28}[A-Za-z0-9]$', description: "Optional. Stored lowercase; unique. Derived from the email when omitted. Reserved names such as admin are rejected." }
-                password: { type: string, format: password, minLength: 15, maxLength: 128, writeOnly: true }
+                password: { type: string, format: password, minLength: 15, maxLength: 128, writeOnly: true, description: "15–128 Unicode code points and at most 512 UTF-8 bytes." }
                 next: { type: string, description: Same-origin path; unsafe values fall back to /dashboard }
       responses:
         "201":
           description: User created; sets HttpOnly mtn_session cookie
+          headers:
+            Set-Cookie:
+              description: HTTP-only mtn_session cookie.
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PasswordAuthResult" }
         "400":
-          description: "Invalid email, name, username, password or JSON"
+          description: "Invalid email, name, username, password or JSON. Codes `INVALID_REQUEST`, `INVALID_CREDENTIALS`, `INVALID_NAME`, `INVALID_USERNAME`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403":
-          description: Missing or disallowed browser Origin
+          description: "Missing or disallowed browser Origin. Code `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "409":
-          description: "Account already exists (original login method must be used) or the requested username is taken (error.code USERNAME_TAKEN)"
+          description: "Account already exists (original login method must be used) or the requested username is taken (error.code USERNAME_TAKEN). Code `ACCOUNT_EXISTS`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "413":
-          description: JSON body exceeds 8 KiB
+          description: "JSON body exceeds 8 KiB. Code `INVALID_REQUEST`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: Content-Type must be application/json
+          description: "Content-Type must be application/json. Code `INVALID_REQUEST`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "503":
-          description: Authentication service unavailable or busy
+          description: "Authentication service unavailable or busy. Code `AUTH_UNAVAILABLE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1014,44 +1101,65 @@ paths:
                   minLength: 15
                   maxLength: 128
                   writeOnly: true
+                  description: 15–128 Unicode code points and at most 512 UTF-8 bytes.
                 next:
                   type: string
+            example:
+              identifier: example-bidder
+              password: "example-password-only"
+              next: /dashboard
       responses:
         "200":
           description: Session established (sets sessionAuth cookie)
+          headers:
+            Set-Cookie:
+              description: HTTP-only mtn_session cookie.
+              schema: { type: string }
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PasswordAuthResult"
+              example:
+                user:
+                  id: 6550f1b2d4e6a7c809123457
+                  email: bidder@example.com
+                  username: example-bidder
+                  name: Example Bidder
+                  role: user
+                redirectTo: /dashboard
         "401":
-          description: Invalid credentials
+          description: "Invalid credentials. Codes `UNAUTHORIZED`, `INVALID_CREDENTIALS`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือโปรดใช้ Google หากสมัครด้วย Google
         "400":
-          description: "Invalid email, password or JSON"
+          description: "Invalid email, password or JSON. Codes `INVALID_REQUEST`, `INVALID_CREDENTIALS`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing or disallowed browser Origin
+          description: "Missing or disallowed browser Origin. Code `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "413":
-          description: JSON body exceeds 8 KiB
+          description: "JSON body exceeds 8 KiB. Code `INVALID_REQUEST`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: Content-Type must be application/json
+          description: "Content-Type must be application/json. Code `INVALID_REQUEST`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "503":
-          description: Authentication service unavailable or busy
+          description: "Authentication service unavailable or busy. Code `AUTH_UNAVAILABLE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1059,7 +1167,12 @@ paths:
   /auth/logout:
     post:
       summary: End the current session
-      description: "Clears the session cookie, even for a guest. A valid supplied session is revoked. An allowed Origin is required for browser requests."
+      description: >
+        Clears the session cookie for signed-in users and guests. Revokes the presented
+        valid JWT in the current process and attempts to increment the account's session
+        version to invalidate earlier sessions across instances. Process-local revocation
+        remains active if the database write fails. Logout is audited with non-secret
+        metadata. An allowed Origin is required for browser requests.
       tags: [Auth]
       operationId: logout
       security: []
@@ -1078,12 +1191,12 @@ paths:
                 properties:
                   ok: { type: boolean, enum: [true] }
         "401":
-          description: "Invalid explicit bearer credential"
+          description: "Invalid explicit bearer credential. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: "Missing or disallowed Origin"
+          description: "Missing or disallowed Origin. Code `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1091,6 +1204,7 @@ paths:
   /auth/me:
     get:
       summary: Get the currently logged-in user
+      description: "Requires `profile:read`."
       tags: [Auth]
       operationId: getCurrentUser
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1114,7 +1228,7 @@ paths:
                       picture: { type: string, nullable: true }
                       role: { type: string, enum: [user, admin] }
         "401":
-          description: "Authentication required, session invalid, or account no longer exists"
+          description: "Authentication required, session invalid, or account no longer exists. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
@@ -1131,7 +1245,7 @@ paths:
   /profile:
     get:
       summary: Read the authenticated user's company profile
-      description: Identity is session.sub (cookie or scoped Bearer); query user IDs are ignored. Legacy bid fields default to empty strings and an empty history.
+      description: "Requires `profile:read`. Identity is session.sub (cookie or scoped Bearer); query user IDs are ignored. Legacy bid fields default to empty strings and an empty history."
       tags: [Contractor Profile]
       operationId: getProfile
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1142,12 +1256,12 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "401":
-          description: "Authentication required or session invalid"
+          description: "Authentication required or session invalid. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Missing profile read permission
+          description: "Missing profile read permission. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1164,7 +1278,7 @@ paths:
               schema: { $ref: '#/components/schemas/MessageError' }
     put:
       summary: Update the authenticated user's company profile
-      description: Partial updates. Unknown fields including role, passwordHash and user IDs are ignored. Strings are trimmed. Replace past_projects with the edited array to remove rows; an empty array clears it. Years are Buddhist Era 2400–2700. Maximum JSON body is 128 KiB. Cookie writes require an approved Origin.
+      description: "Requires `profile:write`. Partial updates. Unknown fields including role, passwordHash and user IDs are ignored. Strings are trimmed. Replace past_projects with the edited array to remove rows; an empty array clears it. Years are Buddhist Era 2400–2700. Maximum JSON body is 128 KiB. Cookie writes require an approved Origin."
       tags: [Contractor Profile]
       operationId: updateProfile
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1180,7 +1294,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "400":
-          description: "Malformed JSON, invalid request body or invalid profile fields"
+          description: "Malformed JSON, invalid request body or invalid profile fields. Codes `INVALID_JSON`, `INVALID_BODY`, `INVALID_PROFILE`."
           content:
             application/json:
               schema:
@@ -1188,12 +1302,12 @@ paths:
                   - { $ref: '#/components/schemas/Error' }
                   - { $ref: '#/components/schemas/ProfileValidationError' }
         "401":
-          description: "Authentication required or session invalid"
+          description: "Authentication required or session invalid. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Missing profile write permission or invalid Origin
+          description: "Missing profile write permission or invalid Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1203,24 +1317,24 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MessageError' }
         "413":
-          description: JSON body exceeds 128 KiB
+          description: "JSON body exceeds 128 KiB. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: Content-Type must be application/json
+          description: "Content-Type must be application/json. Code `UNSUPPORTED_MEDIA_TYPE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to complete the profile request"
+          description: "Failed to complete the profile request. Code `PROFILE_UPDATE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     patch:
       summary: Partially update the authenticated user's company profile
-      description: Alias for PATCH /profiles with the same validation and ownership rules.
+      description: "Requires `profile:write`. Alias for PATCH /profiles with the same validation and ownership rules."
       tags: [Contractor Profile]
       operationId: patchProfileAlias
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1236,7 +1350,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "400":
-          description: "Malformed JSON, invalid request body or invalid profile fields"
+          description: "Malformed JSON, invalid request body or invalid profile fields. Codes `INVALID_JSON`, `INVALID_BODY`, `INVALID_PROFILE`."
           content:
             application/json:
               schema:
@@ -1244,12 +1358,12 @@ paths:
                   - { $ref: '#/components/schemas/Error' }
                   - { $ref: '#/components/schemas/ProfileValidationError' }
         "401":
-          description: "Authentication required or session invalid"
+          description: "Authentication required or session invalid. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Missing profile write permission or invalid Origin
+          description: "Missing profile write permission or invalid Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1259,23 +1373,24 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MessageError' }
         "413":
-          description: JSON body exceeds 128 KiB
+          description: "JSON body exceeds 128 KiB. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: Content-Type must be application/json
+          description: "Content-Type must be application/json. Code `UNSUPPORTED_MEDIA_TYPE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to complete the profile request"
+          description: "Failed to complete the profile request. Code `PROFILE_UPDATE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     delete:
       summary: Delete the signed-in user's account and owned drafts
+      description: "Requires `profile:write`."
       tags: [Contractor Profile]
       operationId: deleteProfileAlias
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1291,31 +1406,29 @@ paths:
                   status: { type: string, enum: [success] }
                   message: { type: string }
         "401":
-          description: "Authentication required or session invalid"
+          description: "Authentication required or session invalid. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Missing profile write permission or invalid Origin
+          description: "Missing profile write permission or invalid Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-        "404":
-          description: "User not found"
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/MessageError' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to complete the profile request"
+          description: "Failed to complete the profile request. Code `DELETE_INCOMPLETE`."
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/MessageError' }
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/Error' }
+                  - { $ref: '#/components/schemas/MessageError' }
 
   /profiles:
     get:
       summary: Read the authenticated user's company profile
-      description: Identity is session.sub (cookie or scoped Bearer); query user IDs are ignored. Legacy bid fields default to empty strings and an empty history.
+      description: "Requires `profile:read`. Identity is session.sub (cookie or scoped Bearer); query user IDs are ignored. Legacy bid fields default to empty strings and an empty history."
       tags: [Contractor Profile]
       operationId: getCompanyProfile
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1326,12 +1439,12 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "401":
-          description: "Authentication required or session invalid"
+          description: "Authentication required or session invalid. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Missing profile read permission
+          description: "Missing profile read permission. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1348,7 +1461,7 @@ paths:
               schema: { $ref: '#/components/schemas/MessageError' }
     put:
       summary: Update the authenticated user's company profile
-      description: Partial updates. Unknown fields including role, passwordHash and user IDs are ignored. Strings are trimmed. Replace past_projects with the edited array to remove rows; an empty array clears it. Years are Buddhist Era 2400–2700. Maximum JSON body is 128 KiB. Cookie writes require an approved Origin.
+      description: "Requires `profile:write`. Partial updates. Unknown fields including role, passwordHash and user IDs are ignored. Strings are trimmed. Replace past_projects with the edited array to remove rows; an empty array clears it. Years are Buddhist Era 2400–2700. Maximum JSON body is 128 KiB. Cookie writes require an approved Origin."
       tags: [Contractor Profile]
       operationId: putCompanyProfile
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1364,7 +1477,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "400":
-          description: "Malformed JSON, invalid request body or invalid profile fields"
+          description: "Malformed JSON, invalid request body or invalid profile fields. Codes `INVALID_JSON`, `INVALID_BODY`, `INVALID_PROFILE`."
           content:
             application/json:
               schema:
@@ -1372,12 +1485,12 @@ paths:
                   - { $ref: '#/components/schemas/Error' }
                   - { $ref: '#/components/schemas/ProfileValidationError' }
         "401":
-          description: "Authentication required or session invalid"
+          description: "Authentication required or session invalid. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Missing profile write permission or invalid Origin
+          description: "Missing profile write permission or invalid Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1387,24 +1500,24 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MessageError' }
         "413":
-          description: JSON body exceeds 128 KiB
+          description: "JSON body exceeds 128 KiB. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: Content-Type must be application/json
+          description: "Content-Type must be application/json. Code `UNSUPPORTED_MEDIA_TYPE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to complete the profile request"
+          description: "Failed to complete the profile request. Code `PROFILE_UPDATE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     patch:
       summary: Partially update the authenticated user's company profile
-      description: Same update allowlist, validation, response and ownership rules as PUT /profiles.
+      description: "Requires `profile:write`. Same update allowlist, validation, response and ownership rules as PUT /profiles."
       tags: [Contractor Profile]
       operationId: patchCompanyProfile
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1413,14 +1526,41 @@ paths:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/CompanyProfileUpdate" }
+            example:
+              company_name: Example Software Co.
+              skills: [Web development]
+              past_projects:
+                - { name: Permit portal, client: Example Municipality, value: 1500000, year: 2568 }
       responses:
         "200":
           description: Saved profile
           content:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
+              example:
+                status: success
+                data:
+                  _id: 6550f1b2d4e6a7c809123457
+                  email: bidder@example.com
+                  name: Example Bidder
+                  company_name: Example Software Co.
+                  registration_number: ""
+                  address: ""
+                  authorized_signatory: ""
+                  past_projects:
+                    - { name: Permit portal, client: Example Municipality, value: 1500000, year: 2568 }
+                  skills: [Web development]
+                  techStack: [Web development]
+                  registered_capital: null
+                  highest_past_project_value: null
+                  concurrent_project_capacity: null
+                  certifications: []
+                  email_notifications_enabled: false
+                  match_score_threshold: 70
+                  notification_frequency: IMMEDIATE
+                  updatedAt: "2026-11-21T08:05:00.000Z"
         "400":
-          description: "Malformed JSON, invalid request body or invalid profile fields"
+          description: "Malformed JSON, invalid request body or invalid profile fields. Codes `INVALID_JSON`, `INVALID_BODY`, `INVALID_PROFILE`."
           content:
             application/json:
               schema:
@@ -1428,12 +1568,12 @@ paths:
                   - { $ref: '#/components/schemas/Error' }
                   - { $ref: '#/components/schemas/ProfileValidationError' }
         "401":
-          description: "Authentication required or session invalid"
+          description: "Authentication required or session invalid. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Missing profile write permission or invalid Origin
+          description: "Missing profile write permission or invalid Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1443,23 +1583,24 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MessageError' }
         "413":
-          description: JSON body exceeds 128 KiB
+          description: "JSON body exceeds 128 KiB. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: Content-Type must be application/json
+          description: "Content-Type must be application/json. Code `UNSUPPORTED_MEDIA_TYPE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to complete the profile request"
+          description: "Failed to complete the profile request. Code `PROFILE_UPDATE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     delete:
       summary: Delete the signed-in user's account and owned drafts
+      description: "Requires `profile:write`."
       tags: [Contractor Profile]
       operationId: deleteCompanyProfile
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1475,26 +1616,24 @@ paths:
                   status: { type: string, enum: [success] }
                   message: { type: string }
         "401":
-          description: "Authentication required or session invalid"
+          description: "Authentication required or session invalid. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Missing profile write permission or invalid Origin
+          description: "Missing profile write permission or invalid Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
-        "404":
-          description: "User not found"
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/MessageError' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to complete the profile request"
+          description: "Failed to complete the profile request. Code `DELETE_INCOMPLETE`."
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/MessageError' }
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/Error' }
+                  - { $ref: '#/components/schemas/MessageError' }
 
   # ---------------------------------------------------------------------------
   # Current - Anomaly Detection (FR-3.1, FR-3.2)
@@ -1515,21 +1654,21 @@ paths:
               schema:
                 $ref: "#/components/schemas/TorApiAnomalyReport"
         "400":
-          description: "Missing TOR id"
+          description: "Missing TOR id. Code `INVALID_TOR_ID`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: TOR not found
+          description: "TOR not found. Code `TOR_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Failed to load TOR anomalies"
+          description: "Failed to load TOR anomalies. Code `GET_TOR_ANOMALIES_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1555,13 +1694,15 @@ paths:
         - name: dateFrom
           in: query
           schema:
-            type: string
-            format: date
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: dateTo
           in: query
           schema:
-            type: string
-            format: date
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: agency
           in: query
           schema:
@@ -1584,7 +1725,8 @@ paths:
           description: Thai Buddhist Era fiscal year, confirmed extraction first, otherwise estimated from the bidding deadline.
           schema: { type: integer, minimum: 2400, maximum: 3000 }
         - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/AnalyticsLimitParam"
+        - $ref: "#/components/parameters/AnalyticsPageSizeAliasParam"
       responses:
         "200":
           description: Search results with aggregate metrics
@@ -1593,7 +1735,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AnalyticsSearchResponse"
         "400":
-          description: Invalid filter parameters
+          description: "Invalid filter parameters. Codes `INVALID_DATE_FROM`, `INVALID_DATE_TO`, `INVALID_DATE_RANGE`, `INVALID_BUDGET_MIN`, `INVALID_BUDGET_MAX`, `INVALID_BUDGET_RANGE`, `INVALID_PAGE`, `INVALID_LIMIT`, `INVALID_IS_SOFTWARE`, `INVALID_BIDDING_STATUS`, `INVALID_FISCAL_YEAR`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -1601,7 +1743,7 @@ paths:
         "403": { $ref: '#/components/responses/Forbidden' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Analytics operation failed"
+          description: "Analytics operation failed. Code `ANALYTICS_SEARCH_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1611,7 +1753,10 @@ paths:
       summary: Export historical search results as CSV or JSON
       tags: [Public Analytics]
       operationId: exportAnalyticsOverview
-      description: Applies the same filters as GET /analytics/overview. Exports at most 10,000 records; X-Export-Truncated indicates additional matches.
+      description: >
+        Applies the same filters as GET /analytics/overview. Pagination parameters
+        are validated but do not limit the export. Exports at most 10,000 records;
+        X-Export-Truncated indicates additional matches.
       parameters:
         - name: format
           in: query
@@ -1622,13 +1767,15 @@ paths:
         - name: dateFrom
           in: query
           schema:
-            type: string
-            format: date
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: dateTo
           in: query
           schema:
-            type: string
-            format: date
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: agency
           in: query
           schema:
@@ -1642,9 +1789,25 @@ paths:
         - name: fiscalYear
           in: query
           schema: { type: integer, minimum: 2400, maximum: 3000 }
+        - name: budgetMin
+          in: query
+          schema: { type: number, minimum: 0 }
+        - name: budgetMax
+          in: query
+          schema: { type: number, minimum: 0 }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/AnalyticsLimitParam"
+        - $ref: "#/components/parameters/AnalyticsPageSizeAliasParam"
       responses:
         "200":
           description: File contents
+          headers:
+            X-Export-Truncated:
+              description: Whether additional records matched the filters.
+              schema: { type: string, enum: ["true", "false"] }
+            Content-Disposition:
+              description: Attachment filename for the requested format.
+              schema: { type: string }
           content:
             text/csv:
               schema:
@@ -1655,7 +1818,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/AnalyticsTorItem"
         "400":
-          description: Invalid export format or filter
+          description: "Invalid export format or filter. Codes `INVALID_DATE_FROM`, `INVALID_DATE_TO`, `INVALID_DATE_RANGE`, `INVALID_BUDGET_MIN`, `INVALID_BUDGET_MAX`, `INVALID_BUDGET_RANGE`, `INVALID_PAGE`, `INVALID_LIMIT`, `INVALID_IS_SOFTWARE`, `INVALID_BIDDING_STATUS`, `INVALID_FISCAL_YEAR`, `INVALID_FORMAT`."
           content:
             application/json:
               schema:
@@ -1664,7 +1827,7 @@ paths:
         "403": { $ref: '#/components/responses/Forbidden' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Analytics operation failed"
+          description: "Analytics operation failed. Code `ANALYTICS_EXPORT_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1675,20 +1838,23 @@ paths:
       tags: [Public Analytics]
       operationId: searchAnalytics
       description: >
-        Unauthenticated and rate-limited (FR-4.2.2, see 429). Aggregates cover
-        every matching project, not just the returned page.
+        Public and rate-limited (FR-4.2.2, see 429). Aggregates cover every matching
+        project. Use category to filter by classification and pageSize to set the page size.
       parameters:
-        - name: isSoftware
-          in: query
-          schema: { type: boolean }
         - name: dateFrom
           in: query
           description: Inclusive lower bound on announce date.
-          schema: { type: string, format: date }
+          schema:
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: dateTo
           in: query
           description: Inclusive upper bound on announce date.
-          schema: { type: string, format: date }
+          schema:
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: agency
           in: query
           description: Exact issuing agency name.
@@ -1704,7 +1870,7 @@ paths:
           schema:
             $ref: "#/components/schemas/KeywordCategory"
         - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/PageSizeParam"
       responses:
         "200":
           description: One page of matching TORs with aggregate metrics
@@ -1723,20 +1889,16 @@ paths:
                       aggregates:
                         $ref: "#/components/schemas/AnalyticsAggregates"
         "400":
-          description: Invalid filter parameters
+          description: "Invalid filter parameters. Codes `INVALID_DATE_FROM`, `INVALID_DATE_TO`, `INVALID_DATE_RANGE`, `INVALID_BUDGET_MIN`, `INVALID_BUDGET_MAX`, `INVALID_BUDGET_RANGE`, `INVALID_CATEGORY`, `INVALID_PAGE`, `INVALID_PAGE_SIZE`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
-        "429":
-          description: Rate limit exceeded
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Analytics operation failed"
+          description: "Analytics operation failed. Code `ANALYTICS_SEARCH_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1760,11 +1922,17 @@ paths:
         - name: dateFrom
           in: query
           description: Inclusive lower bound on announce date.
-          schema: { type: string, format: date }
+          schema:
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: dateTo
           in: query
           description: Inclusive upper bound on announce date.
-          schema: { type: string, format: date }
+          schema:
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: agency
           in: query
           description: Exact issuing agency name.
@@ -1785,6 +1953,9 @@ paths:
           headers:
             X-Export-Truncated:
               schema: { type: string, enum: ["true", "false"] }
+            Content-Disposition:
+              description: Attachment filename for the requested format.
+              schema: { type: string }
           content:
             text/csv:
               schema:
@@ -1795,7 +1966,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/AnalyticsExportRow"
         "400":
-          description: Invalid format or filter parameters
+          description: "Invalid format or filter parameters. Codes `INVALID_DATE_FROM`, `INVALID_DATE_TO`, `INVALID_DATE_RANGE`, `INVALID_BUDGET_MIN`, `INVALID_BUDGET_MAX`, `INVALID_BUDGET_RANGE`, `INVALID_CATEGORY`, `INVALID_FORMAT`."
           content:
             application/json:
               schema:
@@ -1804,7 +1975,7 @@ paths:
         "403": { $ref: '#/components/responses/Forbidden' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Analytics operation failed"
+          description: "Analytics operation failed. Code `ANALYTICS_EXPORT_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1817,10 +1988,12 @@ paths:
     delete:
       summary: Delete the signed-in user's company bid data and drafts
       description: >
+        Requires `profile:write`.
         Clears company fields and deletes every draft owned by the session.
         The account itself is not deleted. A follow-up read must show the
         company fields empty and the draft count at zero before this returns
         success. Requires JSON `{ "confirm": "DELETE_COMPANY_DATA" }`.
+        The JSON body is limited to 4 KiB.
       operationId: deleteBidPrepCompanyData
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1843,36 +2016,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/BidPrepDeletion"
         "400":
-          description: Confirmation missing
+          description: "Malformed JSON, invalid root object or missing confirmation. Codes `INVALID_JSON`, `INVALID_BODY`, `CONFIRMATION_REQUIRED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: Current user no longer exists
+          description: "Current user no longer exists. Code `USER_NOT_FOUND`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "413":
-          description: "Request body or draft content exceeds the size limit"
+          description: "JSON body exceeds 4 KiB. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: "Content-Type must be application/json"
+          description: "Content-Type must be application/json. Code `UNSUPPORTED_MEDIA_TYPE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Codes `DELETE_INCOMPLETE`, `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1880,6 +2053,7 @@ paths:
   /bid-prep/drafts:
     get:
       summary: List the signed-in user's proposal drafts
+      description: "Requires `profile:read`."
       operationId: listBidPrepDrafts
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1899,7 +2073,7 @@ paths:
                   notices:
                     $ref: "#/components/schemas/BidPrepNotices"
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
@@ -1907,16 +2081,17 @@ paths:
         "403": { $ref: '#/components/responses/Forbidden' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Code `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     post:
       summary: Create a proposal draft for the signed-in user
       description: >
+        Requires `profile:write`.
         The owner is the session subject. A user id in the body is ignored.
         Creation is limited per user (default 5 per hour) and returns 429
-        with Retry-After. Draft text is not written to the audit log.
+        with Retry-After. The JSON body is limited to 128 KiB. Audit entries omit draft text.
       operationId: createBidPrepDraft
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1926,6 +2101,13 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/BidPrepDraftInput"
+            example:
+              projectId: "69110000001"
+              title: Permit Portal Technical Proposal
+              sections:
+                - heading: Scope of work
+                  body: Develop a portal for online permit applications.
+                  sources: [TOR scope of work]
       responses:
         "201":
           description: Draft created
@@ -1933,43 +2115,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BidPrepDraft"
+              example:
+                id: 6550f1b2d4e6a7c809123458
+                projectId: "69110000001"
+                title: Permit Portal Technical Proposal
+                version: 1
+                createdAt: "2026-11-21T08:10:00.000Z"
+                updatedAt: "2026-11-21T08:10:00.000Z"
+                sections:
+                  - heading: Scope of work
+                    body: Develop a portal for online permit applications.
+                    sources: [TOR scope of work]
+                notices:
+                  aiDraft: This is an AI draft. Check every statement and its source before submitting.
+                  noEgpSubmission: MoneyTamNgan does not submit a bid to e-GP. The seller must review this draft and submit it with their own digital signature.
+                  noEgpSubmissionTh: ระบบนี้ไม่ยื่นซองต่อ e-GP ให้ผู้ใช้ ผู้ขายต้องตรวจสอบเอกสารแล้วไปยื่นด้วยลายมือชื่อดิจิทัลของตนเอง
         "400":
-          description: Invalid draft
+          description: "Invalid JSON, invalid draft fields or stored draft limit reached. Codes `INVALID_JSON`, `INVALID_BODY`, `INVALID_DRAFT`, `DRAFT_LIMIT`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: TOR not found
+          description: "TOR or current user not found. Codes `TOR_NOT_FOUND`, `USER_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "409":
-          description: "Stored draft limit reached"
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
         "413":
-          description: "Request body or draft content exceeds the size limit"
+          description: "Request body or draft content exceeds the size limit. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: "Content-Type must be application/json"
+          description: "Content-Type must be application/json. Code `UNSUPPORTED_MEDIA_TYPE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Code `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -1979,6 +2171,7 @@ paths:
       - $ref: "#/components/parameters/BidPrepDraftIdParam"
     get:
       summary: Read one draft owned by the signed-in user
+      description: "Requires `profile:read`."
       operationId: getBidPrepDraft
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -1990,27 +2183,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/BidPrepDraft"
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: Missing draft, or a draft owned by someone else
+          description: "Missing draft, or a draft owned by someone else. Code `DRAFT_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Code `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     patch:
       summary: Update one draft owned by the signed-in user
-      description: Send the current version. A stale version returns 409. Another user's draft returns 404.
+      description: >
+        Requires `profile:write`.
+        Send the current version in a JSON body of at most 128 KiB.
+        A stale version returns 409. Another user's draft returns 404.
       operationId: updateBidPrepDraft
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -2020,6 +2216,9 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/BidPrepDraftPatch"
+            example:
+              version: 1
+              title: Revised Permit Portal Technical Proposal
       responses:
         "200":
           description: Updated draft
@@ -2028,48 +2227,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/BidPrepDraft"
         "400":
-          description: Invalid draft
+          description: "Invalid draft. Codes `INVALID_JSON`, `INVALID_BODY`, `INVALID_DRAFT`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: Missing draft, or a draft owned by someone else
+          description: "Missing draft, or a draft owned by someone else. Code `DRAFT_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: Version conflict
+          description: "Version conflict. Code `DRAFT_CONFLICT`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: DRAFT_CONFLICT
+                  message: The draft was updated. Reload it and try again.
         "413":
-          description: "Request body or draft content exceeds the size limit"
+          description: "Request body or draft content exceeds the size limit. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "415":
-          description: "Content-Type must be application/json"
+          description: "Content-Type must be application/json. Code `UNSUPPORTED_MEDIA_TYPE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Code `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     delete:
       summary: Delete one draft owned by the signed-in user
+      description: "Requires `profile:write`."
       operationId: deleteBidPrepDraft
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -2088,21 +2292,21 @@ paths:
                   notices:
                     $ref: "#/components/schemas/BidPrepNotices"
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: Missing draft, or a draft owned by someone else
+          description: "Missing draft, or a draft owned by someone else. Code `DRAFT_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Code `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2111,6 +2315,7 @@ paths:
     post:
       summary: Download the caller's draft and checklist as one DOCX
       description: >
+        Requires `profile:write`.
         One plain-text DOCX contains the saved proposal sections and sources plus
         the current caller-specific checklist (status, reason and TOR page).
         Export requires an available, non-empty, untruncated checklist with every
@@ -2128,47 +2333,55 @@ paths:
         - name: version
           in: query
           description: Optional saved draft version. A stale version returns 409; the editor supplies it.
-          schema: { type: integer, minimum: 1 }
+          schema: { type: integer, minimum: 1, maximum: 9007199254740991 }
       responses:
         "200":
           description: DOCX file
+          headers:
+            Content-Disposition:
+              description: Attachment filename for the exported draft.
+              schema: { type: string }
           content:
             application/vnd.openxmlformats-officedocument.wordprocessingml.document:
               schema:
                 type: string
                 format: binary
         "400":
-          description: Draft is empty, corrupt, or version is invalid
+          description: "Draft is empty, corrupt, or version is invalid. Codes `EMPTY_DRAFT`, `INVALID_DRAFT`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: Missing draft, or a draft owned by someone else
+          description: "Missing draft, or a draft owned by someone else. Code `DRAFT_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: The saved draft version changed, or the checklist is incomplete or has items that have yet to pass
+          description: "The saved draft version changed, or the checklist is incomplete or has items that have yet to pass. Codes `DRAFT_CONFLICT`, `CHECKLIST_NOT_PASSED`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+              example:
+                error:
+                  code: CHECKLIST_NOT_PASSED
+                  message: A complete checklist with every item marked as passed is required before export.
         "413":
-          description: Export exceeds 2 MiB
+          description: "Export exceeds 2 MiB. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Code `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2177,6 +2390,7 @@ paths:
     get:
       summary: Checklist for one TOR using the signed-in user's profile
       description: >
+        Requires `profile:read`.
         The checklist can automatically check a verified past-project minimum
         as a separate value-only item. Items include any status overrides saved by the caller.
         A user id in the query is ignored. Missing or unprocessed TORs return 404 or 409.
@@ -2192,33 +2406,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BidPrepChecklist"
+              example:
+                projectId: "69110000001"
+                notices:
+                  aiDraft: This is an AI draft. Check every statement and its source before submitting.
+                  noEgpSubmission: MoneyTamNgan does not submit a bid to e-GP. The seller must review this draft and submit it with their own digital signature.
+                  noEgpSubmissionTh: ระบบนี้ไม่ยื่นซองต่อ e-GP ให้ผู้ใช้ ผู้ขายต้องตรวจสอบเอกสารแล้วไปยื่นด้วยลายมือชื่อดิจิทัลของตนเอง
+                summary: { pass: 0, fail: 0, manual: 1 }
+                missingProfileFields: [registered_capital, concurrent_project_capacity, certifications]
+                pastProjectValueComparison:
+                  status: not_stated
+                  companyValueBaht: 1500000
+                  minimumBaht: null
+                  operator: null
+                  meetsMinimum: null
+                  evidence: []
+                truncated: false
+                items:
+                  - id: "e46a3f462a579a399e23278caa4399e01fa0724df033372775e0246824b80a3a"
+                    requirement: Provide proof of company registration.
+                    status: manual
+                    overrideStatus: null
+                    reason: Check the full qualification against the company profile and the TOR.
+                    evidencePages: [3]
+                    needsReview: false
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: TOR not found
+          description: "TOR or current user not found. Codes `TOR_NOT_FOUND`, `USER_NOT_FOUND`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: TOR has not been processed
+          description: "TOR is unprocessed or its current document is unreadable. Codes `TOR_NOT_READY`, `TOR_DOCUMENT_UNREADABLE`."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Code `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     patch:
       summary: Set or clear the caller's checklist item status override
+      description: "Requires `profile:write`. The JSON body is limited to 1 KiB. Use an item ID from the caller's current checklist."
       operationId: updateBidPrepChecklistStatus
       tags: [Bid preparation]
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -2238,6 +2477,9 @@ paths:
                   nullable: true
                   enum: [pass, fail, manual, null]
                   description: Use null to restore the automatic status.
+            example:
+              itemId: "e46a3f462a579a399e23278caa4399e01fa0724df033372775e0246824b80a3a"
+              status: pass
       responses:
         "200":
           description: Updated checklist for the caller
@@ -2245,47 +2487,47 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/BidPrepChecklist" }
         "400":
-          description: Invalid checklist item ID or status
+          description: "Malformed JSON, invalid root object, checklist item ID or status. Codes `INVALID_JSON`, `INVALID_BODY`, `INVALID_CHECKLIST_STATUS`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "401":
-          description: Not logged in
+          description: "Not logged in. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "403":
-          description: Request origin or scope is not allowed
+          description: "Request origin or scope is not allowed. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "404":
-          description: TOR or checklist item not found
+          description: "TOR, checklist item or current user not found. Codes `TOR_NOT_FOUND`, `USER_NOT_FOUND`, `CHECKLIST_ITEM_NOT_FOUND`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "409":
-          description: TOR has not been processed or the caller's Bid Prep data changed
+          description: "TOR is unprocessed, its current document is unreadable, or the caller's BidPrep data changed. Codes `TOR_NOT_READY`, `TOR_DOCUMENT_UNREADABLE`, `CHECKLIST_CHANGED`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "413":
-          description: Request body is too large
+          description: "Request body is too large. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "415":
-          description: Request body must be JSON
+          description: "Request body must be JSON. Code `UNSUPPORTED_MEDIA_TYPE`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "429":
-          description: Rate limit exceeded
+          description: "Rate limit exceeded. Code `RATE_LIMITED`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "500":
-          description: "Bid preparation request failed"
+          description: "Bid preparation request failed. Code `INTERNAL`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2324,17 +2566,17 @@ paths:
                         projectId: { type: string }
                         message: { type: string }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Admin role and admin:write required
+          description: "Admin role and admin:write required. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: Classification run failed
+          description: "Classification run failed. Code `CLASSIFICATION_RUN_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2342,6 +2584,7 @@ paths:
   /ingestion/status:
     get:
       summary: Read e-GP ingestion status and schedule metadata
+      description: "Requires `pipeline:read`."
       tags: [Pipeline]
       operationId: getIngestionStatus
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { pipelineBearer: [] }]
@@ -2375,17 +2618,17 @@ paths:
                   lastRun: { type: object, nullable: true, additionalProperties: true }
                   recentRuns: { type: array, items: { type: object, additionalProperties: true } }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing pipeline:read scope
+          description: "Missing pipeline:read scope. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: Ingestion status check failed
+          description: "Ingestion status check failed. Code `STATUS_CHECK_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
@@ -2393,6 +2636,7 @@ paths:
   /ingestion/trigger:
     post:
       summary: Manually trigger e-GP ingestion
+      description: "Requires `pipeline:trigger`."
       tags: [Pipeline]
       operationId: triggerIngestion
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { pipelineBearer: [] }]
@@ -2441,22 +2685,22 @@ paths:
                   errors: { type: array, items: { type: object, additionalProperties: true } }
                   completedAt: { type: string, format: date-time }
         "400":
-          description: Invalid ingestion parameters
+          description: "Invalid ingestion parameters. Code `INVALID_INGESTION_REQUEST`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing pipeline:trigger scope or forbidden Origin
+          description: "Missing pipeline:trigger scope or forbidden Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: "Ingestion failed or e-GP blocked/rejected access"
+          description: "Ingestion failed or e-GP blocked/rejected access. Codes `INGESTION_FAILED`, `EGP_UPSTREAM_BLOCKED`, `EGP_AUTH_FAILED`."
           content:
             application/json:
               schema:
@@ -2472,7 +2716,7 @@ paths:
                       message: { type: string }
                       retryable: { type: boolean }
         "503":
-          description: "Retryable e-GP failure"
+          description: "Retryable e-GP failure. Code `INGESTION_UPSTREAM_UNAVAILABLE`."
           content:
             application/json:
               schema:
@@ -2491,6 +2735,7 @@ paths:
   /scraping/status:
     get:
       summary: Read TOR document scraping coverage statistics
+      description: "Requires `pipeline:read`."
       tags: [Pipeline]
       operationId: getScrapingStatus
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { pipelineBearer: [] }]
@@ -2512,17 +2757,17 @@ paths:
                   withoutPdf: { type: integer }
                   coverage: { type: string }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing pipeline:read scope
+          description: "Missing pipeline:read scope. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: Scraping status check failed
+          description: "Scraping status check failed. Code `STATUS_CHECK_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
@@ -2530,6 +2775,7 @@ paths:
   /scraping/trigger:
     post:
       summary: Trigger TOR document scraping for open software projects
+      description: "Requires `pipeline:trigger`. Direct remote document fetches use the application's URL safety checks."
       tags: [Pipeline]
       operationId: triggerScraping
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { pipelineBearer: [] }]
@@ -2543,7 +2789,11 @@ paths:
                 projectId: { type: string }
                 batchSize: { type: integer, minimum: 1, maximum: 50, default: 10 }
                 onlyMissing: { type: boolean, default: true }
-                delayMs: { type: integer, minimum: 3000, maximum: 60000 }
+                delayMs:
+                  description: Delay between requests in milliseconds. Numeric strings are converted to numbers and checked against the same integer bounds. The default is the configured delay or 4000 ms.
+                  oneOf:
+                    - { type: integer, minimum: 3000, maximum: 60000 }
+                    - { type: string, minLength: 1 }
       responses:
         "200":
           description: "Single-project or batch scraping result"
@@ -2577,22 +2827,22 @@ paths:
                   eligibilitySkipped: { type: array, items: { type: object, additionalProperties: true } }
                   results: { type: array, items: { type: object, additionalProperties: true } }
         "400":
-          description: Invalid scraping request
+          description: "Invalid scraping request. Code `INVALID_SCRAPING_REQUEST`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing pipeline:trigger scope or forbidden Origin
+          description: "Missing pipeline:trigger scope or forbidden Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: Scraping failed
+          description: "Scraping failed. Code `SCRAPING_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
@@ -2600,6 +2850,7 @@ paths:
   /processing/status:
     get:
       summary: Read background OCR/AI processing queue status
+      description: "Requires `pipeline:read`. A nonempty projectId takes precedence over jobId. Omit both to read aggregate counts."
       tags: [Pipeline]
       operationId: getProcessingStatus
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { pipelineBearer: [] }]
@@ -2609,6 +2860,7 @@ paths:
           schema: { type: string }
         - name: jobId
           in: query
+          description: Processing job ID, normally a MongoDB ObjectId. A malformed ID may return 500.
           schema: { type: string }
       responses:
         "200":
@@ -2625,17 +2877,17 @@ paths:
                   jobs: { type: object, additionalProperties: { type: integer } }
                   projects: { type: object, additionalProperties: { type: integer } }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing pipeline:read scope
+          description: "Missing pipeline:read scope. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "404":
-          description: "Requested job or project was not found"
+          description: "JOB_NOT_FOUND for a missing job. A missing project returns status not_found with project set to null."
           content:
             application/json:
               schema:
@@ -2647,7 +2899,7 @@ paths:
                       status: { type: string, enum: [not_found] }
                       project: { type: object, nullable: true, additionalProperties: true }
         "500":
-          description: Processing status check failed
+          description: "Processing status check failed. Code `PROCESSING_STATUS_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
@@ -2655,6 +2907,7 @@ paths:
   /processing/trigger:
     post:
       summary: Enqueue projects or candidates for background OCR/AI processing
+      description: "Requires `pipeline:trigger`. Supply at most one of projectId and candidateId. The scanLimit, afterId, dryRun and retryFailed fields apply only to bulk requests."
       tags: [Pipeline]
       operationId: triggerProcessing
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { pipelineBearer: [] }]
@@ -2704,22 +2957,22 @@ paths:
                   nextAfterId: { type: string, nullable: true }
                   exhausted: { type: boolean }
         "400":
-          description: Invalid processing request
+          description: "Invalid processing request. Code `INVALID_PROCESSING_REQUEST`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing pipeline:trigger scope or forbidden Origin
+          description: "Missing pipeline:trigger scope or forbidden Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: Processing enqueue failed
+          description: "Processing enqueue failed. Code `PROCESSING_ENQUEUE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PipelineFailure' }
@@ -2741,17 +2994,17 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LegacyProjectPage' }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Admin role and admin:read required
+          description: "Admin role and admin:read required. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: Review queue query failed
+          description: "Processing review queue could not be loaded. Code `REVIEW_QUEUE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2775,10 +3028,16 @@ paths:
           schema: { type: string }
         - name: dateFrom
           in: query
-          schema: { type: string, format: date }
+          schema:
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: dateTo
           in: query
-          schema: { type: string, format: date }
+          schema:
+            oneOf:
+              - { type: string, format: date }
+              - { type: string, format: date-time }
         - name: search
           in: query
           schema: { type: string, maxLength: 200 }
@@ -2789,7 +3048,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LegacyProjectPage' }
         "400":
-          description: Invalid query parameters
+          description: "Invalid query parameters. Codes `INVALID_IS_SOFTWARE`, `INVALID_DATE_RANGE`, `INVALID_SEARCH`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2797,7 +3056,7 @@ paths:
         "403": { $ref: '#/components/responses/Forbidden' }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: Failed to list projects
+          description: "Failed to list projects. Code `LIST_PROJECTS_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2818,13 +3077,13 @@ paths:
         "401": { $ref: '#/components/responses/Unauthorized' }
         "403": { $ref: '#/components/responses/Forbidden' }
         "404":
-          description: Project not found
+          description: "Project not found. Code `PROJECT_NOT_FOUND`."
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "429": { $ref: '#/components/responses/RateLimited' }
         "500":
-          description: Failed to load project
+          description: "Failed to load project. Code `GET_PROJECT_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2847,7 +3106,10 @@ paths:
               required: [isSoftware]
               properties:
                 isSoftware: { type: boolean }
-                reason: { type: string, maxLength: 1000 }
+                reason:
+                  type: string
+                  default: Manual review
+                  description: The handler uses at most the first 1,000 characters.
       responses:
         "200":
           description: "Updated project"
@@ -2855,32 +3117,32 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LegacyProject' }
         "400":
-          description: Invalid classification body
+          description: "Invalid classification body. Code `INVALID_CLASSIFICATION`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Admin role and tor:write required
+          description: "Admin role and tor:write required. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "404":
-          description: Project not found
+          description: "Project not found. Code `PROJECT_NOT_FOUND`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "500":
-          description: Failed to update classification
+          description: "Failed to update classification. Code `CLASSIFICATION_UPDATE_FAILED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "503":
-          description: "Classification saved but processing queue unavailable"
+          description: "Classification saved but processing queue unavailable. Code `CLASSIFICATION_ENQUEUE_FAILED`."
           content:
             application/json:
               schema:
@@ -2895,6 +3157,10 @@ paths:
   /notifications/test:
     post:
       summary: Send a test match-notification email to the signed-in user
+      description: >
+        Requires notifications:test. The optional JSON body is limited to 16 KiB.
+        Omitting matches or setting it to null uses sample matches. The recipient
+        is the authenticated user's stored email address.
       tags: [Notifications]
       operationId: sendTestNotification
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -2932,17 +3198,17 @@ paths:
                   emailId: { type: string }
                   sentTo: { type: string, format: email }
         "400":
-          description: Invalid matches payload
+          description: "Malformed JSON, invalid root object or invalid matches. Codes `INVALID_BODY`, `INVALID_MATCHES`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "401":
-          description: "Authentication required"
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthenticationError' }
         "403":
-          description: Forbidden origin or missing notifications:test scope
+          description: "Forbidden origin or missing notifications:test scope. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2952,7 +3218,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/MessageError' }
         "413":
-          description: Request payload exceeds 16 KiB limit
+          description: "Request payload exceeds 16 KiB limit. Code `PAYLOAD_TOO_LARGE`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -2965,7 +3231,9 @@ paths:
   /notifications/digest:
     get:
       summary: Dispatch pending daily digest match notifications (GET alias for cron)
-      description: "Dispatches pending matches. Requires an admin with notifications:send or the configured cron bearer credential."
+      description: >
+        Dispatches persisted pending matches. Requires an admin with notifications:send
+        or the configured cron bearer credential. The Origin policy treats this GET as a mutation.
       tags: [Notifications]
       operationId: getNotificationsDigest
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { cronBearer: [] }]
@@ -2982,18 +3250,20 @@ paths:
                   notified: { type: integer }
                   skipped: { type: integer }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing notifications:send permission or forbidden Origin
+          description: "Missing notifications:send permission or forbidden Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     post:
       summary: Dispatch pending daily digest match notifications
-      description: "Dispatches pending matches. Requires an admin with notifications:send or the configured cron bearer credential."
+      description: >
+        Dispatches persisted pending matches. Requires an admin with notifications:send
+        or the configured cron bearer credential. The request body is unused.
       tags: [Notifications]
       operationId: triggerNotificationsDigest
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { cronBearer: [] }]
@@ -3010,12 +3280,12 @@ paths:
                   notified: { type: integer }
                   skipped: { type: integer }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Missing notifications:send permission or forbidden Origin
+          description: "Missing notifications:send permission or forbidden Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -3039,12 +3309,12 @@ paths:
                   status: { type: string, enum: [connected] }
                   message: { type: string }
         "401":
-          description: Authentication required
+          description: "Authentication required. Code `UNAUTHORIZED`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
         "403":
-          description: Admin role and admin:read required
+          description: "Admin role and admin:read required. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
@@ -3060,13 +3330,23 @@ paths:
                   message: { type: string }
 
 components:
+  headers:
+    OAuthStateCookie:
+      description: HTTP-only OAuth state cookie with a 600-second lifetime.
+      schema: { type: string }
+    GoogleConsentLocation:
+      description: Google consent screen URL.
+      schema: { type: string, format: uri }
+
   securitySchemes:
     sessionAuth:
       type: apiKey
       in: cookie
       name: mtn_session
       description: >
-        Signed auth_version=2 JWT session cookie with role-bounded scopes.
+        Signed version-2 JWT session cookie with role-bounded scopes, a session
+        identifier and an account session version. Revoked sessions and sessions
+        for disabled accounts are rejected.
         Public TOR reads permit guests; profile routes require profile:read/write
         and always target the signed-in owner. Admin routes require admin role
         plus admin:read/write or tor:write. Legacy sessions require re-login.
@@ -3074,7 +3354,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Signed version-2 JWT with the route's required role and permission scope.
+      description: Signed version-2 JWT checked against the same account status, revocation, role and scope rules as the session cookie.
     pipelineBearer:
       type: http
       scheme: bearer
@@ -3087,24 +3367,34 @@ components:
     cronBearer:
       type: http
       scheme: bearer
-      description: Configured CRON_SECRET for scheduled digest dispatch.
+      description: Configured CRON_SECRET of at least 32 characters, limited to scheduled digest dispatch. A server-to-server request may omit Origin. A supplied Origin must be allowed.
 
   responses:
     Unauthorized:
-      description: "Authentication required or invalid credentials"
+      description: "Authentication required or invalid credentials. Code `UNAUTHORIZED`."
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Forbidden:
-      description: "Insufficient role or scope, or missing or disallowed Origin"
+      description: "Insufficient role or scope, or missing or disallowed Origin. Codes `INSUFFICIENT_SCOPE`, `FORBIDDEN_ORIGIN`."
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     RateLimited:
-      description: "Request limit exceeded"
+      description: "Request limit exceeded. Code `RATE_LIMITED`."
       headers:
         Retry-After:
+          description: Seconds until another request can be made.
           schema: { type: integer, minimum: 1 }
+        X-RateLimit-Limit:
+          description: Maximum requests in the active window.
+          schema: { type: integer, minimum: 1 }
+        X-RateLimit-Remaining:
+          description: Requests remaining in the active window.
+          schema: { type: integer, minimum: 0 }
+        X-RateLimit-Reset:
+          description: Window reset time in Unix seconds.
+          schema: { type: integer, minimum: 0 }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -3136,6 +3426,7 @@ components:
       required: true
       schema:
         type: string
+        pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$'
       example: TOR-2569-001
     PageParam:
       name: page
@@ -3144,6 +3435,7 @@ components:
       schema:
         type: integer
         minimum: 1
+        maximum: 9007199254740991
         default: 1
     PageSizeParam:
       name: pageSize
@@ -3163,6 +3455,16 @@ components:
         minimum: 1
         maximum: 100
         default: 10
+    AnalyticsLimitParam:
+      name: limit
+      in: query
+      description: Page size. Takes precedence over pageSize when supplied. Defaults to 10.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+    AnalyticsPageSizeAliasParam:
+      name: pageSize
+      in: query
+      description: Alternative page size used when limit is absent.
+      schema: { type: integer, minimum: 1, maximum: 100 }
 
   schemas:
     AcquisitionHealth:
@@ -4049,7 +4351,7 @@ components:
       description: Owner comes from session.sub. Unknown fields are ignored. Maximum 40 sections and 100000 total text characters including sources. Overlong fields are rejected, not truncated. At most 50 drafts per user (or a lower configured cap); concurrent creation is serialized transactionally.
       required: [projectId]
       properties:
-        projectId: { type: string, maxLength: 64 }
+        projectId: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$' }
         title: { type: string, maxLength: 200 }
         sections:
           type: array
@@ -4060,7 +4362,7 @@ components:
       type: object
       required: [version]
       properties:
-        version: { type: integer, minimum: 1 }
+        version: { type: integer, minimum: 1, maximum: 9007199254740991 }
         title: { type: string, maxLength: 200 }
         sections:
           type: array
