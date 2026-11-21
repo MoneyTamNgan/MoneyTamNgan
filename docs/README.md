@@ -16,7 +16,7 @@
 - [demo-script-bidprep.md](demo-script-bidprep.md): demo script for the BidPrep part
 
 ## Test reports
-- [e2e-test-2026-11-19.md](e2e-test-2026-11-19.md), [connectivity-test-2026-11-19.md](connectivity-test-2026-11-19.md), [card-delivery-status-2026-11-16.md](card-delivery-status-2026-11-16.md)
+- [e2e-test-2026-11-22.md](e2e-test-2026-11-22.md), [e2e-test-2026-11-19.md](e2e-test-2026-11-19.md), [connectivity-test-2026-11-19.md](connectivity-test-2026-11-19.md), [card-delivery-status-2026-11-16.md](card-delivery-status-2026-11-16.md)
 
 ## Security
 - [security/README.md](security/README.md), [THREAT_MODEL](security/THREAT_MODEL.md), [ASVS_CHECKLIST](security/ASVS_CHECKLIST.md), [RBAC_SPEC](security/RBAC_SPEC.md), [bid-prep-fr-4.7](security/bid-prep-fr-4.7.md)

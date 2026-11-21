@@ -1,0 +1,110 @@
+[
+ {
+  "page": "home",
+  "width": 360,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "projects",
+  "width": 360,
+  "status": 200,
+  "horizontalOverflow": true
+ },
+ {
+  "page": "tor-detail",
+  "width": 360,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "profile",
+  "width": 360,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "bid-prep",
+  "width": 360,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "draft-editor",
+  "width": 360,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "home",
+  "width": 768,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "projects",
+  "width": 768,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "tor-detail",
+  "width": 768,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "profile",
+  "width": 768,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "bid-prep",
+  "width": 768,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "draft-editor",
+  "width": 768,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "home",
+  "width": 1280,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "projects",
+  "width": 1280,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "tor-detail",
+  "width": 1280,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "profile",
+  "width": 1280,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "bid-prep",
+  "width": 1280,
+  "status": 200,
+  "horizontalOverflow": false
+ },
+ {
+  "page": "draft-editor",
+  "width": 1280,
+  "status": 200,
+  "horizontalOverflow": false
+ }
+]
