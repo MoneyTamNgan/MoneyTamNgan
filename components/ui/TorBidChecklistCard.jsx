@@ -6,9 +6,12 @@ import { NO_EGP_SUBMISSION_NOTICE_TH } from '@/lib/bid-prep/notices';
 import { useTorChecklist } from './TorChecklistProvider';
 
 const PAGE_SIZE = 5;
-const STATUSES = [
+const DECISIONS = [
     ['pass', 'ผ่าน'],
     ['fail', 'ไม่ผ่าน'],
+];
+const STATUSES = [
+    ...DECISIONS,
     ['manual', 'ตรวจสอบเอง'],
 ];
 const PROFILE_FIELDS = {
@@ -29,7 +32,7 @@ function errorMessage(error) {
     return 'โหลดรายการตรวจสอบไม่สำเร็จ';
 }
 
-export default function TorBidChecklistCard({ projectId, pdfUrl }) {
+export default function TorBidChecklistCard({ projectId, pdfUrl, loginReturnPath = `/tors/${projectId}`, showSubmissionNotice = true }) {
     const headingId = useId();
     const [page, setPage] = useState(1);
     const [savingItem, setSavingItem] = useState(null);
@@ -47,7 +50,7 @@ export default function TorBidChecklistCard({ projectId, pdfUrl }) {
         setSavingItem(itemId);
         setSaveError('');
         try {
-            await saveStatus(itemId, status || null);
+            await saveStatus(itemId, status);
         } catch (error) {
             if (error.code === 'CHECKLIST_CHANGED' || error.code === 'CHECKLIST_ITEM_NOT_FOUND') {
                 setSaveError('ข้อมูลรายการตรวจสอบเปลี่ยนไป กรุณาลองอีกครั้งเมื่อโหลดเสร็จ');
@@ -68,7 +71,7 @@ export default function TorBidChecklistCard({ projectId, pdfUrl }) {
             <h2 id={headingId}>รายการตรวจสอบคุณสมบัติ</h2>
             <aside className="tor-bid-checklist-note" role="note">
                 <p>ผลการตรวจสอบเบื้องต้น กรุณายืนยันคุณสมบัติกับเอกสาร TOR ต้นฉบับก่อนยื่นข้อเสนอ</p>
-                <p>{NO_EGP_SUBMISSION_NOTICE_TH}</p>
+                {showSubmissionNotice && <p>{NO_EGP_SUBMISSION_NOTICE_TH}</p>}
             </aside>
             {saveError && <p role="alert">{saveError}</p>}
             {!current && <p role="status">กำลังโหลดรายการตรวจสอบ…</p>}
@@ -76,7 +79,7 @@ export default function TorBidChecklistCard({ projectId, pdfUrl }) {
                 <div className="tor-bid-checklist-error">
                     <p role="alert">{errorMessage(error)}</p>
                     {error.status === 401
-                        ? <Link href={`/?next=${encodeURIComponent(`/tors/${projectId}`)}`}>เข้าสู่ระบบ</Link>
+                        ? <Link href={`/?next=${encodeURIComponent(loginReturnPath)}`}>เข้าสู่ระบบ</Link>
                         : <button type="button" className="tor-summary-toggle" onClick={retry}>ลองอีกครั้ง</button>}
                 </div>
             )}
@@ -114,19 +117,22 @@ export default function TorBidChecklistCard({ projectId, pdfUrl }) {
                                             : <span key={pageNumber}>{pageNumber}</span>) : <span>ไม่ระบุ</span>}
                                     </div>
                                     {item.id && (
-                                        <label className="tor-bid-checklist-status-control">
-                                            <span>กำหนดสถานะเอง</span>
-                                            <select
-                                                aria-label={`กำหนดสถานะเอง ข้อ ${start + offset + 1}`}
-                                                value={item.overrideStatus ?? ''}
-                                                disabled={savingItem !== null}
-                                                onChange={event => void changeStatus(item.id, event.target.value)}
-                                            >
-                                                <option value="">ใช้ผลจากระบบ</option>
-                                                {STATUSES.map(([status, label]) => <option key={status} value={status}>{label}</option>)}
-                                            </select>
+                                        <div className="tor-bid-checklist-status-control" role="group" aria-label={`กำหนดสถานะเอง ข้อ ${start + offset + 1}`}>
+                                            {DECISIONS.map(([status, label]) => (
+                                                <button
+                                                    key={status}
+                                                    type="button"
+                                                    data-status={status}
+                                                    aria-pressed={item.overrideStatus === status}
+                                                    title={item.overrideStatus === status ? 'กดอีกครั้งเพื่อใช้ผลจากระบบ' : undefined}
+                                                    disabled={savingItem !== null}
+                                                    onClick={() => void changeStatus(item.id, item.overrideStatus === status ? null : status)}
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
                                             {savingItem === item.id && <span role="status">กำลังบันทึก…</span>}
-                                        </label>
+                                        </div>
                                     )}
                                 </li>
                             ))}

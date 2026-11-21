@@ -3,12 +3,13 @@ import yauzl from 'yauzl';
 import { signSession } from '@/lib/auth';
 import { parseDraftContent, draftPlaceholders, proposalToSections } from '@/lib/bid-prep/draft-content';
 import { buildDraftDocx, safeDocxFilename } from '@/lib/bid-prep/docx';
+import { checklistForUser } from '@/lib/bid-prep/checklist';
 
-const state = vi.hoisted(() => ({ draft: null }));
+const state = vi.hoisted(() => ({ draft: null, summary: null, checklistStatuses: {} }));
 vi.mock('@/lib/db', () => ({ default: vi.fn() }));
 vi.mock('@/models/Project', () => ({ default: { findOne: () => ({ select: () => ({ lean: async () => ({ project_id: 'TOR-1' }) }) }) } }));
-vi.mock('@/models/User', () => ({ User: { findById: () => ({ select: () => ({ lean: async () => ({ company_name: 'Owner company' }) }) }) } }));
-vi.mock('@/models/DocumentSummary', () => ({ default: { findOne: () => ({ sort() { return this; }, select() { return this; }, lean: async () => ({ extraction: { qualifications: [{ value: 'มีประสบการณ์พัฒนาระบบ', page: 9 }] } }) }) } }));
+vi.mock('@/models/User', () => ({ User: { findById: () => ({ select: () => ({ lean: async () => ({ company_name: 'Owner company', bid_checklist_statuses: state.checklistStatuses }) }) }) } }));
+vi.mock('@/models/DocumentSummary', () => ({ default: { findOne: () => ({ sort() { return this; }, select() { return this; }, lean: async () => state.summary }) } }));
 vi.mock('@/lib/bid-prep/draft-store', () => ({ createOwnedDraft: vi.fn() }));
 vi.mock('@/models/BidPrepDraft', () => ({ BidPrepDraft: {
     findOne: filter => ({ lean: async () => state.draft && state.draft.userId === filter.userId && state.draft._id === filter._id ? structuredClone(state.draft) : null }),
@@ -38,7 +39,15 @@ function unzip(buffer) {
         zip.on('end', () => resolve(parts)); zip.on('error', reject); zip.readEntry();
     }));
 }
-beforeEach(() => { state.draft = { _id: id, userId: 'owner', projectId: 'TOR-1', title: 'ร่างข้อเสนอ', version: 1,
+async function setChecklistStatus(status) {
+    const { body } = await checklistForUser('owner', state.draft.projectId);
+    state.checklistStatuses = Object.fromEntries(body.items.map(item => [item.id, status]));
+}
+
+beforeEach(() => {
+    state.summary = { document_id: 'tor-document', extraction: { qualifications: [{ value: 'มีประสบการณ์พัฒนาระบบ', page: 9 }] } };
+    state.checklistStatuses = {};
+    state.draft = { _id: id, userId: 'owner', projectId: 'TOR-1', title: 'ร่างข้อเสนอ', version: 1,
     createdAt: new Date('2026-11-01T00:00:00Z'), updatedAt: new Date('2026-11-15T00:00:00Z'),
     sections: [{ heading: 'ขอบเขต', body: '[to fill in: team]\n=HYPERLINK("bad") <script>literal</script>', sources: ['tor.page.9'] }] }; });
 
@@ -69,17 +78,46 @@ describe('#140/#141 draft limits and export', () => {
         expect((await call(exportRoute, 'POST', 'other')).status).toBe(404);
     });
     it('round trips a valid DOCX with checklist, sources, Thai, notices, dates and highlighted placeholders', async () => {
+        await setChecklistStatus('pass');
         const response = await call(exportRoute, 'POST', 'owner'); expect(response.status).toBe(200);
         expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="bid-draft-TOR-1.docx"');
         const files = await unzip(Buffer.from(await response.arrayBuffer()));
         expect(Object.keys(files)).toHaveLength(5);
         const xml = files['word/document.xml'];
-        for (const text of ['มีประสบการณ์พัฒนาระบบ', 'manual', 'tor.page.9', '2026-11-01', '2026-11-15', 'does not submit a bid to e-GP', '[to fill in: team]']) expect(xml).toContain(text);
+        for (const text of ['มีประสบการณ์พัฒนาระบบ', '>pass<', 'tor.page.9', '2026-11-01', '2026-11-15', 'does not submit a bid to e-GP', '[to fill in: team]']) expect(xml).toContain(text);
         expect(xml).toContain('<w:tbl>'); expect(xml).toContain('<w:tblHeader/>'); expect(xml).toContain('w:highlight');
         expect(xml).toContain('&lt;script&gt;'); expect(xml).not.toMatch(/<script|<w:instrText|<w:fldChar/);
         expect(files['word/styles.xml']).toContain('Tahoma');
         expect(Object.keys(files).join()).not.toMatch(/vba|macro|html/);
         expect(files['word/_rels/document.xml.rels']).not.toContain('TargetMode="External"');
+    });
+    it('requires every checklist item to pass for the current TOR document', async () => {
+        state.summary.extraction.qualifications.push({ value: 'Second qualification', page: 10 });
+        const expectBlocked = async () => {
+            const response = await call(exportRoute, 'POST', 'owner');
+            expect(response.status).toBe(409);
+            expect(await response.json()).toMatchObject({ error: { code: 'CHECKLIST_NOT_PASSED' } });
+        };
+        await expectBlocked();
+        await setChecklistStatus('pass');
+        const [, second] = Object.keys(state.checklistStatuses);
+        delete state.checklistStatuses[second];
+        await expectBlocked();
+        state.checklistStatuses[second] = 'fail';
+        await expectBlocked();
+        state.checklistStatuses[second] = 'pass';
+        expect((await call(exportRoute, 'POST', 'owner')).status).toBe(200);
+        state.summary.document_id = 'revised-tor-document';
+        await expectBlocked();
+    });
+    it('blocks unavailable, empty and truncated checklists', async () => {
+        state.summary.extraction.qualifications = Array.from({ length: 101 }, (_, index) => ({ value: `Requirement ${index}`, page: 9 }));
+        await setChecklistStatus('pass');
+        expect((await call(exportRoute, 'POST', 'owner')).status).toBe(409);
+        state.summary.extraction.qualifications = [];
+        expect((await call(exportRoute, 'POST', 'owner')).status).toBe(409);
+        state.summary = null;
+        expect((await call(exportRoute, 'POST', 'owner')).status).toBe(409);
     });
     it('export checks the saved version and rejects empty or corrupt drafts clearly', async () => {
         expect((await call(exportRoute, 'POST', 'owner', undefined, '?version=2')).status).toBe(409);

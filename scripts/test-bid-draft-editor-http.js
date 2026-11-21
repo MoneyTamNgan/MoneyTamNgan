@@ -84,11 +84,9 @@ try {
     assert.equal((await call(`${base}/${empty.id}`, 'DELETE')).status, 200);
     evidence.checks.push('HTTP content limits, stale export and empty draft errors; simultaneous saves yield one 200 and one 409');
     stage = 'http-docx';
-    const directExport = await call(item + '/export', 'POST');
-    assert.equal(directExport.status, 200);
-    const directBytes = Buffer.from(await directExport.arrayBuffer());
-    await mkdir(output, { recursive: true }); await writeFile(`${output}/direct-export.docx`, directBytes);
-    await unzip(directBytes);
+    const blockedExport = await call(item + '/export', 'POST');
+    assert.equal(blockedExport.status, 409);
+    assert.equal((await blockedExport.json()).error.code, 'CHECKLIST_NOT_PASSED');
     stage = 'editor'; browser = await puppeteer.launch({ headless: true }); const page = await browser.newPage();
     await browser.setCookie({ name: 'mtn_session', value: tokenA, domain: 'localhost', path: '/', httpOnly: true, sameSite: 'Lax' });
     await page.setViewport({ width: 1440, height: 1100, deviceScaleFactor: 1 });
@@ -104,7 +102,7 @@ try {
     stage = 'editor-save';
     const save = page.waitForResponse(r => r.url().endsWith(item) && r.request().method() === 'PATCH');
     await page.click('#save-bid-draft'); assert.equal((await save).status(), 200);
-    await page.waitForFunction(() => document.querySelector('#save-bid-draft')?.disabled && !document.querySelector('#export-bid-draft')?.disabled);
+    await page.waitForFunction(() => document.querySelector('#save-bid-draft')?.disabled);
     stage = 'editor-reload';
     await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForSelector('#section-body-1');
     assert.ok((await page.$eval('#section-body-1', element => element.value)).includes('delivery plan'));
@@ -118,6 +116,27 @@ try {
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: `${output}/editor-mobile.png`, fullPage: true });
     evidence.checks.push('Headless editor add/edit/save/reload, visible sources/placeholders and mobile navigation separation pass');
+    stage = 'checklist-review';
+    assert.equal(await page.$eval('#export-bid-draft', element => element.disabled), true);
+    await page.click('#bid-tab-checklist');
+    await page.waitForSelector('.tor-bid-checklist-status-control button', { visible: true });
+    for (const index of [1, 2]) {
+        const selector = `.tor-bid-checklist-items > li:nth-child(${index}) button[data-status="pass"]`;
+        const response = page.waitForResponse(r => r.url().endsWith('/checklist') && r.request().method() === 'PATCH');
+        await page.click(selector);
+        assert.equal((await response).status(), 200);
+        await page.waitForFunction(selector => {
+            const button = document.querySelector(selector);
+            return button?.getAttribute('aria-pressed') === 'true' && !button.disabled;
+        }, {}, selector);
+        if (index === 1) assert.equal(await page.$eval('#export-bid-draft', element => element.disabled), true);
+    }
+    await page.waitForFunction(() => !document.querySelector('#export-bid-draft')?.disabled);
+    const directExport = await call(item + '/export', 'POST');
+    assert.equal(directExport.status, 200);
+    const directBytes = Buffer.from(await directExport.arrayBuffer());
+    await writeFile(`${output}/direct-export.docx`, directBytes);
+    await unzip(directBytes);
     stage = 'export';
     const cdp = await page.createCDPSession();
     await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: output, eventsEnabled: true });
@@ -141,7 +160,7 @@ try {
     await mkdir(output, { recursive: true });
     stage = 'export-unzip';
     const parts = await unzip(file), xml = parts['word/document.xml'];
-    for (const text of ['มีประสบการณ์พัฒนาระบบ', 'manual', 'tor.page.10', '[to fill in:', 'does not submit a bid to e-GP']) assert.ok(xml.includes(text));
+    for (const text of ['มีประสบการณ์พัฒนาระบบ', '>pass<', 'tor.page.10', '[to fill in:', 'does not submit a bid to e-GP']) assert.ok(xml.includes(text));
     assert.ok(xml.includes('<w:tbl>')); assert.ok(xml.includes('w:highlight'));
     assert.ok(!Object.keys(parts).some(name => /vba|macro|html/i.test(name)));
     await writeFile(`${output}/sample.docx`, file);

@@ -1655,7 +1655,8 @@ paths:
       description: >
         One plain-text DOCX contains the saved proposal sections and sources plus
         the current caller-specific checklist (status, reason and TOR page).
-        Missing checklist data is explicitly manual with visible placeholders.
+        Export requires an available, non-empty, untruncated checklist with every
+        item marked as passed.
         The file states it is an AI draft, does not submit to e-GP, and shows created,
         modified and exported dates. A4 fixed-width tables and Thai-capable fonts
         are used. Maximum size is 2 MiB. PDF is outside this release (#145).
@@ -1697,7 +1698,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
         "409":
-          description: Saved draft version changed; reload before exporting
+          description: The saved draft version changed, or the checklist is incomplete or has items that have yet to pass
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
