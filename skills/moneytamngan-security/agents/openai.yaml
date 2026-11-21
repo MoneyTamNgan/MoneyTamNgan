@@ -1,0 +1,4 @@
+interface:
+  display_name: "MoneyTamNgan Security"
+  short_description: "Review controls, tests and security evidence"
+  default_prompt: "Use $moneytamngan-security to review this control against current code, tests and the coursework audit."

@@ -1,0 +1,6 @@
+{
+  "expiredTokenRejected": true,
+  "nonAllowlistedAlgorithmRejected": true,
+  "sessionLifetimeSeconds": 86400,
+  "actualAccountsUsed": false
+}

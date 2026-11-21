@@ -1,0 +1,20 @@
+{
+  "checked_at": "2026-11-19T07:11:48.597Z",
+  "base": "http://127.0.0.1:3119",
+  "scope": "Isolated local server; dummy JWT secret; no actual accounts or database access",
+  "rootStatus": 200,
+  "headers": {
+    "content-security-policy": "default-src 'self'; script-src 'self' 'nonce-GwlV3ZaAyiPqyM/ZM4ptiw==' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "x-frame-options": "DENY",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "strict-origin-when-cross-origin"
+  },
+  "cspNonceMatchesHtml": true,
+  "logout": {
+    "status": 200,
+    "cookieCleared": true,
+    "copiedJwtStillVerifies": true,
+    "limitation": "Logout clears the browser cookie but does not revoke a copied bearer JWT before expiry."
+  }
+}
