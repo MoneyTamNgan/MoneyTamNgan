@@ -1,0 +1,8 @@
+{
+  "scope": "All locally available fetched Git refs; heuristic patterns only; no values printed",
+  "textBlobsScanned": 1532,
+  "largeBlobsSkipped": 0,
+  "candidateMatches": [],
+  "notAGuaranteeOfNoSecrets": true,
+  "excluded": "Ignored/untracked environment files, binary content, blobs over 2 MB; GitHub-only refs not fetched"
+}
