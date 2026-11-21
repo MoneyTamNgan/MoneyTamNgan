@@ -11,6 +11,9 @@ Use the demo account and a made-up company profile. **Never use real company dat
 | 3:00 | A | Edit one paragraph, export DOCX, open the file | |
 | 3:45 | A | Log in as second account: it cannot see the first account's draft (404) | 2nd demo account |
 
+## Before the demo
+DOCX export is blocked (409) until every checklist item is marked passed. Mark all items on the demo draft's TOR in advance and keep that draft ready; on a real TOR every item starts as `manual`.
+
 ## Fallback
 Decide on the day before (18 Nov rule): if the AI draft is not stable (2 of 3 real TORs timed out at 90 s on this hardware), demo only the checklist, show the pre-made draft and DOCX, and tell the customer beforehand.
 

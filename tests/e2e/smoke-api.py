@@ -105,6 +105,21 @@ if did:
     s, _, ms = call(B, 'GET', f'/api/bid-prep/drafts/{did}'); step('B cannot read A draft (isolation)', [403, 404], s, ms)
     s, _, ms = call(B, 'POST', f'/api/bid-prep/drafts/{did}/export', raw=True); step('B cannot export A draft', [403, 404], s, ms)
     s, blob, ms = call(A, 'POST', f'/api/bid-prep/drafts/{did}/export', raw=True)
+    step('Export blocked until every checklist item passed', 409, s, ms, 'CHECKLIST_NOT_PASSED')
+    # the owner confirms each checklist item (PATCH), as the UI does; then the export is allowed
+    s, cl, _ = call(A, 'GET', f'/api/bid-prep/tors/{TOR}/checklist')
+    marked = 0
+    for item in (cl.get('items', []) if isinstance(cl, dict) else []):
+        if item.get('status') == 'pass':
+            continue
+        for _ in range(6):
+            s, _, _ = call(A, 'PATCH', f'/api/bid-prep/tors/{TOR}/checklist', {'itemId': item['id'], 'status': 'pass'})
+            if s != 429:
+                break
+            time.sleep(10)
+        marked += s == 200
+    rows.append(('Mark checklist items passed', 'PASS' if marked or not cl.get('items') else 'FAIL', 'HTTP 200', 0, f'marked={marked}'))
+    s, blob, ms = call(A, 'POST', f'/api/bid-prep/drafts/{did}/export', raw=True)
     step('DOCX export (A)', 200, s, ms, f"zip-magic={'yes' if blob[:2] == b'PK' else 'no'} bytes={len(blob)}")
     s, lb, ms = call(B, 'GET', '/api/bid-prep/drafts'); step('B list does not include A draft', 200, s, ms,
                                                               f"B_drafts={len(lb.get('drafts', [])) if isinstance(lb, dict) else '?'}")
