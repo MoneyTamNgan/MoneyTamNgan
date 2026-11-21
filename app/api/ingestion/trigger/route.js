@@ -177,11 +177,19 @@ async function handlePOST(request) {
         // Tell the scheduler whether retrying can help (e-GP 5xx/429, network)
         // or not (missing API key, bad config).
         const retryable = isTransientError(error);
+        // Codes name the two cases an operator can act on. The text stays static:
+        // unexpected catch blocks must not return raw error.message.
+        const diagnosed = error.code === 'EGP_UPSTREAM_BLOCKED' || error.code === 'EGP_AUTH_FAILED';
+        const message = error.code === 'EGP_UPSTREAM_BLOCKED'
+            ? 'The e-GP edge blocked this client before the API key was checked. Run ingestion from a Thailand network.'
+            : error.code === 'EGP_AUTH_FAILED'
+                ? 'The e-GP API rejected the API key. Rotate the EGP_API_KEY secret.'
+                : (retryable ? 'Upstream ingestion service is temporarily unavailable' : 'Ingestion trigger failed');
         return NextResponse.json({
             status: 'failed',
             error: {
-                code: retryable ? 'INGESTION_UPSTREAM_UNAVAILABLE' : 'INGESTION_FAILED',
-                message: retryable ? 'Upstream ingestion service is temporarily unavailable' : 'Ingestion trigger failed',
+                code: diagnosed ? error.code : (retryable ? 'INGESTION_UPSTREAM_UNAVAILABLE' : 'INGESTION_FAILED'),
+                message,
                 retryable,
             },
         }, { status: retryable ? 503 : 500 });

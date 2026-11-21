@@ -54,7 +54,7 @@ There are two ways in. The **API route** (steps 1 to 7 below) is the default: th
 | Year | the current Thai fiscal year (Buddhist Era; the year rolls over in October) unless `year` is sent |
 | Mapping | dates such as `21 มิ.ย. 67` are parsed to UTC dates (BE minus 543); budget is `project_money`, falling back to `price_build`; a SHA-256 of the raw record is stored as `source.payload_hash` |
 | Write | an upsert by `project_id` that refreshes metadata but never touches fields owned by processing or Vertex (`$setOnInsert` sets the initial `metadata_ingested` status) |
-| Failure | HTTP 5xx and 429 are transient and the scheduler retries (about 5, 15 and 45 minutes with jitter); a missing key or a 4xx is not retried |
+| Failure | HTTP 5xx and 429 are transient and the scheduler retries (about 5, 15 and 45 minutes with jitter); a missing key or a 4xx is not retried. An HTML 403 titled Access Denied that says "blocked by our security systems" (Cloudflare Ray ID) is `EGP_UPSTREAM_BLOCKED`: the edge refused this client before checking `EGP_API_KEY`, so rotating the key does not help. Point the `INGESTION_RUNNER` Actions variable at a self-hosted runner in Thailand. A JSON 401/403 that names the API key is `EGP_AUTH_FAILED` and does mean the secret should be rotated |
 
 ### 2. Triage by project name
 

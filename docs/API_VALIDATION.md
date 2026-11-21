@@ -248,7 +248,7 @@ Accepted202 returns jobId/runId/startedAt immediately; concurrent live run409 `P
 | `verifyInline` | Boolean, default false |
 | `keyword`, `deptCode` | Optional passed through to upstream fetch, no handler type/length validation |
 
-Invalid checked fields400 `INVALID_INGESTION_REQUEST`. This route performs ingestion before returning202; it is **not** the immediate asynchronous admin runner. Upstream transient failure503 `INGESTION_UPSTREAM_UNAVAILABLE`, otherwise500 `INGESTION_FAILED`. [Proof](../tests/unit/ingestion-trigger-route.test.js).
+Invalid checked fields400 `INVALID_INGESTION_REQUEST`. This route performs ingestion before returning202; it is **not** the immediate asynchronous admin runner. Upstream transient failure503 `INGESTION_UPSTREAM_UNAVAILABLE`. A Cloudflare security block is500 `EGP_UPSTREAM_BLOCKED` (the key was not checked). An upstream key rejection is500 `EGP_AUTH_FAILED`. Other permanent failures stay500 `INGESTION_FAILED`. [Proof](../tests/unit/ingestion-trigger-route.test.js).
 
 ### POST /api/processing/trigger
 
