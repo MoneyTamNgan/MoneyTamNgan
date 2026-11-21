@@ -2,21 +2,16 @@ openapi: 3.0.3
 info:
   title: MoneyTamNgan API
   description: >
-    JSON REST API contract between the Next.js frontend and the Node.js backend,
-    covering the full system so FE/BE only need to design this once.
-
-    Endpoints are tagged by status (see each tag's description). "Current"
-    endpoints are the committed, build-now target (TOR ingestion + software/
-    non-software classification, FR-1.1/FR-1.2); everything else is a
-    forward-looking draft that MAY change once its requirements are worked
-    out in detail — treat it as a starting point for later contract review,
-    not a frozen spec.
+    HTTP API implemented by the MoneyTamNgan Next.js application.
+    Browser mutations require an allowed Origin. Requests with an invalid explicit
+    bearer credential may receive 401 even on public routes. A disallowed Origin
+    may receive 403 on any route.
   version: "0.2.0-draft"
   license:
     name: UNLICENSED
 servers:
-  - url: http://localhost:4000/api/v1
-    description: Local development (backend port TBD by BE dev)
+  - url: http://localhost:3000/api
+    description: Local Next.js application
 
 security: []
 
@@ -28,15 +23,13 @@ tags:
   - name: Admin - Classification
     description: "[Current] Reviewing and correcting software/non-software classification (FR-1.2)."
   - name: Auth
-    description: "[Planned] Login/session, required by Contractor Profile and Matching below (supports FR-2.2/2.3)."
+    description: "[Current] Password and Google sign-in, session lookup, and sign-out."
   - name: Contractor Profile
-    description: "[Planned] Self-reported contractor profile CRUD (FR-2.2)."
-  - name: Matching
-    description: "[Planned] Match scoring between TORs and contractor profiles (FR-2.3)."
+    description: "[Current] Self-reported contractor profile CRUD (FR-2.2)."
   - name: PDF Summary
-    description: "[Planned] OCR/LLM-extracted structured summary fields on a TOR (FR-2.1)."
+    description: "[Current] OCR/LLM-extracted structured summary fields on a TOR (FR-2.1)."
   - name: Anomaly Detection
-    description: "[Planned] Budget and qualification anomaly flags on a TOR (FR-3.1, FR-3.2)."
+    description: "[Current] Budget and qualification anomaly flags on a TOR (FR-3.1, FR-3.2)."
   - name: Public Analytics
     description: "[Current] Public historical search, dashboard aggregates, and export for the Analytics page."
   - name: Bid preparation
@@ -50,8 +43,6 @@ tags:
 
 paths:
   /admin/pipeline/trigger:
-    servers:
-      - url: http://localhost:3000/api
     post:
       tags: [Admin - Ingestion]
       summary: Start the complete admin pipeline asynchronously
@@ -92,9 +83,21 @@ paths:
                   statusUrl: { type: string, enum: [/api/admin/pipeline/status] }
                   message: { type: string }
                   run: { $ref: '#/components/schemas/AdminPipelineRun' }
-        "400": { description: 'Invalid JSON, body over 8 KiB, invalid parameters or sync=true' }
-        "401": { description: Missing or invalid authentication }
-        "403": { description: Non-admin or insufficient scope or forbidden Origin }
+        "400":
+          description: 'Invalid JSON, body over 8 KiB, invalid parameters or sync=true'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Non-admin or insufficient scope or forbidden Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         "409":
           description: PIPELINE_ALREADY_RUNNING; no second task is scheduled
           content:
@@ -111,11 +114,13 @@ paths:
                       code: { type: string, enum: [PIPELINE_ALREADY_RUNNING] }
                       message: { type: string }
                   currentRun: { $ref: '#/components/schemas/AdminPipelineRun' }
-        "503": { description: 'Database, audit or scheduling unavailable; work is not launched' }
+        "503":
+          description: 'Database, audit or scheduling unavailable; work is not launched'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
 
   /admin/pipeline/status:
-    servers:
-      - url: http://localhost:3000/api
     get:
       tags: [Admin - Ingestion]
       summary: Read persisted admin pipeline status and last start time
@@ -140,9 +145,21 @@ paths:
                     properties:
                       totalProjects: { type: integer }
                       withSummary: { type: integer }
-        "401": { description: Missing or invalid authentication }
-        "403": { description: Admin role and admin:read are required }
-        "500": { description: Status database is unavailable }
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Admin role and admin:read are required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: Status database is unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
     delete:
       tags: [Admin - Ingestion]
       summary: Reset terminal pipeline status to idle
@@ -161,10 +178,33 @@ paths:
                   status: { type: string, enum: [ok] }
                   message: { type: string }
                   run: { $ref: '#/components/schemas/AdminPipelineRun' }
-        "401": { description: Missing or invalid authentication }
-        "403": { description: Non-admin or insufficient scope or forbidden Origin }
-        "409": { description: PIPELINE_ALREADY_RUNNING; live run cannot be reset }
-        "500": { description: Reset database is unavailable }
+        "401":
+          description: Missing or invalid authentication
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Non-admin or insufficient scope or forbidden Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "409":
+          description: PIPELINE_ALREADY_RUNNING; live run cannot be reset
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Error' }
+                  - type: object
+                    required: [status, currentRun]
+                    properties:
+                      status: { type: string, enum: [conflict] }
+                      currentRun: { $ref: '#/components/schemas/AdminPipelineRun' }
+        "500":
+          description: Reset database is unavailable
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
 
   # ---------------------------------------------------------------------------
   # Current - build now
@@ -176,16 +216,31 @@ paths:
       operationId: getHealth
       responses:
         "200":
-          description: Service is up
+          description: "Database reachable"
           content:
             application/json:
               schema:
                 type: object
-                required: [status]
+                required: [status, database, timestamp]
                 properties:
-                  status:
-                    type: string
-                    example: ok
+                  status: { type: string, enum: [ok], example: ok }
+                  database: { type: string, enum: [connected] }
+                  timestamp: { type: string, format: date-time }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "503":
+          description: "Database unavailable"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, database, message, timestamp]
+                properties:
+                  status: { type: string, enum: [error] }
+                  database: { type: string, enum: [disconnected] }
+                  message: { type: string }
+                  timestamp: { type: string, format: date-time }
 
   /tors:
     get:
@@ -275,6 +330,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to list TORs"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /tors/facets:
     get:
@@ -305,6 +368,19 @@ paths:
                       properties:
                         name: { type: string }
                         count: { type: integer, minimum: 1 }
+        "400":
+          description: "isSoftware must be true or false"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to list TOR facets"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /tors/{id}:
     get:
@@ -320,12 +396,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TorDetail"
+        "400":
+          description: "Missing TOR id"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: TOR not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to load TOR details"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /tors/{id}/proposal-draft:
     post:
@@ -339,8 +428,7 @@ paths:
         endpoint does not submit a bid.
       tags: [Bid Preparation]
       operationId: createProposalDraft
-      security:
-        - sessionAuth: []
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       parameters:
         - $ref: "#/components/parameters/TorIdParam"
       responses:
@@ -362,6 +450,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: TOR not found
           content:
@@ -386,6 +475,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "500":
+          description: "Failed to queue the proposal draft"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     get:
       summary: Read the caller's proposal draft job
       description: >
@@ -394,8 +488,7 @@ paths:
         sanitized draft, the AI-draft warning, and the model and prompt version.
       tags: [Bid Preparation]
       operationId: getProposalDraft
-      security:
-        - sessionAuth: []
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       parameters:
         - $ref: "#/components/parameters/TorIdParam"
         - name: jobId
@@ -423,76 +516,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: No such draft for this caller and TOR
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
-  /admin/ingestion/runs:
-    get:
-      summary: List recent ingestion job runs
-      description: Backs the admin "ingestion overview" panel (source, status, item counts).
-      tags: [Admin - Ingestion]
-      operationId: listIngestionRuns
-      parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-      responses:
-        "200":
-          description: Paginated list of ingestion runs, most recent first
+        "500":
+          description: "Failed to read the proposal draft job"
           content:
             application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/PaginatedList"
-                  - type: object
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/IngestionRun"
-        "400":
-          description: Invalid pagination parameters
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-    post:
-      summary: Manually trigger an ingestion job
-      description: >
-        Backs the "สั่งการดึงข้อมูลด้วยตนเอง" (trigger ingestion manually) button
-        in the admin mockup.
-      tags: [Admin - Ingestion]
-      operationId: triggerIngestionRun
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                source:
-                  type: string
-                  description: Optional single source to run (e.g. "BMA Procurement Portal", "e-GP"). Omit to run all configured sources.
-      responses:
-        "202":
-          description: Ingestion job accepted and started asynchronously
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/IngestionRun"
-        "409":
-          description: An ingestion run is already in progress for the requested source
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
 
   /admin/classification/queue:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: List TORs with confidence strictly below 70 percent
       description: >
@@ -519,21 +556,33 @@ paths:
                 $ref: "#/components/schemas/LowConfidenceReviewPage"
         "401":
           description: Missing, invalid or expired admin authentication
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         "403":
           description: Authenticated session is not an admin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         "400":
           description: Invalid pagination parameters
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "500":
+          description: "Failed to load the low-confidence queue"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /admin/tors/{id}/classification:
     get:
       summary: List a TOR's classification override history
-      description: Audit log of admin overrides with the reviewer who made each one, newest first.
+      description: "Returns up to 100 override history entries, newest first. Requires the admin role and admin:read scope."
       tags: [Admin - Classification]
       operationId: listTorClassificationOverrides
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       parameters:
         - $ref: "#/components/parameters/TorIdParam"
       responses:
@@ -555,9 +604,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "500":
+          description: "Failed to load classification override history"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     patch:
       summary: Manually override a TOR's classification and document status
       description: |
+        Requires the admin role and tor:write scope. Browser requests require an allowed Origin.
         FR-1.2.2 / FR-1.2.3. Sets `classification.status` to `manual_override` (which keyword
         re-runs and ingestion never overwrite), force-assigns tags, and optionally overrides the
         processing or primary document status. The reviewer is recorded on the TOR and in the
@@ -566,6 +623,7 @@ paths:
         and `isSoftware: false` rejects it; the response then has `target: candidate`.
       tags: [Admin - Classification]
       operationId: updateTorClassification
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       parameters:
         - $ref: "#/components/parameters/TorIdParam"
       requestBody:
@@ -617,6 +675,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: TOR not found
           content:
@@ -629,12 +689,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "500":
+          description: "Failed to save the classification override"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /admin/keywords:
     get:
       summary: List classification keyword rules
+      description: "Requires the admin role and admin:read scope."
       tags: [Admin - Classification]
       operationId: listClassificationKeywords
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
         "200":
           description: All keyword rules used by the classifier
@@ -644,11 +711,19 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ClassificationKeyword"
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "500":
+          description: "Failed to list classification keywords"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     put:
       summary: Replace the classification keyword list
-      description: Backs the admin toggle for updating software-classification keywords.
+      description: "Requires the admin role and admin:write scope. Browser requests require an allowed Origin."
       tags: [Admin - Classification]
       operationId: replaceClassificationKeywords
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       requestBody:
         required: true
         content:
@@ -678,6 +753,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "500":
+          description: "Failed to replace classification keywords"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   # ---------------------------------------------------------------------------
   # Current - PDF parsing / summarization (FR-2.1)
@@ -698,12 +780,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TorApiSummary"
+        "400":
+          description: "Missing TOR id"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: TOR not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to load TOR summary"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   # ---------------------------------------------------------------------------
   # Auth (supports FR-2.2, FR-2.3)
@@ -714,6 +809,8 @@ paths:
       description: Sets a short-lived state cookie and redirects to Google. Limited to 5 requests per IP per 15-minute fixed window; shares its budget with /auth/google/login.
       tags: [Auth]
       operationId: startGoogleOAuth
+      parameters:
+        - $ref: '#/components/parameters/OAuthNextParam'
       responses:
         "200":
           description: When Accept is application/json, returns the Google authorization URL for browser navigation; sets the same state cookie and counts one attempt.
@@ -726,12 +823,18 @@ paths:
                   authorizationUrl: { type: string, format: uri }
         "307":
           description: Redirect to Google consent screen
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
         "429":
-          description: Too many authentication attempts
+          description: OAuth attempt limit exceeded
           headers:
             Retry-After:
-              description: Whole seconds to wait before retrying
               schema: { type: integer, minimum: 1 }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+            text/html:
+              schema: { type: string }
 
   /auth/google/callback:
     get:
@@ -739,17 +842,55 @@ paths:
       description: Validates the state cookie, exchanges the code, and creates a session. Limited to 5 requests per IP per 15-minute fixed window, independently of the start budget. Invalid state and rate-limited attempts are audited without recording OAuth secrets.
       tags: [Auth]
       operationId: completeGoogleOAuth
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: state
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
       responses:
-        "307": { description: Session established; redirect to validated destination }
-        "400": { description: "Missing code, invalid state, or Google verification failure" }
-        "409": { description: Existing account uses a different sign-in method }
-        "500": { description: Authentication processing failed }
+        "307":
+          description: Session established; redirect to validated destination
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+            Set-Cookie:
+              description: OAuth state or session cookie for the redirect.
+              schema: { type: string }
+        "400":
+          description: "Missing code, invalid state, or Google verification failure"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403":
+          description: Account disabled or disallowed Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "409":
+          description: "Existing account uses a different sign-in method"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "500":
+          description: "Authentication processing failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
         "429":
-          description: Too many authentication attempts
+          description: OAuth attempt limit exceeded
           headers:
             Retry-After:
-              description: Whole seconds to wait before retrying
               schema: { type: integer, minimum: 1 }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+            text/html:
+              schema: { type: string }
 
   /auth/google/login:
     get:
@@ -757,17 +898,32 @@ paths:
       description: Compatibility alias for /auth/google/start. Shares its limit of 5 requests per IP per 15-minute fixed window.
       tags: [Auth]
       operationId: loginWithGoogle
+      parameters:
+        - $ref: '#/components/parameters/OAuthNextParam'
       responses:
         "200":
-          description: With Accept application/json, returns authorizationUrl and sets the state cookie, matching /auth/google/start.
+          description: "Authorization URL for JSON clients"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authorizationUrl]
+                properties:
+                  authorizationUrl: { type: string, format: uri }
         "307":
           description: Redirect to Google consent screen
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
         "429":
-          description: Too many authentication attempts
+          description: OAuth attempt limit exceeded
           headers:
             Retry-After:
-              description: Whole seconds to wait before retrying
               schema: { type: integer, minimum: 1 }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+            text/html:
+              schema: { type: string }
 
   /auth/register:
     post:
@@ -794,13 +950,38 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PasswordAuthResult" }
-        "400": { description: "Invalid email, name, username, password or JSON" }
-        "403": { description: Missing or disallowed browser Origin }
-        "409": { description: "Account already exists (original login method must be used) or the requested username is taken (error.code USERNAME_TAKEN)" }
-        "413": { description: JSON body exceeds 8 KiB }
-        "415": { description: Content-Type must be application/json }
-        "429": { description: Too many attempts; Retry-After is returned }
-        "503": { description: Authentication service unavailable or busy }
+        "400":
+          description: "Invalid email, name, username, password or JSON"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403":
+          description: Missing or disallowed browser Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "409":
+          description: "Account already exists (original login method must be used) or the requested username is taken (error.code USERNAME_TAKEN)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "413":
+          description: JSON body exceeds 8 KiB
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: Content-Type must be application/json
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "503":
+          description: Authentication service unavailable or busy
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /auth/login:
     post:
@@ -848,122 +1029,198 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "400": { description: "Invalid email, password or JSON" }
-        "403": { description: Missing or disallowed browser Origin }
-        "413": { description: JSON body exceeds 8 KiB }
-        "415": { description: Content-Type must be application/json }
-        "429": { description: Too many attempts; Retry-After is returned }
-        "503": { description: Authentication service unavailable or busy }
+        "400":
+          description: "Invalid email, password or JSON"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing or disallowed browser Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "413":
+          description: JSON body exceeds 8 KiB
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: Content-Type must be application/json
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "503":
+          description: Authentication service unavailable or busy
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /auth/logout:
     post:
       summary: End the current session
+      description: "Clears the session cookie, even for a guest. A valid supplied session is revoked. An allowed Origin is required for browser requests."
       tags: [Auth]
       operationId: logout
-      security: [{ sessionAuth: [] }]
+      security: []
       responses:
-        "204":
-          description: Logged out
-        "401":
-          description: Not logged in
+        "200":
+          description: "Session cookie cleared"
+          headers:
+            Set-Cookie:
+              description: Expires the session cookie.
+              schema: { type: string }
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                type: object
+                required: [ok]
+                properties:
+                  ok: { type: boolean, enum: [true] }
+        "401":
+          description: "Invalid explicit bearer credential"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: "Missing or disallowed Origin"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /auth/me:
     get:
       summary: Get the currently logged-in user
       tags: [Auth]
       operationId: getCurrentUser
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
         "200":
-          description: Current user
+          description: "Current user"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                type: object
+                required: [user]
+                properties:
+                  user:
+                    type: object
+                    required: [id, email, name, companyName, picture, role]
+                    properties:
+                      id: { type: string }
+                      email: { type: string, format: email }
+                      name: { type: string, nullable: true }
+                      companyName: { type: string, nullable: true }
+                      picture: { type: string, nullable: true }
+                      role: { type: string, enum: [user, admin] }
         "401":
-          description: Not logged in
+          description: "Authentication required, session invalid, or account no longer exists"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "500":
+          description: "Failed to load the current user"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
 
   # ---------------------------------------------------------------------------
-  # Planned - Contractor Profile (FR-2.2)
+  # Current - Contractor Profile (FR-2.2)
   # ---------------------------------------------------------------------------
   /profile:
     get:
-      summary: Get the current user's contractor profile
+      summary: Read the authenticated user's company profile
+      description: Identity is session.sub (cookie or scoped Bearer); query user IDs are ignored. Legacy bid fields default to empty strings and an empty history.
       tags: [Contractor Profile]
       operationId: getProfile
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
         "200":
-          description: Contractor profile
+          description: Current profile with no googleId or passwordHash
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ContractorProfile"
-        "404":
-          description: Profile not created yet
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-    post:
-      summary: Create the current user's contractor profile
-      tags: [Contractor Profile]
-      operationId: createProfile
-      security: [{ sessionAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ContractorProfileInput"
-      responses:
-        "201":
-          description: Profile created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ContractorProfile"
+              schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "401":
-          description: Not logged in
+          description: "Authentication required or session invalid"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Missing profile read permission
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to complete the profile request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
     put:
-      summary: Update the current user's contractor profile
-      description: Per FR-2.2.3 - users may update their profile at any time.
+      summary: Update the authenticated user's company profile
+      description: Partial updates. Unknown fields including role, passwordHash and user IDs are ignored. Strings are trimmed. Replace past_projects with the edited array to remove rows; an empty array clears it. Years are Buddhist Era 2400–2700. Maximum JSON body is 128 KiB. Cookie writes require an approved Origin.
       tags: [Contractor Profile]
       operationId: updateProfile
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/ContractorProfileInput"
+            schema: { $ref: "#/components/schemas/CompanyProfileUpdate" }
       responses:
         "200":
-          description: Updated profile
+          description: Saved profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
+        "400":
+          description: "Malformed JSON, invalid request body or invalid profile fields"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ContractorProfile"
+                anyOf:
+                  - { $ref: '#/components/schemas/Error' }
+                  - { $ref: '#/components/schemas/ProfileValidationError' }
         "401":
-          description: Not logged in
+          description: "Authentication required or session invalid"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Missing profile write permission or invalid Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "413":
+          description: JSON body exceeds 128 KiB
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: Content-Type must be application/json
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to complete the profile request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     patch:
-      summary: Partially update the current user's contractor profile (alias for PATCH /profiles)
+      summary: Partially update the authenticated user's company profile
+      description: Alias for PATCH /profiles with the same validation and ownership rules.
       tags: [Contractor Profile]
       operationId: patchProfileAlias
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -979,28 +1236,81 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "400":
-          description: Invalid JSON or profile values
+          description: "Malformed JSON, invalid request body or invalid profile fields"
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ProfileValidationError" }
-        "401": { description: Authentication required }
-        "403": { description: Missing profile write permission or invalid Origin }
-        "404": { description: User not found }
-        "413": { description: JSON body exceeds 128 KiB }
-        "415": { description: Content-Type must be application/json }
-        "429": { description: Profile rate limit exceeded }
+              schema:
+                anyOf:
+                  - { $ref: '#/components/schemas/Error' }
+                  - { $ref: '#/components/schemas/ProfileValidationError' }
+        "401":
+          description: "Authentication required or session invalid"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Missing profile write permission or invalid Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "413":
+          description: JSON body exceeds 128 KiB
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: Content-Type must be application/json
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to complete the profile request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     delete:
-      summary: Delete the signed-in user's account and owned drafts (alias for DELETE /profiles)
+      summary: Delete the signed-in user's account and owned drafts
       tags: [Contractor Profile]
       operationId: deleteProfileAlias
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
         "200":
-          description: Account and drafts deleted
-        "401": { description: Authentication required }
-        "403": { description: Missing profile write permission or invalid Origin }
-        "404": { description: User not found }
-        "429": { description: Profile rate limit exceeded }
+          description: "Account and owned drafts deleted"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, message]
+                properties:
+                  status: { type: string, enum: [success] }
+                  message: { type: string }
+        "401":
+          description: "Authentication required or session invalid"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Missing profile write permission or invalid Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to complete the profile request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
 
   /profiles:
     get:
@@ -1015,10 +1325,27 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
-        "401": { description: Authentication required }
-        "403": { description: Missing profile read permission }
-        "404": { description: User not found }
-        "429": { description: Profile rate limit exceeded }
+        "401":
+          description: "Authentication required or session invalid"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Missing profile read permission
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to complete the profile request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
     put:
       summary: Update the authenticated user's company profile
       description: Partial updates. Unknown fields including role, passwordHash and user IDs are ignored. Strings are trimmed. Replace past_projects with the edited array to remove rows; an empty array clears it. Years are Buddhist Era 2400–2700. Maximum JSON body is 128 KiB. Cookie writes require an approved Origin.
@@ -1037,16 +1364,44 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "400":
-          description: Invalid JSON or profile values
+          description: "Malformed JSON, invalid request body or invalid profile fields"
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ProfileValidationError" }
-        "401": { description: Authentication required }
-        "403": { description: Missing profile write permission or invalid Origin }
-        "404": { description: User not found }
-        "413": { description: JSON body exceeds 128 KiB }
-        "415": { description: Content-Type must be application/json }
-        "429": { description: Profile rate limit exceeded }
+              schema:
+                anyOf:
+                  - { $ref: '#/components/schemas/Error' }
+                  - { $ref: '#/components/schemas/ProfileValidationError' }
+        "401":
+          description: "Authentication required or session invalid"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Missing profile write permission or invalid Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "413":
+          description: JSON body exceeds 128 KiB
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: Content-Type must be application/json
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to complete the profile request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     patch:
       summary: Partially update the authenticated user's company profile
       description: Same update allowlist, validation, response and ownership rules as PUT /profiles.
@@ -1065,16 +1420,44 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CompanyProfileResponse" }
         "400":
-          description: Invalid JSON or profile values
+          description: "Malformed JSON, invalid request body or invalid profile fields"
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ProfileValidationError" }
-        "401": { description: Authentication required }
-        "403": { description: Missing profile write permission or invalid Origin }
-        "404": { description: User not found }
-        "413": { description: JSON body exceeds 128 KiB }
-        "415": { description: Content-Type must be application/json }
-        "429": { description: Profile rate limit exceeded }
+              schema:
+                anyOf:
+                  - { $ref: '#/components/schemas/Error' }
+                  - { $ref: '#/components/schemas/ProfileValidationError' }
+        "401":
+          description: "Authentication required or session invalid"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Missing profile write permission or invalid Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "413":
+          description: JSON body exceeds 128 KiB
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: Content-Type must be application/json
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to complete the profile request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     delete:
       summary: Delete the signed-in user's account and owned drafts
       tags: [Contractor Profile]
@@ -1082,66 +1465,36 @@ paths:
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
         "200":
-          description: Account and drafts deleted
-        "401": { description: Authentication required }
-        "403": { description: Missing profile write permission or invalid Origin }
-        "404": { description: User not found }
-        "429": { description: Profile rate limit exceeded }
-
-  # ---------------------------------------------------------------------------
-  # Planned - Matching (FR-2.3)
-  # ---------------------------------------------------------------------------
-  /matches:
-    get:
-      summary: List TORs matching the current user's profile above their threshold
-      tags: [Matching]
-      operationId: listMatches
-      security: [{ sessionAuth: [] }]
-      parameters:
-        - $ref: "#/components/parameters/PageParam"
-        - $ref: "#/components/parameters/PageSizeParam"
-      responses:
-        "200":
-          description: Paginated list of matched TORs
+          description: "Account and owned drafts deleted"
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/PaginatedList"
-                  - type: object
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/MatchResult"
+                type: object
+                required: [status, message]
+                properties:
+                  status: { type: string, enum: [success] }
+                  message: { type: string }
         "401":
-          description: Not logged in
+          description: "Authentication required or session invalid"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /tors/{id}/match:
-    get:
-      summary: Get the match score between one TOR and the current user's profile
-      tags: [Matching]
-      operationId: getTorMatch
-      security: [{ sessionAuth: [] }]
-      parameters:
-        - $ref: "#/components/parameters/TorIdParam"
-      responses:
-        "200":
-          description: Match result
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Missing profile write permission or invalid Origin
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/MatchResult"
+              schema: { $ref: '#/components/schemas/Error' }
         "404":
-          description: TOR not found, or no profile exists to match against
+          description: "User not found"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to complete the profile request"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
 
   # ---------------------------------------------------------------------------
   # Current - Anomaly Detection (FR-3.1, FR-3.2)
@@ -1161,40 +1514,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TorApiAnomalyReport"
+        "400":
+          description: "Missing TOR id"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: TOR not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
-  /tors/{id}/report:
-    post:
-      summary: User-submitted flag report on a TOR
-      description: Backs the "user flag reporting button" component.
-      tags: [Anomaly Detection]
-      operationId: reportTor
-      parameters:
-        - $ref: "#/components/parameters/TorIdParam"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [reason]
-              properties:
-                reason:
-                  type: string
-      responses:
-        "201":
-          description: Report submitted
-        "404":
-          description: TOR not found
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Failed to load TOR anomalies"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
 
   # ---------------------------------------------------------------------------
   # Public Analytics (FR-4.1, FR-4.2)
@@ -1259,6 +1597,14 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Analytics operation failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /analytics/overview/export:
     get:
@@ -1314,6 +1660,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Analytics operation failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /analytics/search:
     get:
@@ -1374,11 +1728,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
         "429":
           description: Rate limit exceeded
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+        "500":
+          description: "Analytics operation failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /analytics/export:
     get:
@@ -1439,12 +1800,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "429":
-          description: Rate limit exceeded
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Analytics operation failed"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
 
   # ---------------------------------------------------------------------------
   # Current - Bid preparation (FR-4.7). Live Next.js routes are /api + path
@@ -1460,7 +1823,7 @@ paths:
         success. Requires JSON `{ "confirm": "DELETE_COMPANY_DATA" }`.
       operationId: deleteBidPrepCompanyData
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       requestBody:
         required: true
         content:
@@ -1491,19 +1854,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "429":
-          description: Rate limit exceeded
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "404":
+          description: Current user no longer exists
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
+        "413":
+          description: "Request body or draft content exceeds the size limit"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: "Content-Type must be application/json"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Bid preparation request failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /bid-prep/drafts:
     get:
       summary: List the signed-in user's proposal drafts
       operationId: listBidPrepDrafts
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
         "200":
           description: Drafts owned by the caller
@@ -1525,12 +1904,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "429":
-          description: Rate limit exceeded
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Bid preparation request failed"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
     post:
       summary: Create a proposal draft for the signed-in user
       description: >
@@ -1539,7 +1919,7 @@ paths:
         with Retry-After. Draft text is not written to the audit log.
       operationId: createBidPrepDraft
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       requestBody:
         required: true
         content:
@@ -1565,24 +1945,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: TOR not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "409":
+          description: "Stored draft limit reached"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
         "413":
-          description: Draft content is too large
+          description: "Request body or draft content exceeds the size limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "429":
-          description: Rate limit exceeded
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: "Content-Type must be application/json"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Bid preparation request failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /bid-prep/drafts/{id}:
     parameters:
@@ -1591,7 +1981,7 @@ paths:
       summary: Read one draft owned by the signed-in user
       operationId: getBidPrepDraft
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
         "200":
           description: The caller's draft
@@ -1605,24 +1995,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: Missing draft, or a draft owned by someone else
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "429":
-          description: Rate limit exceeded
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Bid preparation request failed"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
     patch:
       summary: Update one draft owned by the signed-in user
       description: Send the current version. A stale version returns 409. Another user's draft returns 404.
       operationId: updateBidPrepDraft
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       requestBody:
         required: true
         content:
@@ -1648,6 +2039,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: Missing draft, or a draft owned by someone else
           content:
@@ -1660,17 +2052,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "429":
-          description: Rate limit exceeded
+        "413":
+          description: "Request body or draft content exceeds the size limit"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
+        "415":
+          description: "Content-Type must be application/json"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Bid preparation request failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     delete:
       summary: Delete one draft owned by the signed-in user
       operationId: deleteBidPrepDraft
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
         "200":
           description: Draft deleted
@@ -1691,18 +2093,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: Missing draft, or a draft owned by someone else
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "429":
-          description: Rate limit exceeded
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Bid preparation request failed"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
 
   /bid-prep/drafts/{id}/export:
     post:
@@ -1719,7 +2122,7 @@ paths:
         time, IP and draft/project identifiers. Raw HTML, fields and macros are absent.
       operationId: exportBidPrepDraft
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       parameters:
         - $ref: "#/components/parameters/BidPrepDraftIdParam"
         - name: version
@@ -1746,6 +2149,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: Missing draft, or a draft owned by someone else
           content:
@@ -1762,12 +2166,12 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
-        "429":
-          description: Rate limit exceeded
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Bid preparation request failed"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
 
   /bid-prep/tors/{projectId}/checklist:
     get:
@@ -1778,7 +2182,7 @@ paths:
         A user id in the query is ignored. Missing or unprocessed TORs return 404 or 409.
       operationId: getBidPrepChecklist
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       parameters:
         - $ref: "#/components/parameters/BidPrepProjectIdParam"
       responses:
@@ -1794,6 +2198,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: TOR not found
           content:
@@ -1806,17 +2211,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "429":
-          description: Rate limit exceeded
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: "Bid preparation request failed"
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+              schema: { $ref: '#/components/schemas/Error' }
     patch:
       summary: Set or clear the caller's checklist item status override
       operationId: updateBidPrepChecklistStatus
       tags: [Bid preparation]
-      security: [{ sessionAuth: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       parameters:
         - $ref: "#/components/parameters/BidPrepProjectIdParam"
       requestBody:
@@ -1879,42 +2284,113 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+        "500":
+          description: "Bid preparation request failed"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   # ---------------------------------------------------------------------------
   # Current - Live operational, legacy project, and notification routes
   # ---------------------------------------------------------------------------
   /admin/classification/run:
-    servers:
-      - url: http://localhost:3000/api
     post:
       summary: Re-run keyword classification across unclassified TORs
-      description: Admin role and admin:write required. Preserves manual overrides.
+      description: "Requires the admin role and admin:write scope. Browser requests require an allowed Origin."
       tags: [Admin - Classification]
       operationId: runAdminClassification
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
-        "200": { description: Classification summary }
-        "401": { description: Authentication required }
-        "403": { description: Admin role and admin:write required }
-        "500": { description: Classification run failed }
+        "200":
+          description: "Classification and processing queue totals"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [scanned, updated, remaining, jobsQueued, jobsReused, queueFailures, queueErrors]
+                properties:
+                  scanned: { type: integer }
+                  updated: { type: integer }
+                  remaining: { type: integer }
+                  jobsQueued: { type: integer }
+                  jobsReused: { type: integer }
+                  queueFailures: { type: integer }
+                  queueErrors:
+                    type: array
+                    items:
+                      type: object
+                      required: [projectId, message]
+                      properties:
+                        projectId: { type: string }
+                        message: { type: string }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Admin role and admin:write required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: Classification run failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /ingestion/status:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: Read e-GP ingestion status and schedule metadata
       tags: [Pipeline]
       operationId: getIngestionStatus
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { pipelineBearer: [] }]
       responses:
-        "200": { description: Current ingestion status }
-        "401": { description: Authentication required }
-        "403": { description: Missing pipeline:read scope }
-        "500": { description: Ingestion status check failed }
+        "200":
+          description: "Ingestion status and recent runs"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, totalProjects, candidates, pendingCandidates, lastIngestedAt, lastProjectId, schedule, lastRun, recentRuns]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  totalProjects: { type: integer }
+                  candidates: { type: object, additionalProperties: { type: integer } }
+                  pendingCandidates: { type: array, items: { type: object, additionalProperties: true } }
+                  lastIngestedAt: { type: string, format: date-time, nullable: true }
+                  lastProjectId: { type: string, nullable: true }
+                  schedule:
+                    oneOf:
+                    - type: object
+                      required: [spec, timeZone, nextRunAt]
+                      properties:
+                        spec: { type: string }
+                        timeZone: { type: string }
+                        nextRunAt: { type: string, format: date-time }
+                    - type: object
+                      required: [error]
+                      properties:
+                        error: { type: string }
+                  lastRun: { type: object, nullable: true, additionalProperties: true }
+                  recentRuns: { type: array, items: { type: object, additionalProperties: true } }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing pipeline:read scope
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: Ingestion status check failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
 
   /ingestion/trigger:
-    servers:
-      - url: http://localhost:3000/api
     post:
       summary: Manually trigger e-GP ingestion
       tags: [Pipeline]
@@ -1927,38 +2403,131 @@ paths:
             schema:
               type: object
               properties:
-                year: { type: string, pattern: '^\d{4}$' }
+                year: { $ref: '#/components/schemas/FourDigitCode' }
                 keyword: { type: string }
                 limit: { type: integer, minimum: 1, maximum: 1000 }
                 deptCode: { type: string }
-                rssDeptId: { type: string, pattern: '^\d{4}$' }
+                rssDeptId: { $ref: '#/components/schemas/FourDigitCode' }
                 enqueueProcessing: { type: boolean, default: true }
                 verifyInline: { type: boolean, default: false }
       responses:
-        "202": { description: Ingestion summary }
-        "400": { description: Invalid ingestion parameters }
-        "401": { description: Authentication required }
-        "403": { description: Missing pipeline:trigger scope or forbidden Origin }
-        "500": { description: Ingestion failed }
-        "503": { description: Upstream ingestion service unavailable }
+        "202":
+          description: "e-GP ingestion completed and ingestion counts returned"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, source, params, itemsFound, itemsNew, itemsUpdated, itemsFailed, jobsQueued, candidatesSaved, skipped, skipExamples, revisionsLinked, revisionsSuperseded, errors, completedAt]
+                properties:
+                  status: { type: string, enum: [completed] }
+                  source: { type: string, enum: [EGP-CONTRACT] }
+                  params:
+                    type: object
+                    required: [year, keyword, deptCode]
+                    properties:
+                      year: { $ref: '#/components/schemas/FourDigitCode' }
+                      keyword: { type: string, nullable: true }
+                      deptCode: { type: string, nullable: true }
+                  itemsFound: { type: integer }
+                  itemsNew: { type: integer }
+                  itemsUpdated: { type: integer }
+                  itemsFailed: { type: integer }
+                  jobsQueued: { type: integer }
+                  candidatesSaved: { type: integer }
+                  skipped: { type: object, additionalProperties: { type: integer } }
+                  skipExamples: { type: array, items: { type: object, additionalProperties: true } }
+                  revisionsLinked: { type: integer, nullable: true }
+                  revisionsSuperseded: { type: integer, nullable: true }
+                  errors: { type: array, items: { type: object, additionalProperties: true } }
+                  completedAt: { type: string, format: date-time }
+        "400":
+          description: Invalid ingestion parameters
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing pipeline:trigger scope or forbidden Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: "Ingestion failed or e-GP blocked/rejected access"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, error]
+                properties:
+                  status: { type: string, enum: [failed] }
+                  error:
+                    type: object
+                    required: [code, message, retryable]
+                    properties:
+                      code: { type: string }
+                      message: { type: string }
+                      retryable: { type: boolean }
+        "503":
+          description: "Retryable e-GP failure"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, error]
+                properties:
+                  status: { type: string, enum: [failed] }
+                  error:
+                    type: object
+                    required: [code, message, retryable]
+                    properties:
+                      code: { type: string }
+                      message: { type: string }
+                      retryable: { type: boolean }
 
   /scraping/status:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: Read TOR document scraping coverage statistics
       tags: [Pipeline]
       operationId: getScrapingStatus
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { pipelineBearer: [] }]
       responses:
-        "200": { description: Scraping coverage status }
-        "401": { description: Authentication required }
-        "403": { description: Missing pipeline:read scope }
-        "500": { description: Scraping status check failed }
+        "200":
+          description: "Scraping coverage statistics"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, totalProjects, withPdfFiles, withoutPdfFiles, withPdfLinks, withPdf, withoutPdf, coverage]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  totalProjects: { type: integer }
+                  withPdfFiles: { type: integer }
+                  withoutPdfFiles: { type: integer }
+                  withPdfLinks: { type: integer }
+                  withPdf: { type: integer }
+                  withoutPdf: { type: integer }
+                  coverage: { type: string }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing pipeline:read scope
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: Scraping status check failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
 
   /scraping/trigger:
-    servers:
-      - url: http://localhost:3000/api
     post:
       summary: Trigger TOR document scraping for open software projects
       tags: [Pipeline]
@@ -1976,15 +2545,59 @@ paths:
                 onlyMissing: { type: boolean, default: true }
                 delayMs: { type: integer, minimum: 3000, maximum: 60000 }
       responses:
-        "200": { description: Scraping completed or skipped }
-        "400": { description: Invalid scraping request }
-        "401": { description: Authentication required }
-        "403": { description: Missing pipeline:trigger scope or forbidden Origin }
-        "500": { description: Scraping failed }
+        "200":
+          description: "Single-project or batch scraping result"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, mode]
+                properties:
+                  status: { type: string, enum: [completed, skipped] }
+                  mode: { type: string, enum: [single, batch] }
+                  dbUpdated: { type: boolean }
+                  result: { type: object, additionalProperties: true }
+                  reason: { type: string }
+                  eligibility: { type: object, nullable: true, additionalProperties: true }
+                  message: { type: string }
+                  rateLimit:
+                    type: object
+                    required: [delayMs]
+                    properties:
+                      delayMs: { type: integer }
+                  summary:
+                    type: object
+                    required: [total, success, failed, skipped]
+                    properties:
+                      total: { type: integer }
+                      success: { type: integer }
+                      failed: { type: integer }
+                      skipped: { type: integer }
+                      dbUpdated: { type: integer }
+                  eligibilitySkipped: { type: array, items: { type: object, additionalProperties: true } }
+                  results: { type: array, items: { type: object, additionalProperties: true } }
+        "400":
+          description: Invalid scraping request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing pipeline:trigger scope or forbidden Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: Scraping failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
 
   /processing/status:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: Read background OCR/AI processing queue status
       tags: [Pipeline]
@@ -1998,15 +2611,48 @@ paths:
           in: query
           schema: { type: string }
       responses:
-        "200": { description: Processing status }
-        "401": { description: Authentication required }
-        "403": { description: Missing pipeline:read scope }
-        "404": { description: Project or job not found }
-        "500": { description: Processing status check failed }
+        "200":
+          description: "Job, project, or aggregate processing status"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  job: { type: object, additionalProperties: true }
+                  project: { type: object, additionalProperties: true }
+                  jobs: { type: object, additionalProperties: { type: integer } }
+                  projects: { type: object, additionalProperties: { type: integer } }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing pipeline:read scope
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "Requested job or project was not found"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/PipelineFailure' }
+                  - type: object
+                    required: [status, project]
+                    properties:
+                      status: { type: string, enum: [not_found] }
+                      project: { type: object, nullable: true, additionalProperties: true }
+        "500":
+          description: Processing status check failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
 
   /processing/trigger:
-    servers:
-      - url: http://localhost:3000/api
     post:
       summary: Enqueue projects or candidates for background OCR/AI processing
       tags: [Pipeline]
@@ -2027,17 +2673,61 @@ paths:
                 dryRun: { type: boolean, default: false }
                 retryFailed: { type: boolean, default: false }
       responses:
-        "202": { description: Processing jobs accepted }
-        "400": { description: Invalid processing request }
-        "401": { description: Authentication required }
-        "403": { description: Missing pipeline:trigger scope or forbidden Origin }
-        "500": { description: Processing enqueue failed }
+        "202":
+          description: "Jobs accepted or a bulk recovery report returned"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, queued, reused, jobs]
+                properties:
+                  status: { type: string, enum: [accepted] }
+                  queued: { type: integer }
+                  reused: { type: integer }
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, projectId, status, reused]
+                      properties:
+                        id: { type: string }
+                        projectId: { type: string }
+                        status: { type: string }
+                        reused: { type: boolean }
+                        type: { type: string }
+                  dryRun: { type: boolean }
+                  scanned: { type: integer }
+                  wouldQueue: { type: integer }
+                  failed: { type: integer }
+                  skipped: { type: object, additionalProperties: { type: integer } }
+                  entries: { type: array, items: { type: object, additionalProperties: true } }
+                  nextAfterId: { type: string, nullable: true }
+                  exhausted: { type: boolean }
+        "400":
+          description: Invalid processing request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing pipeline:trigger scope or forbidden Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: Processing enqueue failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PipelineFailure' }
 
   /processing/review:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: List uncertain or failed processing items for admin review
+      description: "Requires the admin role and admin:read scope."
       tags: [Admin - Classification]
       operationId: listProcessingReviewQueue
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -2045,14 +2735,28 @@ paths:
         - $ref: "#/components/parameters/PageParam"
         - $ref: "#/components/parameters/PageSizeParam"
       responses:
-        "200": { description: Paginated review queue }
-        "401": { description: Authentication required }
-        "403": { description: Admin role and admin:read required }
-        "500": { description: Review queue query failed }
+        "200":
+          description: "Paginated review queue"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegacyProjectPage' }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Admin role and admin:read required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: Review queue query failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /projects:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: List and filter ingested projects (legacy route)
       tags: [TORs]
@@ -2079,13 +2783,26 @@ paths:
           in: query
           schema: { type: string, maxLength: 200 }
       responses:
-        "200": { description: Paginated projects list }
-        "400": { description: Invalid query parameters }
-        "500": { description: Failed to list projects }
+        "200":
+          description: "Paginated projects list"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegacyProjectPage' }
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: Failed to list projects
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /projects/{id}:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: Get a single project by id (legacy route)
       tags: [TORs]
@@ -2093,19 +2810,29 @@ paths:
       parameters:
         - $ref: "#/components/parameters/TorIdParam"
       responses:
-        "200": { description: Project details }
+        "200":
+          description: "Project details"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegacyProject' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
         "404":
           description: Project not found
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
-        "500": { description: Failed to load project }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "500":
+          description: Failed to load project
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /projects/{id}/classification:
-    servers:
-      - url: http://localhost:3000/api
     patch:
       summary: Manually approve or reject software classification on a project
+      description: "Requires the admin role and tor:write scope. Browser requests require an allowed Origin."
       tags: [Admin - Classification]
       operationId: patchLegacyProjectClassification
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
@@ -2122,17 +2849,50 @@ paths:
                 isSoftware: { type: boolean }
                 reason: { type: string, maxLength: 1000 }
       responses:
-        "200": { description: Updated project }
-        "400": { description: Invalid classification body }
-        "401": { description: Authentication required }
-        "403": { description: Admin role and tor:write required }
-        "404": { description: Project not found }
-        "500": { description: Failed to update classification }
-        "503": { description: Saved classification but processing queue unavailable }
+        "200":
+          description: "Updated project"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegacyProject' }
+        "400":
+          description: Invalid classification body
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Admin role and tor:write required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: Failed to update classification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "503":
+          description: "Classification saved but processing queue unavailable"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/Error' }
+                  - type: object
+                    required: [classificationSaved, projectId]
+                    properties:
+                      classificationSaved: { type: boolean, enum: [true] }
+                      projectId: { type: string }
 
   /notifications/test:
-    servers:
-      - url: http://localhost:3000/api
     post:
       summary: Send a test match-notification email to the signed-in user
       tags: [Notifications]
@@ -2147,6 +2907,7 @@ paths:
               properties:
                 matches:
                   type: array
+                  nullable: true
                   minItems: 1
                   maxItems: 20
                   items:
@@ -2156,52 +2917,147 @@ paths:
                       torId: { type: string, minLength: 1, maxLength: 64 }
                       title: { type: string, minLength: 1, maxLength: 300 }
                       agency: { type: string, maxLength: 200 }
-                      budget: { type: number, minimum: 0 }
+                      budget: { type: number, minimum: 0, maximum: 1000000000000000 }
                       matchScore: { type: number, minimum: 0, maximum: 100 }
       responses:
-        "200": { description: Test email sent }
-        "400": { description: Invalid matches payload }
-        "401": { description: Authentication required }
-        "403": { description: Forbidden origin or missing notifications:test scope }
-        "404": { description: User not found }
-        "413": { description: Request payload exceeds 16 KiB limit }
-        "500": { description: Failed to send email }
+        "200":
+          description: "Test notification was sent"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, emailId, sentTo]
+                properties:
+                  status: { type: string, enum: [success] }
+                  emailId: { type: string }
+                  sentTo: { type: string, format: email }
+        "400":
+          description: Invalid matches payload
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: "Authentication required"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthenticationError' }
+        "403":
+          description: Forbidden origin or missing notifications:test scope
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: "User not found"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
+        "413":
+          description: Request payload exceeds 16 KiB limit
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: "Failed to send notification"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageError' }
 
   /notifications/digest:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: Dispatch pending daily digest match notifications (GET alias for cron)
+      description: "Dispatches pending matches. Requires an admin with notifications:send or the configured cron bearer credential."
       tags: [Notifications]
       operationId: getNotificationsDigest
-      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { cronBearer: [] }]
       responses:
-        "200": { description: Digest dispatch result }
-        "401": { description: Authentication required }
-        "403": { description: Missing notifications:send permission or forbidden Origin }
+        "200":
+          description: "Digest dispatch totals"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, notified, skipped]
+                properties:
+                  status: { type: string, enum: [success] }
+                  notified: { type: integer }
+                  skipped: { type: integer }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing notifications:send permission or forbidden Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
     post:
       summary: Dispatch pending daily digest match notifications
+      description: "Dispatches pending matches. Requires an admin with notifications:send or the configured cron bearer credential."
       tags: [Notifications]
       operationId: triggerNotificationsDigest
-      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
+      security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }, { cronBearer: [] }]
       responses:
-        "200": { description: Digest dispatch result }
-        "401": { description: Authentication required }
-        "403": { description: Missing notifications:send permission or forbidden Origin }
+        "200":
+          description: "Digest dispatch totals"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, notified, skipped]
+                properties:
+                  status: { type: string, enum: [success] }
+                  notified: { type: integer }
+                  skipped: { type: integer }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Missing notifications:send permission or forbidden Origin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 
   /test-db:
-    servers:
-      - url: http://localhost:3000/api
     get:
       summary: Check MongoDB Atlas database connectivity (admin diagnostic)
+      description: "Requires the admin role and admin:read scope."
       tags: [Pipeline]
       operationId: testDatabaseConnection
       security: [{ sessionAuth: [] }, { scopedJwtBearer: [] }]
       responses:
-        "200": { description: Connected to MongoDB Atlas }
-        "401": { description: Authentication required }
-        "403": { description: Admin role and admin:read required }
-        "500": { description: Database connection failed }
+        "200":
+          description: "Database connection succeeded"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, message]
+                properties:
+                  status: { type: string, enum: [connected] }
+                  message: { type: string }
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Admin role and admin:read required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "500":
+          description: "Database connection failed"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, message]
+                properties:
+                  status: { type: string, enum: [error] }
+                  message: { type: string }
 
 components:
   securitySchemes:
@@ -2224,12 +3080,41 @@ components:
       scheme: bearer
       description: >
         PIPELINE_ADMIN_TOKEN (at least 32 characters), limited to pipeline:read
-        and pipeline:trigger; it cannot authorize admin or profile operations.
-        Scoped JWT bearer credentials are also supported with their signed role
-        and scopes. Browser mutations require an exact allowed Origin, even
-        with bearer credentials. No wildcard CORS origins are accepted.
+        and pipeline:trigger on the standalone pipeline endpoints. A server-to-server
+        request with a valid explicit bearer credential may omit Origin. An Origin,
+        when supplied, must be allowed.
+
+    cronBearer:
+      type: http
+      scheme: bearer
+      description: Configured CRON_SECRET for scheduled digest dispatch.
+
+  responses:
+    Unauthorized:
+      description: "Authentication required or invalid credentials"
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: "Insufficient role or scope, or missing or disallowed Origin"
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: "Request limit exceeded"
+      headers:
+        Retry-After:
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
 
   parameters:
+    OAuthNextParam:
+      name: next
+      in: query
+      description: Local destination to use after successful sign-in.
+      schema: { type: string }
     TorIdParam:
       name: id
       in: path
@@ -2440,11 +3325,11 @@ components:
           nullable: true
           minimum: 0
           maximum: 100
-          description: "[Planned] Populated only when returned via an authenticated endpoint for a contractor with a profile."
+          description: "[Current] Populated only when returned via an authenticated endpoint for a contractor with a profile."
         budgetAnomaly:
           type: object
           nullable: true
-          description: "[Planned]"
+          description: "[Current]"
           allOf:
             - $ref: "#/components/schemas/BudgetAnomaly"
         createdAt:
@@ -2764,32 +3649,6 @@ components:
           type: string
           format: date-time
 
-    IngestionRun:
-      type: object
-      required: [id, source, startedAt, status, itemsFound, itemsNew, itemsFailed]
-      properties:
-        id:
-          type: string
-        source:
-          type: string
-          description: e.g. "BMA Procurement Portal", "e-GP".
-        startedAt:
-          type: string
-          format: date-time
-        finishedAt:
-          type: string
-          format: date-time
-          nullable: true
-        status:
-          type: string
-          enum: [running, success, failed]
-        itemsFound:
-          type: integer
-        itemsNew:
-          type: integer
-        itemsFailed:
-          type: integer
-
     ClassificationKeyword:
       type: object
       required: [id, keyword, category, updatedAt]
@@ -2902,79 +3761,6 @@ components:
               type: object
               additionalProperties: { type: string }
 
-    ContractorProfileInput:
-      type: object
-      description: "[Planned] FR-2.2.2 - self-reported, no verification required."
-      properties:
-        companyName:
-          type: string
-        techStack:
-          type: array
-          items:
-            type: string
-        projectCapacity:
-          type: string
-          description: Free-text self-reported capacity (e.g. team size, concurrent-project count).
-        pastProjectValues:
-          type: array
-          items:
-            type: number
-          description: THB values of past completed projects, self-reported.
-        certifications:
-          type: array
-          items:
-            type: string
-        capital:
-          type: number
-          nullable: true
-        matchThreshold:
-          type: number
-          minimum: 0
-          maximum: 100
-          default: 70
-          description: FR-2.3.3 - notification fires when a TOR's matchScore meets/exceeds this.
-
-    ContractorProfile:
-      allOf:
-        - $ref: "#/components/schemas/ContractorProfileInput"
-        - type: object
-          required: [id, userId, createdAt, updatedAt]
-          properties:
-            id:
-              type: string
-            userId:
-              type: string
-            createdAt:
-              type: string
-              format: date-time
-            updatedAt:
-              type: string
-              format: date-time
-
-    MatchResult:
-      type: object
-      description: "[Planned, FR-2.3.2]"
-      required: [torId, matchScore, computedAt]
-      properties:
-        torId:
-          type: string
-        matchScore:
-          type: number
-          minimum: 0
-          maximum: 100
-        skillOverlapScore:
-          type: number
-          nullable: true
-        contractSizeScore:
-          type: number
-          nullable: true
-        teamCapacityScore:
-          type: number
-          nullable: true
-        computedAt:
-          type: string
-          format: date-time
-
     BudgetAnomalyTag:
       type: string
       enum: [NONE, HIGH_BUDGET_ANOMALY]
@@ -3008,7 +3794,7 @@ components:
 
     AnomalyReport:
       type: object
-      description: "[Planned]"
+      description: "[Current]"
       properties:
         torId:
           type: string
@@ -3483,6 +4269,50 @@ components:
         draft:
           $ref: "#/components/schemas/ProposalDraft"
 
+    MessageError:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+
+    AuthenticationError:
+      oneOf:
+        - { $ref: '#/components/schemas/Error' }
+        - { $ref: '#/components/schemas/MessageError' }
+
+    FourDigitCode:
+      oneOf:
+        - { type: string, pattern: '^\d{4}$' }
+        - { type: integer, minimum: 1000, maximum: 9999 }
+
+    PipelineFailure:
+      allOf:
+        - { $ref: '#/components/schemas/Error' }
+        - type: object
+          required: [status]
+          properties:
+            status: { type: string, enum: [error, failed] }
+
+    LegacyProject:
+      type: object
+      description: Project record using the legacy database field names. Extra stored and hydrated fields may be present.
+      required: [project_id]
+      properties:
+        project_id: { type: string }
+        project_name: { type: string, nullable: true }
+        dept_name: { type: string, nullable: true }
+        budget: { type: number, nullable: true }
+        is_software: { type: boolean, nullable: true }
+
+    LegacyProjectPage:
+      type: object
+      required: [items, total, page, pageSize]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/LegacyProject' } }
+        total: { type: integer }
+        page: { type: number }
+        pageSize: { type: number }
+
     Error:
       type: object
       required: [error]
@@ -3497,10 +4327,3 @@ components:
             message:
               type: string
               example: "No TOR exists with the given id."
-
-# Status of this file:
-# - Current paths (TORs, Admin - Ingestion, Admin - Classification, /health) are
-#   the committed, build-now contract.
-# - All other tags/paths are a full-system draft so FE/BE only design once.
-#   They are NOT locked - revisit and adjust each one once it's actually being
-#   built, when real requirements/data shapes are known.
