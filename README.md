@@ -144,7 +144,7 @@ Stage details, statuses and failure paths: [docs/pipeline.md](docs/pipeline.md).
 
 ## Run (Docker only)
 
-**Docker is the only supported way to run this project.** Do not start it with `npm run dev`, `npm start` or `node scripts/...` on the host: the worker needs Chromium, Poppler and Tesseract, the app needs the compose network, and every document, test and screenshot in `docs/` was produced from the containers. Requirements: Docker with Compose v2. Nothing else (no Node, no MongoDB) is needed on the host.
+**Docker is the only supported way to run this project.** Do not start it with `npm run dev`, `npm start` or `node scripts/...` on the host: the worker needs Chromium, Poppler and Tesseract, and the app expects the compose network. Requirements: Docker with Compose v2. No Node or MongoDB is needed on the host (Python 3 only for the optional smoke test).
 
 ```bash
 cp .env.example .env                 # set JWT_SECRET (and EGP_API_KEY); see .env.example
