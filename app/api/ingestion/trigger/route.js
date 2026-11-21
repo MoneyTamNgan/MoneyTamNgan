@@ -181,7 +181,7 @@ async function handlePOST(request) {
             status: 'failed',
             error: {
                 code: retryable ? 'INGESTION_UPSTREAM_UNAVAILABLE' : 'INGESTION_FAILED',
-                message: error.message,
+                message: retryable ? 'Upstream ingestion service is temporarily unavailable' : 'Ingestion trigger failed',
                 retryable,
             },
         }, { status: retryable ? 503 : 500 });

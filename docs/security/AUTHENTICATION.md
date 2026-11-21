@@ -49,7 +49,28 @@ Admin and pipeline routes are not covered by the guest limiter; they require a r
 | Google OAuth over the limit (browser) | 429 | a small HTML page that redirects to `/?auth_wait_until=<epoch ms>` so the login popup can show the time left | same headers |
 | BidPrep over the limit | 429 | `RATE_LIMITED` error envelope | same headers |
 
-`Retry-After` is in seconds and is at least 1. `X-RateLimit-Reset` is the window end in Unix seconds. Refused Google attempts are written to the auth audit log (`oauth_rate_limited`).
+`Retry-After` is in seconds and is at least 1. `X-RateLimit-Reset` is the window end in Unix seconds.
+
+## Authentication audit logging and retention (ASVS V16.3.1, TH-4)
+
+All authentication endpoints emit structured allowlisted JSON events via `logAuthAudit()` (`lib/auth-audit.js`). Each record logs only `event`, `reason`, UTC ISO `timestamp`, `path`, `clientAddress`, and optional non-secret `userId` and `role`. Passwords, tokens, email addresses, OAuth query codes, and cookies are never logged.
+
+| Event | Route(s) | Trigger / Reason |
+|---|---|---|
+| `auth_register_success` | `POST /api/auth/register` | Account created (`created`) |
+| `auth_register_conflict` | `POST /api/auth/register` | Duplicate email (`account_exists`) or username (`username_taken`) |
+| `auth_login_success` | `POST /api/auth/login` | Valid password login (`authenticated`) |
+| `auth_login_failed` | `POST /api/auth/login` | Wrong password, unknown account (`invalid_credentials`), or disabled account (`account_disabled`) |
+| `auth_rate_limited` | `POST /api/auth/login`, `/register` | IP, identifier, or account budget exceeded (`ip_limit`, `identifier_limit`, `account_limit`) |
+| `auth_logout` | `POST /api/auth/logout` | Session revoked (`session_revoked`) or guest logout (`guest_logout`) |
+| `oauth_rate_limited` | `/api/auth/google/*` | OAuth start or callback IP budget exceeded |
+| `oauth_invalid_state` | `GET /api/auth/google/callback` | Missing state/cookie or CSRF state mismatch |
+| `oauth_callback_failed` | `GET /api/auth/google/callback` | Missing code, Google token exchange failure, unverified profile, or error |
+| `oauth_callback_conflict` | `GET /api/auth/google/callback` | Email belongs to a password account (`method_conflict`) |
+| `oauth_callback_denied` | `GET /api/auth/google/callback` | Account is disabled (`account_disabled`) |
+| `oauth_login_success` | `GET /api/auth/google/callback` | Valid OAuth login (`authenticated`) |
+
+**Retention policy:** Security and authentication audit logs emitted to structured stdout are retained in hosting logs for **90 days** in production deployments, matching the operational retention window used for acquisition health history.
 
 ## Other controls that limit automation
 

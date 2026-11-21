@@ -31,6 +31,7 @@ const UserSchema = new Schema({
     // on the next request (lib/account-status.js). Set with `npm run user:disable`.
     disabled: { type: Boolean, default: false },
     disabled_at: { type: Date, default: null },
+    session_version: { type: Number, default: 0, select: false },
     bid_prep_revision: { type: Number, default: 0, select: false },
     bid_checklist_revision: { type: Number, select: false },
     bid_checklist_statuses: { type: Map, of: { type: String, enum: ['pass', 'fail', 'manual'] }, select: false },

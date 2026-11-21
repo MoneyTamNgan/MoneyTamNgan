@@ -35,9 +35,9 @@ async function handleGET(request) {
             page,
             pageSize,
         }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie, Authorization' } });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
-            error: { code: 'REVIEW_QUEUE_FAILED', message: error.message },
+            error: { code: 'REVIEW_QUEUE_FAILED', message: 'Failed to load processing review queue' },
         }, { status: 500 });
     }
 }

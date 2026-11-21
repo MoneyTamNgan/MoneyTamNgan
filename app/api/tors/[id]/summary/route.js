@@ -27,9 +27,9 @@ async function handleGET(_request, { params }) {
         }
 
         return NextResponse.json(toTorSummary(await hydrateProjectCompatibility(project)));
-    } catch (error) {
+    } catch {
         return NextResponse.json({
-            error: { code: 'GET_TOR_SUMMARY_FAILED', message: error.message },
+            error: { code: 'GET_TOR_SUMMARY_FAILED', message: 'Failed to load TOR summary' },
         }, { status: 500 });
     }
 }

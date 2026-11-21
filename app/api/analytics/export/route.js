@@ -41,8 +41,8 @@ async function handleGET(request) {
         return new NextResponse(toCsv(rows), {
             headers: { ...headers, 'Content-Type': 'text/csv; charset=utf-8' },
         });
-    } catch (error) {
-        return errorResponse('ANALYTICS_EXPORT_FAILED', error.message, 500);
+    } catch {
+        return errorResponse('ANALYTICS_EXPORT_FAILED', 'Analytics export failed', 500);
     }
 }
 

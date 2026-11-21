@@ -49,6 +49,7 @@ The matrix assumes valid full-scope sessions, allowed Origin and valid input. â€
 | GET | [/api/bid-prep/drafts](../../app/api/bid-prep/drafts/route.js) | 401 | Allow | Allow | `profile:read` | [M](../../tests/security/rbac-route-matrix.test.js) |
 | POST | [/api/bid-prep/drafts](../../app/api/bid-prep/drafts/route.js) | 401 | Allow | Allow | `profile:write` | [M](../../tests/security/rbac-route-matrix.test.js) |
 | GET | [/api/bid-prep/tors/[projectId]/checklist](../../app/api/bid-prep/tors/[projectId]/checklist/route.js) | 401 | Allow | Allow | `profile:read` | [M](../../tests/security/rbac-route-matrix.test.js) |
+| PATCH | [/api/bid-prep/tors/[projectId]/checklist](../../app/api/bid-prep/tors/[projectId]/checklist/route.js) | 401 | Allow | Allow | `profile:write` | [M](../../tests/security/rbac-route-matrix.test.js) |
 | GET | [/api/health](../../app/api/health/route.js) | Allow | Allow | Allow | None | [M](../../tests/security/rbac-route-matrix.test.js) |
 | GET | [/api/ingestion/status](../../app/api/ingestion/status/route.js) | 401 | 403 | Allow | `pipeline:read` | [M](../../tests/security/rbac-route-matrix.test.js) |
 | POST | [/api/ingestion/trigger](../../app/api/ingestion/trigger/route.js) | 401 | 403 | Allow | `pipeline:trigger` | [M](../../tests/security/rbac-route-matrix.test.js) |

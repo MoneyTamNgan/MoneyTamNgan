@@ -126,6 +126,7 @@ it('uses unique server nonces, never client nonces, and excludes unsafe-eval/uns
     expect(policies[0]).not.toBe(policies[1]);
     expect(policies[0]).not.toContain('attacker');
     expect(policies[0]).toContain('frame-ancestors \'none\'');
+    expect(policies[0]).toContain("base-uri 'none'");
     const production = contentSecurityPolicy({ nonce: 'fixture', development: false });
     expect(production).not.toContain('unsafe-eval');
     expect(production.match(/script-src[^;]+/)[0]).not.toContain('unsafe-inline');
