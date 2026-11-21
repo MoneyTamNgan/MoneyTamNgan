@@ -282,6 +282,16 @@ describe('BidPrep endpoint controls', () => {
             method: 'PATCH', token: attacker, params: { id }, body: { version: 1, title: 'stale' },
         })).status).toBe(409);
 
+        const projectId = 'TOR-1';
+        const checklistPath = `/api/bid-prep/tors/${projectId}/checklist`;
+        state.summaries.set(projectId, {
+            document_id: 'owner-tor-document',
+            extraction: { qualifications: [{ value: 'Review the owner qualification', page: 1 }] },
+        });
+        const { items } = await (await call(checklist, checklistPath, { token: attacker, params: { projectId } })).json();
+        expect((await call(updateChecklist, checklistPath, {
+            method: 'PATCH', token: attacker, params: { projectId }, body: { itemId: items[0].id, status: 'pass' },
+        })).status).toBe(200);
         const exported = await call(exportDraft, `/api/bid-prep/drafts/${id}/export`, { method: 'POST', token: attacker, params: { id } });
         expect(exported.status).toBe(200);
         expect(exported.headers.get('content-disposition')).toBe('attachment; filename="bid-draft-TOR-1.docx"');

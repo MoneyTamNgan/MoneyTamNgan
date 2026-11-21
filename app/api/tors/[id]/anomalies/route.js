@@ -27,9 +27,9 @@ async function handleGET(_request, { params }) {
         }
 
         return NextResponse.json(toTorAnomalyReport(await hydrateProjectCompatibility(project)));
-    } catch (error) {
+    } catch {
         return NextResponse.json({
-            error: { code: 'GET_TOR_ANOMALIES_FAILED', message: error.message },
+            error: { code: 'GET_TOR_ANOMALIES_FAILED', message: 'Failed to load TOR anomalies' },
         }, { status: 500 });
     }
 }

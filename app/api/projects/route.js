@@ -2,7 +2,14 @@ import { withRouteSecurity } from "@/lib/route-security";
 import connectDB from '@/lib/db';
 import Project from '@/models/Project';
 import { hydrateProjectsCompatibility } from '@/lib/project-compat';
+import { parseDate } from '@/lib/api/query-params';
 import { NextResponse } from 'next/server';
+
+const MAX_SEARCH_LENGTH = 200;
+
+function escapeRegex(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 /**
  * GET /api/projects
@@ -21,9 +28,40 @@ import { NextResponse } from 'next/server';
  */
 async function handleGET(request) {
     try {
-        await connectDB();
-
         const { searchParams } = new URL(request.url);
+
+        // Validate software classification filter
+        const isSoftware = searchParams.get('isSoftware');
+        if (isSoftware !== null && isSoftware !== '' && isSoftware !== 'true' && isSoftware !== 'false') {
+            return NextResponse.json({
+                error: { code: 'INVALID_IS_SOFTWARE', message: 'isSoftware must be true or false' },
+            }, { status: 400 });
+        }
+
+        // Validate date range parameters
+        const dateFromResult = parseDate(searchParams.get('dateFrom'), 'dateFrom');
+        const dateToResult = parseDate(searchParams.get('dateTo'), 'dateTo', true);
+        if (dateFromResult.error || dateToResult.error) {
+            return NextResponse.json({
+                error: { code: 'INVALID_DATE_RANGE', message: 'Invalid dateFrom or dateTo parameter' },
+            }, { status: 400 });
+        }
+        if (dateFromResult.value && dateToResult.value && dateFromResult.value > dateToResult.value) {
+            return NextResponse.json({
+                error: { code: 'INVALID_DATE_RANGE', message: 'Invalid dateFrom or dateTo parameter' },
+            }, { status: 400 });
+        }
+
+        // Validate search text length
+        const rawSearch = searchParams.get('search');
+        const search = rawSearch ? rawSearch.trim() : '';
+        if (search.length > MAX_SEARCH_LENGTH) {
+            return NextResponse.json({
+                error: { code: 'INVALID_SEARCH', message: 'search must not exceed 200 characters' },
+            }, { status: 400 });
+        }
+
+        await connectDB();
 
         // Pagination
         const page = Math.max(1, parseInt(searchParams.get('page')) || 1);
@@ -33,11 +71,8 @@ async function handleGET(request) {
         // Build filter query
         const filter = {};
 
-        // Filter by software classification
-        const isSoftware = searchParams.get('isSoftware');
-        if (isSoftware !== null && isSoftware !== '') {
-            filter.is_software = isSoftware === 'true';
-        }
+        if (isSoftware === 'true') filter.is_software = true;
+        if (isSoftware === 'false') filter.is_software = false;
 
         // Filter by agency (department name)
         const agency = searchParams.get('agency');
@@ -52,18 +87,15 @@ async function handleGET(request) {
         }
 
         // Filter by date range (announce_date)
-        const dateFrom = searchParams.get('dateFrom');
-        const dateTo = searchParams.get('dateTo');
-        if (dateFrom || dateTo) {
+        if (dateFromResult.value || dateToResult.value) {
             filter['timeline.announce_date'] = {};
-            if (dateFrom) filter['timeline.announce_date'].$gte = new Date(dateFrom);
-            if (dateTo) filter['timeline.announce_date'].$lte = new Date(dateTo);
+            if (dateFromResult.value) filter['timeline.announce_date'].$gte = dateFromResult.value;
+            if (dateToResult.value) filter['timeline.announce_date'].$lte = dateToResult.value;
         }
 
-        // Text search on project_name
-        const search = searchParams.get('search');
+        // Escaped text search on project_name (prevents ReDoS / operator injection)
         if (search) {
-            filter.project_name = { $regex: search, $options: 'i' };
+            filter.project_name = { $regex: escapeRegex(search), $options: 'i' };
         }
 
         // Execute query
@@ -87,11 +119,11 @@ async function handleGET(request) {
                 'Content-Type': 'application/json; charset=utf-8',
             },
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
             error: {
                 code: 'LIST_PROJECTS_FAILED',
-                message: error.message,
+                message: 'Failed to list projects',
             },
         }, { status: 500 });
     }

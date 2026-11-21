@@ -187,9 +187,9 @@ async function handleGET(request) {
             total: payload.total?.[0]?.count ?? 0,
             data: (payload.data ?? []).map(toAnalyticsItem),
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({
-            error: { code: 'ANALYTICS_SEARCH_FAILED', message: error.message },
+            error: { code: 'ANALYTICS_SEARCH_FAILED', message: 'Analytics search failed' },
         }, { status: 500 });
     }
 }

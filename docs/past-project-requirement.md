@@ -52,7 +52,7 @@ Missing company values and flagged or low-confidence source qualifications stay 
 
 To check through the API, sign in with a company profile and open `GET /api/bid-prep/tors/69099360837/checklist`. Inspect `items`, `summary`, and `evidencePages`. The Bid Prep draft checklist and DOCX export use these same items.
 
-On the TOR detail checklist, use **กำหนดสถานะเอง** to save a status for one item. The checklist totals, Bid Prep draft, and DOCX use the saved status for the signed-in user. Choose **ใช้ผลจากระบบ** to clear the override. The API accepts `PATCH /api/bid-prep/tors/{projectId}/checklist` with `itemId` from the checklist response and a `status` of `pass`, `fail`, `manual`, or `null` to clear.
+In the checklist, choose **ผ่าน** or **ไม่ผ่าน** to save a status. Click the selected button again to restore the system result. The checklist totals, Bid Prep draft, and DOCX use the saved status for the signed-in user. The API accepts `PATCH /api/bid-prep/tors/{projectId}/checklist` with `itemId` from the checklist response and a `status` of `pass`, `fail`, `manual`, or `null` to clear.
 
 ## Local verification
 

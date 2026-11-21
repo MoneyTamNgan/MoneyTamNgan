@@ -107,4 +107,22 @@ describe('POST /api/notifications/test', () => {
         const body = await response.json();
         expect(body.error).toContain('Failed to send email');
     });
+
+    it('rejects invalid or oversized matches payloads', async () => {
+        const invalidArray = await POST(requestWithBody({ matches: [] }));
+        expect(invalidArray.status).toBe(400);
+        expect((await invalidArray.json()).error.code).toBe('INVALID_MATCHES');
+
+        const invalidItem = await POST(requestWithBody({
+            matches: [{ torId: '', title: 'T', agency: 'A', budget: -5, matchScore: 200 }],
+        }));
+        expect(invalidItem.status).toBe(400);
+        expect((await invalidItem.json()).error.code).toBe('INVALID_MATCHES');
+
+        const oversized = await POST(requestWithBody({
+            matches: [{ torId: 'X', title: 'A'.repeat(20000), agency: 'A', budget: 100, matchScore: 50 }],
+        }));
+        expect(oversized.status).toBe(413);
+        expect((await oversized.json()).error.code).toBe('PAYLOAD_TOO_LARGE');
+    });
 });

@@ -48,8 +48,8 @@ async function handleGET(request) {
             items: items.map(project => toTorListItem(project)),
             aggregates,
         });
-    } catch (error) {
-        return errorResponse('ANALYTICS_SEARCH_FAILED', error.message, 500);
+    } catch {
+        return errorResponse('ANALYTICS_SEARCH_FAILED', 'Analytics search failed', 500);
     }
 }
 

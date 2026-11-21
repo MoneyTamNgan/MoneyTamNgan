@@ -8,8 +8,8 @@ Issues #140 and #141 extend the existing bid preparation security layer into a u
 2. Create a draft to edit, or request an AI draft through the existing `/api/tors/{id}/proposal-draft` job API. AI generation still needs the worker. The workspace polls that owner's job, then imports its completed output into an owned saved draft.
 3. Edit the title, sections, plain-text content and source references. Add/remove sections as needed. Each imported statement has its own section and its original TOR page or company-field source. User-created sections can record references explicitly.
 4. Save to MongoDB. The response updates the visible version and last-modified time. A stale save returns 409 and leaves the local edits visible; it does not overwrite the newer server version. The editor offers an explicitly labeled reload/discard action.
-5. Review the caller-specific checklist and any missing information. Export is disabled while there are unsaved changes. Standard `[to fill in]`/`[to fill in: ...]` placeholders are highlighted in the preview and summary. Missing sources/checklist pages also cause an export warning.
-6. Confirm an incomplete export if needed. The downloaded DOCX retains highlighted placeholders, reference labels and human-review notices. It contains one checklist and proposal, not an e-GP submission.
+5. Open **รายการตรวจสอบคุณสมบัติ** and review each requirement. Download becomes available after all items pass on a complete checklist and the draft has been saved.
+6. Confirm any remaining draft or reference warnings. The downloaded DOCX retains highlighted placeholders, reference labels and human-review notices and contains both the checklist and proposal.
 
 The AI warning and non-submission notice are shown on the workspace and editor. The editor warning stays visible while scrolling. React text nodes, form controls and `<mark>` elements display text without rendering raw HTML. The mobile form stays clear of the fixed navigation rail; the checklist scrolls inside its own container.
 
@@ -108,11 +108,11 @@ The file includes:
 - A title, project ID, original creation date, last edit date and export timestamp in ISO format.
 - The AI-draft warning and English/Thai notice that MoneyTamNgan does not submit to e-GP.
 - A checklist table with requirement, status, reasoning and TOR source page.
-- Missing profile fields and a warning when the checklist is truncated.
+- Missing profile fields.
 - Proposal headings, bodies and source references.
 - Yellow/red highlights on unfilled standard placeholders.
 
-Unavailable/unprocessed checklist data becomes an explicitly manual row with a placeholder and reason. Missing source pages stay visibly unfilled; the export does not fabricate a page or pass result.
+The export endpoint returns `409 CHECKLIST_NOT_PASSED` for an unavailable, empty or truncated checklist or when an item has yet to pass. Missing source pages stay visibly unfilled when the checklist passes.
 
 The OOXML ZIP contains only `[Content_Types].xml`, package relationships, `word/document.xml`, internal document relationships and `word/styles.xml`. It has no macros, external relationships, executable fields, HTML or embedded remote content. Supplied markup is XML-escaped text; formula-looking strings are neutralized and remain text runs. The safe ASCII filename is sent in `Content-Disposition: attachment`, with the DOCX MIME type, `private, no-store` and `nosniff`.
 
