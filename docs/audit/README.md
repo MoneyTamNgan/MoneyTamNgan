@@ -8,6 +8,8 @@ Everything an auditor usually asks for, in one place. Written 22 Nov 2026 for `v
 | 2 | [02-data-model-er.md](02-data-model-er.md) | ER diagram, what personal data is stored, which integrity rules the database enforces |
 | 3 | [03-design-patterns.md](03-design-patterns.md) | Which design patterns are used, where, why, how to verify; trade-offs |
 | 4 | [04-controls-and-evidence.md](04-controls-and-evidence.md) | Control by control: what we do, proof, status, open gaps |
+| 5 | [05-incident-response-runbook.md](05-incident-response-runbook.md) | What do we do when something goes wrong: roles, severity, containment, notification, recovery |
+| 6 | [06-privacy-notice.md](06-privacy-notice.md) | Privacy notice (Thai and English), draft for legal review |
 
 Existing evidence these point to: [security audit](../security-assignment-audit-2026-11-19.md), [threat model](../security/THREAT_MODEL.md), [RBAC matrix](../security/RBAC_SPEC.md), [ASVS notes](../security/ASVS_CHECKLIST.md), [vulnerability policy](../security/VULNERABILITY_MGMT.md), [E2E 22 Nov](../e2e-test-2026-11-22.md), [acceptance table](../acceptance-bidprep-2026-11.md), [handover](../handover.md).
 
@@ -23,7 +25,7 @@ Existing evidence these point to: [security audit](../security-assignment-audit-
 | What if the database or AI is down? | `/api/health` 503 within 3 s, clear AI error in 20 ms, no hangs; fallback to local mongo | E2E 19 Nov |
 | How is the code reviewed and tested? | PR into `develop`, CI (build, tests, contract, Semgrep, ZAP); 353 + 472 tests | 04 section C |
 | How are dependencies and secrets managed? | npm audit gate with expiring exceptions; secrets only in `.env`; rotation procedure written | VULNERABILITY_MGMT.md; handover.md |
-| How would you recover from a breach or data loss? | Rotation and revocation steps exist; **incident runbook and restore drill are not written yet** | 04 section D, open items |
+| How would you recover from a breach or data loss? | Rotation and revocation steps exist; incident runbook written ([05](05-incident-response-runbook.md)), **restore drill not done** | 04 section D, open items |
 | Is it compliant with ASVS / PDPA? | 13 of 18 selected ASVS criteria covered, 5 partial; **no claim of full compliance; no PDPA notice yet** | security audit |
 
 ## How to reproduce the checks

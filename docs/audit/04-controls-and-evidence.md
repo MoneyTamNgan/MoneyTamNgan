@@ -23,7 +23,7 @@ For each topic an auditor raises: what we do, where the proof is, and its honest
 | Encryption in transit | HTTPS in production; HSTS; TLS to Atlas | `lib/security-policy.js` | Done in production config; demo machine runs plain http on localhost |
 | Encryption at rest | Provided by Atlas / host disk; not configured by the application | | **Gap: confirm Atlas encryption at rest and host disk encryption** |
 | Third-party data sharing | TOR text (public) and owner's profile sent to the AI provider for drafts | [handover.md](../handover.md) | Disclose to users; local model keeps it on the machine |
-| PDPA / privacy notice | Not written | | **Gap: privacy notice and lawful-basis statement not produced** |
+| PDPA / privacy notice | Not written | | Draft written: [06-privacy-notice.md](06-privacy-notice.md); **needs legal review, filled fields and a link in the app** |
 
 ## C. Secure development
 | Topic | What we do | Evidence | Status |
@@ -47,7 +47,7 @@ For each topic an auditor raises: what we do, where the proof is, and its honest
 | Logging and audit trail | Admin trigger audit (actor, role, IP, outcome), classification overrides, auth events, ingestion and acquisition records | `PipelineTriggerAudit`, `ClassificationOverride`; audit notes in the security audit | Partial: auth-event logging inconsistent (listed gap); no central log store |
 | Backup and restore | Not configured by the application | | **Gap: confirm Atlas backup policy and write a restore drill** |
 | Disaster recovery / fallback | Fallback to local `mongo` with pre-processed data if the venue cannot reach Atlas | [connectivity](../connectivity-test-2026-11-19.md), [local-deployment.md](../local-deployment.md) | Written; rehearse |
-| Incident response | Not written | | **Gap: short runbook (who, how to revoke sessions, rotate keys)** |
+| Incident response | Runbook with roles, severity, playbooks, notification and record template | [05-incident-response-runbook.md](05-incident-response-runbook.md) | Written; **roles are blank and no tabletop exercise yet** |
 | Secret rotation | Procedure written; not yet executed | [handover.md](../handover.md) | **Pending execution** |
 | Change management | PR history, tags (`v1.0.0`), CI | GitHub | Done |
 | Capacity | Single host; AI draft 76 to 92 s on GTX 1050 Ti with the local model | [connectivity](../connectivity-test-2026-11-19.md) | Known limit |
@@ -68,7 +68,7 @@ Requirement IDs come from the BidPrep SRS (private Google Doc, v0.1, waiting for
 1. Run a real secret scanner and rotate any credential that appeared in chat or on test machines.
 2. Move admin rights to the new system owner; name the owner in [handover.md](../handover.md).
 3. Confirm Atlas encryption at rest and backup; add a restore drill.
-4. Write a short incident-response runbook and a privacy notice.
+4. Fill the blanks in the incident runbook (roles, contacts), run one tabletop exercise, and get the privacy notice reviewed, completed and linked in the app (plus a delete-account button or a manual process).
 5. Reconcile the README "known gaps" line on copied tokens after logout with ASVS V7.4.1 (DONE).
 6. Attach the customer's written SRS confirmation.
 7. Fix `/projects` horizontal overflow at 360 px and test in Microsoft Word.
