@@ -17,9 +17,9 @@ const BIDDING_STATUS_OPTIONS = [
 ];
 
 const informationSlides = [
-  { kicker: "ติดตาม TOR ได้ในที่เดียว", title: "ค้นหาโครงการจากหน่วยงานภาครัฐ", description: "รวมข้อมูล TOR พร้อมสถานะเอกสารและวันเผยแพร่ล่าสุด", accent: "ค้นหารายการ TOR", href: "#tor-search" },
+  { kicker: "ติดตาม TOR ได้ในที่เดียว", title: "ค้นหาโครงการจากหน่วยงานภาครัฐ", description: "รวมข้อมูล TOR พร้อมสถานะเอกสารและวันเผยแพร่ล่าสุด", accent: "ค้นหารายการ TOR" },
   { kicker: "อ่านข้อมูลได้รวดเร็วขึ้น", title: "สรุปคุณสมบัติและเทคโนโลยีที่ต้องการ", description: "เมื่อมีข้อมูลเอกสาร ระบบจะแสดงข้อมูลที่สรุปได้เพื่อช่วยให้คุณประเมินโครงการ", accent: "ดูข้อมูลเอกสาร" },
-  { kicker: "เปรียบเทียบอย่างรอบคอบ", title: "ติดตามงบประมาณและข้อมูลความผิดปกติ", description: "แสดงข้อมูลเปรียบเทียบเมื่อมีข้อมูลเพียงพอ โดยผลลัพธ์เป็นข้อมูลประกอบการพิจารณาเท่านั้น", accent: "ดูข้อมูลวิเคราะห์", href: "/analytics" },
+  { kicker: "เปรียบเทียบอย่างรอบคอบ", title: "ติดตามงบประมาณและข้อมูลความผิดปกติ", description: "แสดงข้อมูลเปรียบเทียบเมื่อมีข้อมูลเพียงพอ โดยผลลัพธ์เป็นข้อมูลประกอบการพิจารณาเท่านั้น", accent: "ดูข้อมูลวิเคราะห์" },
 ];
 
 function feedCacheKey(
@@ -267,11 +267,7 @@ function DashboardContent() {
   }, [softwareOnly]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (!document.activeElement?.closest(".information-link")) {
-        setActiveSlide((current) => (current + 1) % informationSlides.length);
-      }
-    }, 5_000);
+    const timer = window.setInterval(() => setActiveSlide((current) => (current + 1) % informationSlides.length), 5_000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -299,11 +295,6 @@ function DashboardContent() {
   const updateSoftwareOnly = () => { setSoftwareOnly((current) => !current); setAgency("ทั้งหมด"); setPage(1); };
 
   const isGuest = account === null;
-  const projectWithSummary = visibleItems.find((tor) => tor.processingStatus === "completed" || tor.techStack.length > 0);
-  const documentPath = projectWithSummary ? `/tors/${encodeURIComponent(projectWithSummary.id)}/document` : null;
-  const documentHref = documentPath && !account
-    ? `/?next=${encodeURIComponent(documentPath)}`
-    : documentPath ?? "#tor-list";
 
   return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:440px!important;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card:hover{z-index:5!important;transform:none!important;border-color:var(--orange-primary)!important;background:var(--cream-soft)!important;box-shadow:0 26px 42px var(--shadow)!important}}`}</style>
     <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}`}</style>
@@ -312,8 +303,8 @@ function DashboardContent() {
 
     <section className="information-carousel" aria-label="ข้อมูลแนะนำ">
       <div className="information-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
-        {informationSlides.map((slide, index) => <article className="information-slide" key={slide.title} aria-hidden={index !== activeSlide} inert={index !== activeSlide}>
-          <div className="information-copy"><p>{slide.kicker}</p><h2>{slide.title}</h2><span>{slide.description}</span><Link className="information-link" href={slide.href ?? documentHref}>{slide.accent} <i aria-hidden="true">→</i></Link></div>
+        {informationSlides.map((slide, index) => <article className="information-slide" key={slide.title} aria-hidden={index !== activeSlide}>
+          <div className="information-copy"><p>{slide.kicker}</p><h2>{slide.title}</h2><span>{slide.description}</span><strong>{slide.accent} <i aria-hidden="true">→</i></strong></div>
           <div className="information-image" aria-label="พื้นที่สำหรับภาพประกอบ"><svg viewBox="0 0 320 190" role="img" aria-label="ภาพตัวอย่าง"><rect x="8" y="8" width="304" height="174" rx="14" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="7 7" /><circle cx="106" cy="82" r="24" fill="currentColor" opacity=".25" /><path d="M38 154l62-49 41 34 48-58 93 73H38z" fill="currentColor" opacity=".42" /><path d="M208 49h57M208 65h39M208 81h48" stroke="currentColor" strokeLinecap="round" strokeWidth="6" opacity=".5" /></svg><span>ภาพประกอบตัวอย่าง</span></div>
         </article>)}
       </div>
@@ -338,7 +329,7 @@ function DashboardContent() {
         </aside>
       )}
 
-      <label className="feed-search feed-search-main"><span aria-hidden="true">⌕</span><input id="tor-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสโครงการ ชื่อ หรือหน่วยงาน" aria-label="ค้นหา TOR" /></label>
+      <label className="feed-search feed-search-main"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหารหัสโครงการ ชื่อ หรือหน่วยงาน" aria-label="ค้นหา TOR" /></label>
 
       <section className="feed-filters feed-filters-labeled" aria-label="ตัวกรอง TOR" ref={filterBarRef}>
         <div className="filter-title"><span aria-hidden="true">☷</span> ตัวกรอง</div>
@@ -350,7 +341,7 @@ function DashboardContent() {
         <label className="sort-control"><span>เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบประมาณ: สูงไปต่ำ</option><option value="budget-low">งบประมาณ: ต่ำไปสูง</option><option value="best-match">ความตรงกับโปรไฟล์</option></select></label>
       </section>
 
-      <section id="tor-list" className="feed-grid" aria-label="รายการ TOR">
+      <section className="feed-grid" aria-label="รายการ TOR">
         {loading && items.length === 0 && <p className="feed-empty">กำลังโหลดรายการ TOR…</p>}
         {isRefreshing && <p className="feed-refreshing" role="status">กำลังอัปเดตรายการ TOR…</p>}
         {error && <p className={items.length > 0 ? "feed-refreshing" : "feed-empty"}>{error}</p>}
