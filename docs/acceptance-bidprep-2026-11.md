@@ -11,7 +11,7 @@ Evidence is from the 19 Nov run on the demo machine ([E2E report](e2e-test-2026-
 | FR-4.7 access control and privacy | Pass | E2E: B gets 404 on A's draft, export, AI job and list; guests 401; user 403 on admin; [bid-prep-fr-4.7.md](security/bid-prep-fr-4.7.md) |
 | Vertex/AI down: checklist works, draft shows a message | Pass | `VERTEX_UNAVAILABLE` in 20 ms, no hang |
 | 2 accounts, full flow | Pass | E2E steps above |
-| 3 different TORs (clear, ambiguous, incomplete) | Partial | 25 TORs read on 22 Nov: 5 with checklists (all `manual` with an empty profile), 20 return a clean 409 (incomplete data). Clear vs ambiguous not separable ([report](e2e-test-2026-11-22.md)) |
+| 3 different TORs (clear, ambiguous, incomplete) | Partial | 25 TORs read on 22 Nov: 5 with checklists (all `manual` with an empty profile), 20 return a clean 409 (incomplete data). A full profile on 6 TORs still gives all `manual` (no automatic pass/fail triggered); covered by unit tests only ([report](e2e-test-2026-11-22.md)) |
 | Google sign-in, match email, admin pipeline run | Not verified | listed under "Not covered" in the E2E report |
 | Screenshots at 360/768/1280 px | Pass with 1 defect | 18 screenshots; `/projects` overflows horizontally at 360 px ([evidence](evidence/screenshots-2026-11-22/)) |
 
