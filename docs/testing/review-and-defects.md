@@ -36,6 +36,9 @@ Combined effect of D1 and D2: on the demo machine, no AI draft can be produced e
 - DOCX export needs every checklist item set to "ผ่าน" and the draft saved (F06-07, F06-10, F06-11); on a real TOR all items start as "ตรวจสอบเอง".
 - The sign-in and register endpoints share a limit of 30 per 15 minutes per address, so two test runs close together hit HTTP 429 (the runner waits for `Retry-After`).
 
+## 3b. Fallback after Vertex refuses (PR #249), checked on the demo machine
+The machine was set to `AI_PROVIDER=vertex`, `AI_FALLBACK_PROVIDER=ollama`, `OLLAMA_BASE_URL` = the agy bridge. There are no Vertex credentials on the machine, so Vertex refuses every request: the worker log shows `ai_fallback` with reason `credentials` and then `HTTP 401` for each draft, and **F07 and F07b pass 10 of 10** ([test-sheet-ai-fallback.md](test-sheet-ai-fallback.md), [evidence](../evidence/ai-fallback-2026-11-22/), worker log `worker-ai_fallback-log.txt`). F07 took 123 s (the request is sent to Vertex first, and the draft itself takes about 70 to 80 s). What is not covered: a Vertex that works and then fails halfway, and Vertex quota (429) as opposed to missing credentials; those are covered by the unit tests only (`tests/unit/ai-fallback.test.js`, 7 tests).
+
 ## 4. Full re-run after the fixes (22 Nov 2026, later the same day)
 All 9 flows were run again on the demo machine with the fixes of PR #242, #243 and #245 (files copied to the machine by hand, not yet merged): **86 of 86 steps pass** (F01 got one new step, 14, for the layout at 360 and 768 px). Sheet: [test-sheet.md](test-sheet.md). Every function with its video and screenshot: [evidence-index.md](evidence-index.md). Evidence: [../evidence/testing-2026-11-22-full/](../evidence/testing-2026-11-22-full/). The evidence of the first run (81 of 85, with the defects) stays in [../evidence/testing-2026-11-22/](../evidence/testing-2026-11-22/).
 

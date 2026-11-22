@@ -2,7 +2,7 @@
 
 Tracks software-related TOR (procurement) projects from Thailand's e-GP portal: it ingests project metadata, downloads and reads the TOR documents (text and Thai OCR), summarises them with Vertex AI, and shows them in a Next.js dashboard with search, matching and analytics. A Bid Preparation Assistant helps sellers prepare bid documents; it never submits a bid.
 
-> **AI provider.** The system is designed to use Gemini on Vertex AI. Gemini called through the `agy` CLI ([agy bridge](docs/agy-bridge.md)) is the **fallback AI provider** for the demo, because Vertex AI has no billing yet; it replaced the local model (Ollama `qwen2.5:3b`), which was too slow. The fallback is chosen by configuration (`AI_PROVIDER`, `OLLAMA_BASE_URL`); there is no automatic failover from Vertex. The bridge is for demos only.
+> **AI provider.** The system is designed to use Gemini on Vertex AI. Gemini called through the `agy` CLI ([agy bridge](docs/agy-bridge.md)) is the **fallback AI provider** for the demo, because Vertex AI has no billing yet; it replaced the local model (Ollama `qwen2.5:3b`), which was too slow. With `AI_PROVIDER=vertex` and `AI_FALLBACK_PROVIDER=ollama` (PR #249), a generation request that Vertex refuses (credentials, HTTP error, quota, network, time-out) is sent once to `OLLAMA_BASE_URL` (the bridge or a local model); embeddings do not fall back. Without PR #249 or without that setting the switch is manual (`AI_PROVIDER`). The bridge is for demos only.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
