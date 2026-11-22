@@ -2,6 +2,8 @@
 
 Tracks software-related TOR (procurement) projects from Thailand's e-GP portal: it ingests project metadata, downloads and reads the TOR documents (text and Thai OCR), summarises them with Vertex AI, and shows them in a Next.js dashboard with search, matching and analytics. A Bid Preparation Assistant helps sellers prepare bid documents; it never submits a bid.
 
+> **AI provider.** The system is designed to use Gemini on Vertex AI. The demo AI moved from the local model (Ollama `qwen2.5:3b`) to Gemini called through the `agy` CLI ([agy bridge](docs/agy-bridge.md)), because Vertex AI has no billing yet. The bridge is for demos only.
+
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)
