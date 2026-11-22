@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import yauzl from 'yauzl';
 import { signSession } from '@/lib/auth';
-import { parseDraftContent, draftPlaceholders, proposalToSections } from '@/lib/bid-prep/draft-content';
+import { parseDraftContent, draftPlaceholders, proposalToSections, DRAFT_LIMITS } from '@/lib/bid-prep/draft-content';
 import { buildDraftDocx, safeDocxFilename } from '@/lib/bid-prep/docx';
 import { checklistForUser } from '@/lib/bid-prep/checklist';
 
@@ -53,11 +53,13 @@ beforeEach(() => {
 
 describe('#140/#141 draft limits and export', () => {
     it('rejects oversized and wrong-type fields rather than silently clipping', () => {
-        for (const body of [{ title: 'x'.repeat(201) }, { title: false }, { sections: null }, { sections: Array(41).fill({}) },
+        for (const body of [{ title: 'x'.repeat(201) }, { title: false }, { sections: null },
+            { sections: Array(DRAFT_LIMITS.sections + 1).fill({}) },
             { sections: [{ body: 'x'.repeat(8001) }] }, { sections: [{ sources: ['x'.repeat(201)] }] },
             { sections: [{ sources: Array(21).fill('source') }] }, { sections: [{ body: {} }] }]) {
             expect(parseDraftContent(body, { projectRequired: false }).code).toBe('INVALID_DRAFT');
         }
+        expect(parseDraftContent({ sections: Array(DRAFT_LIMITS.sections).fill({}) }, { projectRequired: false }).sections).toHaveLength(DRAFT_LIMITS.sections);
         expect(parseDraftContent({ sections: Array(13).fill({ body: 'x'.repeat(8000) }) }, { projectRequired: false }).status).toBe(413);
     });
     it('imports one sourced generator statement per section without losing references or placeholders', () => {
