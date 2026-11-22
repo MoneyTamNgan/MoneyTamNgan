@@ -10,7 +10,7 @@ System owner: **to be named by the team at delivery** (fill in name and contact)
 |---|---|---|
 | MongoDB Atlas | main database | `MONGODB_URI`, `MONGODB_DB_NAME`; Atlas API keys only for `atlas-allowlist` |
 | Google Cloud / Vertex AI | TOR extraction, drafts, embeddings (off by default) | `VERTEX_AI_ENABLED`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_APPLICATION_CREDENTIALS` |
-| Gemini through the `agy` CLI (agy bridge) | **Demo AI since 22 Nov 2026.** Replaces the local model `qwen2.5:3b` (too slow: AI drafts timed out). Same Ollama-protocol setting, pointed at the bridge; no app change. Demo only: no authentication, data goes to Gemini. See [agy-bridge.md](agy-bridge.md) | `AI_PROVIDER=ollama`, `OLLAMA_BASE_URL=http://host.docker.internal:11500`, `PROPOSAL_DRAFT_TIMEOUT_MS=0` |
+| Gemini through the `agy` CLI (agy bridge) | **Fallback AI provider, and the demo AI since 22 Nov 2026** (chosen by configuration, no automatic failover from Vertex). Replaces the local model `qwen2.5:3b` (too slow: AI drafts timed out). Same Ollama-protocol setting, pointed at the bridge; no app change. Demo only: no authentication, data goes to Gemini. See [agy-bridge.md](agy-bridge.md) | `AI_PROVIDER=ollama`, `OLLAMA_BASE_URL=http://host.docker.internal:11500`, `PROPOSAL_DRAFT_TIMEOUT_MS=0` |
 | Ollama (local model) | previous demo AI; still supported when no bridge is available | `AI_PROVIDER=ollama`, `OLLAMA_BASE_URL` |
 | Google OAuth | Google sign-in | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_REDIRECT_URI` |
 | Resend / SMTP | notification email | `RESEND_API_KEY`, `MAIL_*`, `EMAIL_TRANSPORT` |

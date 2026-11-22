@@ -77,7 +77,7 @@ docker compose stop worker                 # stop processing queued jobs
 Check `ingestionruns`, `processingjobs` and `GET /api/admin/pipeline/status`. A stuck admin run recovers by itself 90 seconds after its lease stops renewing (`PIPELINE_INTERRUPTED`). Remove or fix the bad records, then restart `worker`. The `scheduler` stays off on a demo machine unless wanted.
 
 ### 5.5 AI misbehaviour (prompt injection, wrong or harmful draft, data leaving the machine)
-1. Switch to the local model or turn the AI off: set `AI_PROVIDER=ollama` or `VERTEX_AI_ENABLED=false`, recreate `worker`. Drafts and checklists still work without Vertex.
+1. Switch to the fallback or turn the AI off: set `AI_PROVIDER=ollama` (local model, or the Gemini-through-agy bridge by pointing `OLLAMA_BASE_URL` at it, demo only: [agy-bridge.md](../agy-bridge.md)) or `VERTEX_AI_ENABLED=false`, recreate `worker`. The switch is manual; there is no automatic failover. Drafts and checklists still work without Vertex.
 2. Keep the offending TOR id and the `DocumentSummary` / job record (it stores model, prompt version, usage).
 3. Remind users that every draft must be reviewed; nothing is submitted automatically.
 
