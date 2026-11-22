@@ -7,13 +7,13 @@ Plan: [test-plan.md](test-plan.md). Every flow is one recorded video; the time c
 | Flow | Title | Steps | Pass | Fail | Video | Length |
 |---|---|---|---|---|---|---|
 | F01-guest-browse | Guest browses TORs, searches, filters, pages, opens detail and analytics (no login) | 14 | 14 | 0 | [video](../evidence/testing-2026-11-22-full/F01-guest-browse/F01-guest-browse.webm) | 00:38 |
-| F02-auth | Register, log out, log in by email and username, error cases, Google redirect | 11 | 11 | 0 | [video](../evidence/testing-2026-11-22-full/F02-auth/F02-auth.webm) | 00:21 |
+| F02-auth | Register, log out, log in by email and username, error cases, Google redirect | 11 | 11 | 0 | [video](../evidence/testing-2026-11-22-full/F02-auth/F02-auth.webm) | 00:20 |
 | F03-access-control | Guests and normal users cannot reach protected pages and APIs; users cannot see each other's drafts | 8 | 8 | 0 | [video](../evidence/testing-2026-11-22-full/F03-access-control/F03-access-control.webm) | 00:15 |
-| F04-profile | Edit the company profile, validation, persistence, delete company data, delete account | 13 | 13 | 0 | [video](../evidence/testing-2026-11-22-full/F04-profile/F04-profile.webm) | 00:26 |
+| F04-profile | Edit the company profile, validation, persistence, delete company data, delete account | 13 | 13 | 0 | [video](../evidence/testing-2026-11-22-full/F04-profile/F04-profile.webm) | 00:25 |
 | F05-tor-detail | Signed-in user reads a TOR: summary, qualification checklist (own status), prepare-draft link, dashboard | 9 | 9 | 0 | [video](../evidence/testing-2026-11-22-full/F05-tor-detail/F05-tor-detail.webm) | 00:21 |
 | F06-bidprep-draft | BidPrep: create a draft, edit, sections, checklist gate, export DOCX, delete | 14 | 14 | 0 | [video](../evidence/testing-2026-11-22-full/F06-bidprep-draft/F06-bidprep-draft.webm) | 00:37 |
-| F07-bidprep-ai | BidPrep: generate an AI draft (queued job, local model), TOR with a small scope | 5 | 5 | 0 | [video](../evidence/testing-2026-11-22-full/F07-bidprep-ai/F07-bidprep-ai.webm) | 01:51 |
-| F07b-bidprep-ai-large-tor | BidPrep: generate an AI draft for a TOR with a large scope (47 items) | 5 | 5 | 0 | [video](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/F07b-bidprep-ai-large-tor.webm) | 01:35 |
+| F07-bidprep-ai | BidPrep: generate an AI draft (queued job, local model), TOR with a small scope | 5 | 5 | 0 | [video](../evidence/testing-2026-11-22-full/F07-bidprep-ai/F07-bidprep-ai.webm) | 01:43 |
+| F07b-bidprep-ai-large-tor | BidPrep: generate an AI draft for a TOR with a large scope (47 items) | 5 | 5 | 0 | [video](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/F07b-bidprep-ai-large-tor.webm) | 01:22 |
 | F08-admin | Admin console: ingestion status, health, review queue (read only, nothing is triggered) | 7 | 7 | 0 | [video](../evidence/testing-2026-11-22-full/F08-admin/F08-admin.webm) | 00:17 |
 
 **Total: 86 passed, 0 failed of 86 steps.**
@@ -33,11 +33,11 @@ Video: [F01-guest-browse/F01-guest-browse.webm](../evidence/testing-2026-11-22-f
 | 07 | Open a TOR detail page directly as a guest | URL is /tors/<id>; the TOR overview is shown with the notice "เข้าสู่ระบบเพื่อดูรายละเอียดโครงการฉบับเต็ม"; the comparison card with the company profile ("มูลค่าผลงานขั้นต่ำตาม TOR") is not shown to a guest | as expected | ✅ PASS | 00:15 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/07-07.png) |
 | 08 | Open the document page of the TOR | The page shows the same project title as the detail page | as expected | ✅ PASS | 00:16 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/08-08.png) |
 | 09 | Open Analytics and change a filter | The analytics API is called again with HTTP 200 and the page stays populated | as expected | ✅ PASS | 00:18 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/09-09.png) |
-| 10 | Clear the filters | The filter returns to its first option and the data reloads | as expected | ✅ PASS | 00:20 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/10-10.png) |
-| 11 | Switch the chart mode to "ความพร้อมเอกสาร" and back | The chart heading changes to "ความพร้อมของเอกสาร TOR" and returns to "TOR ตามปีงบประมาณ" | as expected | ✅ PASS | 00:21 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/11-11.png) |
-| 12 | Export the analytics as CSV and as JSON | Two downloads start: a .csv and a .json file | tor-analytics-2026-11-22.csv, tor-analytics-2026-11-22.json | ✅ PASS | 00:22 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/12-12.png) |
-| 13 | Toggle the theme and collapse the sidebar | The theme control changes the page theme and the sidebar toggle flips aria-expanded | as expected | ✅ PASS | 00:24 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/13-13.png) |
-| 14 | Open the public pages on a phone-sized screen (360 px) and a tablet (768 px) | No page is wider than the screen (no sideways scrolling) on /, /projects, /analytics and /dashboard | 360:/=360 360:/projects=360 360:/analytics=360 360:/dashboard=360 768:/=768 768:/projects=768 768:/analytics=768 768:/dashboard=768 | ✅ PASS | 00:26 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/14-14.png) |
+| 10 | Clear the filters | The filter returns to its first option and the data reloads | as expected | ✅ PASS | 00:19 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/10-10.png) |
+| 11 | Switch the chart mode to "ความพร้อมเอกสาร" and back | The chart heading changes to "ความพร้อมของเอกสาร TOR" and returns to "TOR ตามปีงบประมาณ" | as expected | ✅ PASS | 00:20 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/11-11.png) |
+| 12 | Export the analytics as CSV and as JSON | Two downloads start: a .csv and a .json file | tor-analytics-2026-11-22.csv, tor-analytics-2026-11-22.json | ✅ PASS | 00:21 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/12-12.png) |
+| 13 | Toggle the theme and collapse the sidebar | The theme control changes the page theme and the sidebar toggle flips aria-expanded | as expected | ✅ PASS | 00:23 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/13-13.png) |
+| 14 | Open the public pages on a phone-sized screen (360 px) and a tablet (768 px) | No page is wider than the screen (no sideways scrolling) on /, /projects, /analytics and /dashboard | 360:/=360 360:/projects=360 360:/analytics=360 360:/dashboard=360 768:/=768 768:/projects=768 768:/analytics=768 768:/dashboard=768 | ✅ PASS | 00:25 | [img](../evidence/testing-2026-11-22-full/F01-guest-browse/14-14.png) |
 
 ## F02-auth: Register, log out, log in by email and username, error cases, Google redirect
 
@@ -54,8 +54,8 @@ Video: [F02-auth/F02-auth.webm](../evidence/testing-2026-11-22-full/F02-auth/F02
 | 07 | Log in with the email | Signed in as the new account | as expected | ✅ PASS | 00:09 | [img](../evidence/testing-2026-11-22-full/F02-auth/07-07.png) |
 | 08 | Log out, then log in with the username in upper case | Signed in as the same account (username is case-insensitive) | as expected | ✅ PASS | 00:12 | [img](../evidence/testing-2026-11-22-full/F02-auth/08-08.png) |
 | 09 | Register again with the same email | An alert says the email already has an account ("มีบัญชีอยู่แล้ว") | อีเมลนี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบด้วยวิธีเดิม | ✅ PASS | 00:15 | [img](../evidence/testing-2026-11-22-full/F02-auth/09-09.png) |
-| 10 | Click "เข้าสู่ระบบด้วย Google" | The browser is sent to accounts.google.com (we stop there; no real Google sign-in) | redirected to accounts.google.com | ✅ PASS | 00:18 | [img](../evidence/testing-2026-11-22-full/F02-auth/10-10.png) |
-| 11 | Cleanup: sign in and delete the test account (API) | HTTP 200 | as expected | ✅ PASS | 00:20 | [img](../evidence/testing-2026-11-22-full/F02-auth/11-11.png) |
+| 10 | Click "เข้าสู่ระบบด้วย Google" | The browser is sent to accounts.google.com (we stop there; no real Google sign-in) | redirected to accounts.google.com | ✅ PASS | 00:16 | [img](../evidence/testing-2026-11-22-full/F02-auth/10-10.png) |
+| 11 | Cleanup: sign in and delete the test account (API) | HTTP 200 | as expected | ✅ PASS | 00:18 | [img](../evidence/testing-2026-11-22-full/F02-auth/11-11.png) |
 
 ## F03-access-control: Guests and normal users cannot reach protected pages and APIs; users cannot see each other's drafts
 
@@ -104,9 +104,9 @@ Video: [F05-tor-detail/F05-tor-detail.webm](../evidence/testing-2026-11-22-full/
 | 05 | Change the first item to "ไม่ผ่าน", then press it again | The API reports fail; pressing the same button again returns the item to the system value (manual) | as expected | ✅ PASS | 00:07 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/04-05.png) |
 | 06 | Page through the checklist ("ถัดไป →") | A different first item is shown on the next page | as expected | ✅ PASS | 00:10 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/05-06.png) |
 | 07 | Click "เตรียมร่างข้อเสนอ" | The BidPrep page opens with projectId in the URL | as expected | ✅ PASS | 00:12 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/06-07.png) |
-| 08 | Open the document page of the TOR | The document view shows a project heading | as expected | ✅ PASS | 00:13 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/07-08.png) |
-| 09 | Open the dashboard | Cards link to /tors/<id> (not to sign-in), unlike the guest view | first card -> /tors/69109345522 | ✅ PASS | 00:15 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/08-09.png) |
-| 10 | Cleanup: delete the test account | HTTP 200 | as expected | ✅ PASS | 00:20 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/09-10.png) |
+| 08 | Open the document page of the TOR | The document view shows a project heading | as expected | ✅ PASS | 00:12 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/07-08.png) |
+| 09 | Open the dashboard | Cards link to /tors/<id> (not to sign-in), unlike the guest view | first card -> /tors/69109345522 | ✅ PASS | 00:14 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/08-09.png) |
+| 10 | Cleanup: delete the test account | HTTP 200 | as expected | ✅ PASS | 00:19 | [img](../evidence/testing-2026-11-22-full/F05-tor-detail/09-10.png) |
 
 ## F06-bidprep-draft: BidPrep: create a draft, edit, sections, checklist gate, export DOCX, delete
 
@@ -125,8 +125,8 @@ Video: [F06-bidprep-draft/F06-bidprep-draft.webm](../evidence/testing-2026-11-22
 | 09 | Mark one item "ไม่ผ่าน" | The "ไม่ผ่าน" counter becomes 1 | as expected | ✅ PASS | 00:13 | [img](../evidence/testing-2026-11-22-full/F06-bidprep-draft/09-09.png) |
 | 10 | Mark every item "ผ่าน" on all pages | The "ผ่าน" counter equals 11 and the other two are 0 | 11 clicks on 3 page(s), counters 11/0/0 | ✅ PASS | 00:15 | [img](../evidence/testing-2026-11-22-full/F06-bidprep-draft/10-10.png) |
 | 11 | Download the DOCX (saving first if the page reports unsaved changes) | A .docx download starts and the file is a valid zip (first bytes "PK") | download bid-draft-69109232352.docx (21795 bytes) | ✅ PASS | 00:29 | [img](../evidence/testing-2026-11-22-full/F06-bidprep-draft/11-11.png) |
-| 12 | Return to the list and open the saved draft | The draft is listed with its title and opens at version 3 or higher, showing the saved title and first section heading | as expected | ✅ PASS | 00:31 | [img](../evidence/testing-2026-11-22-full/F06-bidprep-draft/12-12.png) |
-| 13 | Delete the draft | The list shows the empty message and the API has 0 drafts | as expected | ✅ PASS | 00:34 | [img](../evidence/testing-2026-11-22-full/F06-bidprep-draft/13-13.png) |
+| 12 | Return to the list and open the saved draft | The draft is listed with its title and opens at version 3 or higher, showing the saved title and first section heading | as expected | ✅ PASS | 00:30 | [img](../evidence/testing-2026-11-22-full/F06-bidprep-draft/12-12.png) |
+| 13 | Delete the draft | The list shows the empty message and the API has 0 drafts | as expected | ✅ PASS | 00:33 | [img](../evidence/testing-2026-11-22-full/F06-bidprep-draft/13-13.png) |
 | 14 | Cleanup: delete the test account | HTTP 200 | as expected | ✅ PASS | 00:36 | [img](../evidence/testing-2026-11-22-full/F06-bidprep-draft/14-14.png) |
 
 ## F07-bidprep-ai: BidPrep: generate an AI draft (queued job, local model), TOR with a small scope
@@ -137,9 +137,9 @@ Video: [F07-bidprep-ai/F07-bidprep-ai.webm](../evidence/testing-2026-11-22-full/
 |---|---|---|---|---|---|---|
 | 01 | Sign in, fill a profile and open "เตรียมข้อเสนอ" | The page loads with the AI warning | as expected | ✅ PASS | 00:00 | [img](../evidence/testing-2026-11-22-full/F07-bidprep-ai/01-01.png) |
 | 02 | Enter a TOR id and click "สร้างร่างด้วย AI" | A job is queued (HTTP 202) and the page shows "กำลังรอผล AI" with a job number | queued -> 202 | ✅ PASS | 00:02 | [img](../evidence/testing-2026-11-22-full/F07-bidprep-ai/02-02.png) |
-| 03 | Wait for the job to finish (up to 5.5 minutes) | When the job completes the page opens the saved draft (or lists it under "ร่างที่บันทึกไว้"); if the job fails, the page must show why | ready after 96 s | ✅ PASS | 00:04 | [img](../evidence/testing-2026-11-22-full/F07-bidprep-ai/03-03.png) |
-| 04 | Open the AI draft | The editor shows at least 3 sections, source lists and at least one "[to fill in: ...]" placeholder | as expected | ✅ PASS | 01:41 | [img](../evidence/testing-2026-11-22-full/F07-bidprep-ai/04-04.png) |
-| 05 | Cleanup: delete the test account and its drafts | HTTP 200 | as expected | ✅ PASS | 01:42 | [img](../evidence/testing-2026-11-22-full/F07-bidprep-ai/05-05.png) |
+| 03 | Wait for the job to finish (up to 5.5 minutes) | When the job completes the page opens the saved draft (or lists it under "ร่างที่บันทึกไว้"); if the job fails, the page must show why | ready after 87 s | ✅ PASS | 00:04 | [img](../evidence/testing-2026-11-22-full/F07-bidprep-ai/03-03.png) |
+| 04 | Open the AI draft | The editor shows at least 3 sections, source lists and at least one "[to fill in: ...]" placeholder | as expected | ✅ PASS | 01:32 | [img](../evidence/testing-2026-11-22-full/F07-bidprep-ai/04-04.png) |
+| 05 | Cleanup: delete the test account and its drafts | HTTP 200 | as expected | ✅ PASS | 01:33 | [img](../evidence/testing-2026-11-22-full/F07-bidprep-ai/05-05.png) |
 
 ## F07b-bidprep-ai-large-tor: BidPrep: generate an AI draft for a TOR with a large scope (47 items)
 
@@ -149,9 +149,9 @@ Video: [F07b-bidprep-ai-large-tor/F07b-bidprep-ai-large-tor.webm](../evidence/te
 |---|---|---|---|---|---|---|
 | 01 | Sign in, fill a profile and open "เตรียมข้อเสนอ" | The page loads with the AI warning | as expected | ✅ PASS | 00:00 | [img](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/01-01.png) |
 | 02 | Enter a TOR id and click "สร้างร่างด้วย AI" | A job is queued (HTTP 202) and the page shows "กำลังรอผล AI" with a job number | queued -> 202 | ✅ PASS | 00:02 | [img](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/02-02.png) |
-| 03 | Wait for the job to finish (up to 5.5 minutes) | When the job completes the page opens the saved draft (or lists it under "ร่างที่บันทึกไว้"); if the job fails, the page must show why | ready after 81 s | ✅ PASS | 00:04 | [img](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/03-03.png) |
-| 04 | Open the AI draft | The editor shows at least 3 sections, source lists and at least one "[to fill in: ...]" placeholder | as expected | ✅ PASS | 01:26 | [img](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/04-04.png) |
-| 05 | Cleanup: delete the test account and its drafts | HTTP 200 | as expected | ✅ PASS | 01:27 | [img](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/05-05.png) |
+| 03 | Wait for the job to finish (up to 5.5 minutes) | When the job completes the page opens the saved draft (or lists it under "ร่างที่บันทึกไว้"); if the job fails, the page must show why | ready after 69 s | ✅ PASS | 00:04 | [img](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/03-03.png) |
+| 04 | Open the AI draft | The editor shows at least 3 sections, source lists and at least one "[to fill in: ...]" placeholder | as expected | ✅ PASS | 01:14 | [img](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/04-04.png) |
+| 05 | Cleanup: delete the test account and its drafts | HTTP 200 | as expected | ✅ PASS | 01:15 | [img](../evidence/testing-2026-11-22-full/F07b-bidprep-ai-large-tor/05-05.png) |
 
 ## F08-admin: Admin console: ingestion status, health, review queue (read only, nothing is triggered)
 
@@ -163,9 +163,9 @@ Video: [F08-admin/F08-admin.webm](../evidence/testing-2026-11-22-full/F08-admin/
 | 02 | Open /admin | The console shows the ingestion status and the scraper health section | as expected | ✅ PASS | 00:02 | [img](../evidence/testing-2026-11-22-full/F08-admin/02-02.png) |
 | 03 | Read the review queue | The queue finishes loading and shows rows or an empty-state message (not the loading text) | 5 row(s) in the queue | ✅ PASS | 00:03 | [img](../evidence/testing-2026-11-22-full/F08-admin/03-03.png) |
 | 04 | Filter the queue by reason | The reason filter is applied to the rows on the page: the row count does not grow | 5 -> 3 rows | ✅ PASS | 00:10 | [img](../evidence/testing-2026-11-22-full/F08-admin/04-04.png) |
-| 05 | Search the queue for text that matches nothing | The queue shows no rows (or only the empty-state row) | as expected | ✅ PASS | 00:13 | [img](../evidence/testing-2026-11-22-full/F08-admin/05-05.png) |
-| 06 | Admin API status call | HTTP 200 with a pipeline status body | status -> 200 | ✅ PASS | 00:15 | [img](../evidence/testing-2026-11-22-full/F08-admin/06-06.png) |
-| 07 | Cleanup: delete the admin test account | HTTP 200 | as expected | ✅ PASS | 00:16 | [img](../evidence/testing-2026-11-22-full/F08-admin/07-07.png) |
+| 05 | Search the queue for text that matches nothing | The queue shows no rows (or only the empty-state row) | as expected | ✅ PASS | 00:12 | [img](../evidence/testing-2026-11-22-full/F08-admin/05-05.png) |
+| 06 | Admin API status call | HTTP 200 with a pipeline status body | status -> 200 | ✅ PASS | 00:14 | [img](../evidence/testing-2026-11-22-full/F08-admin/06-06.png) |
+| 07 | Cleanup: delete the admin test account | HTTP 200 | as expected | ✅ PASS | 00:15 | [img](../evidence/testing-2026-11-22-full/F08-admin/07-07.png) |
 
 ## Defects found
 

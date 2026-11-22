@@ -89,7 +89,7 @@
     "id": "10",
     "action": "Clear the filters",
     "expected": "The filter returns to its first option and the data reloads",
-    "at": 20,
+    "at": 19,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F01-guest-browse/10-10.png"
@@ -98,7 +98,7 @@
     "id": "11",
     "action": "Switch the chart mode to \"ความพร้อมเอกสาร\" and back",
     "expected": "The chart heading changes to \"ความพร้อมของเอกสาร TOR\" and returns to \"TOR ตามปีงบประมาณ\"",
-    "at": 21,
+    "at": 20,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F01-guest-browse/11-11.png"
@@ -107,7 +107,7 @@
     "id": "12",
     "action": "Export the analytics as CSV and as JSON",
     "expected": "Two downloads start: a .csv and a .json file",
-    "at": 22,
+    "at": 21,
     "result": "PASS",
     "actual": "tor-analytics-2026-11-22.csv, tor-analytics-2026-11-22.json",
     "screenshot": "F01-guest-browse/12-12.png"
@@ -116,7 +116,7 @@
     "id": "13",
     "action": "Toggle the theme and collapse the sidebar",
     "expected": "The theme control changes the page theme and the sidebar toggle flips aria-expanded",
-    "at": 24,
+    "at": 23,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F01-guest-browse/13-13.png"
@@ -125,7 +125,7 @@
     "id": "14",
     "action": "Open the public pages on a phone-sized screen (360 px) and a tablet (768 px)",
     "expected": "No page is wider than the screen (no sideways scrolling) on /, /projects, /analytics and /dashboard",
-    "at": 26,
+    "at": 25,
     "result": "PASS",
     "actual": "360:/=360 360:/projects=360 360:/analytics=360 360:/dashboard=360 768:/=768 768:/projects=768 768:/analytics=768 768:/dashboard=768",
     "screenshot": "F01-guest-browse/14-14.png"
@@ -223,7 +223,7 @@
     "id": "10",
     "action": "Click \"เข้าสู่ระบบด้วย Google\"",
     "expected": "The browser is sent to accounts.google.com (we stop there; no real Google sign-in)",
-    "at": 18,
+    "at": 16,
     "result": "PASS",
     "actual": "redirected to accounts.google.com",
     "screenshot": "F02-auth/10-10.png"
@@ -232,13 +232,13 @@
     "id": "11",
     "action": "Cleanup: sign in and delete the test account (API)",
     "expected": "HTTP 200",
-    "at": 20,
+    "at": 18,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F02-auth/11-11.png"
    }
   ],
-  "seconds": 21
+  "seconds": 20
  },
  {
   "id": "F03-access-control",
@@ -443,7 +443,7 @@
     "screenshot": "F04-profile/13-13.png"
    }
   ],
-  "seconds": 26
+  "seconds": 25
  },
  {
   "id": "F05-tor-detail",
@@ -508,7 +508,7 @@
     "id": "08",
     "action": "Open the document page of the TOR",
     "expected": "The document view shows a project heading",
-    "at": 13,
+    "at": 12,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F05-tor-detail/07-08.png"
@@ -517,7 +517,7 @@
     "id": "09",
     "action": "Open the dashboard",
     "expected": "Cards link to /tors/<id> (not to sign-in), unlike the guest view",
-    "at": 15,
+    "at": 14,
     "result": "PASS",
     "actual": "first card -> /tors/69109345522",
     "screenshot": "F05-tor-detail/08-09.png"
@@ -526,7 +526,7 @@
     "id": "10",
     "action": "Cleanup: delete the test account",
     "expected": "HTTP 200",
-    "at": 20,
+    "at": 19,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F05-tor-detail/09-10.png"
@@ -642,7 +642,7 @@
     "id": "12",
     "action": "Return to the list and open the saved draft",
     "expected": "The draft is listed with its title and opens at version 3 or higher, showing the saved title and first section heading",
-    "at": 31,
+    "at": 30,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F06-bidprep-draft/12-12.png"
@@ -651,7 +651,7 @@
     "id": "13",
     "action": "Delete the draft",
     "expected": "The list shows the empty message and the API has 0 drafts",
-    "at": 34,
+    "at": 33,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F06-bidprep-draft/13-13.png"
@@ -697,14 +697,14 @@
     "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
     "at": 4,
     "result": "PASS",
-    "actual": "ready after 96 s",
+    "actual": "ready after 87 s",
     "screenshot": "F07-bidprep-ai/03-03.png"
    },
    {
     "id": "04",
     "action": "Open the AI draft",
     "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
-    "at": 101,
+    "at": 92,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07-bidprep-ai/04-04.png"
@@ -713,13 +713,13 @@
     "id": "05",
     "action": "Cleanup: delete the test account and its drafts",
     "expected": "HTTP 200",
-    "at": 102,
+    "at": 93,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07-bidprep-ai/05-05.png"
    }
   ],
-  "seconds": 111
+  "seconds": 103
  },
  {
   "id": "F07b-bidprep-ai-large-tor",
@@ -750,14 +750,14 @@
     "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
     "at": 4,
     "result": "PASS",
-    "actual": "ready after 81 s",
+    "actual": "ready after 69 s",
     "screenshot": "F07b-bidprep-ai-large-tor/03-03.png"
    },
    {
     "id": "04",
     "action": "Open the AI draft",
     "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
-    "at": 86,
+    "at": 74,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07b-bidprep-ai-large-tor/04-04.png"
@@ -766,13 +766,13 @@
     "id": "05",
     "action": "Cleanup: delete the test account and its drafts",
     "expected": "HTTP 200",
-    "at": 87,
+    "at": 75,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07b-bidprep-ai-large-tor/05-05.png"
    }
   ],
-  "seconds": 95
+  "seconds": 82
  },
  {
   "id": "F08-admin",
@@ -819,7 +819,7 @@
     "id": "05",
     "action": "Search the queue for text that matches nothing",
     "expected": "The queue shows no rows (or only the empty-state row)",
-    "at": 13,
+    "at": 12,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F08-admin/05-05.png"
@@ -828,7 +828,7 @@
     "id": "06",
     "action": "Admin API status call",
     "expected": "HTTP 200 with a pipeline status body",
-    "at": 15,
+    "at": 14,
     "result": "PASS",
     "actual": "status -> 200",
     "screenshot": "F08-admin/06-06.png"
@@ -837,7 +837,7 @@
     "id": "07",
     "action": "Cleanup: delete the admin test account",
     "expected": "HTTP 200",
-    "at": 16,
+    "at": 15,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F08-admin/07-07.png"
