@@ -22,7 +22,7 @@ flowchart LR
     SCR --- FS
     SCR -->|HTTPS| EGP[e-GP open data / RSS / announcement pages]
     SCH -->|HTTPS| EGP
-    WRK -->|extraction, drafts| AI[AI provider<br/>Vertex AI, or local Ollama]
+    WRK -->|extraction, drafts| AI[AI provider<br/>Vertex AI, local Ollama,<br/>or Gemini via the agy bridge - demo]
     APP -->|queue draft job| DB
     APP -->|OAuth| GO[Google OAuth]
     WRK -->|email| MAIL[Resend / SMTP]

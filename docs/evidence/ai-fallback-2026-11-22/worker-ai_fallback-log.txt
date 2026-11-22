@@ -1,0 +1,5 @@
+admin cleanup 200
+worker-1  | {"event":"ai_fallback","from":"vertex","to":"ollama","reason":"credentials"}
+worker-1  | {"event":"ai_fallback","from":"vertex","to":"ollama","reason":"HTTP 401"}
+worker-1  | {"event":"ai_fallback","from":"vertex","to":"ollama","reason":"credentials"}
+worker-1  | {"event":"ai_fallback","from":"vertex","to":"ollama","reason":"HTTP 401"}

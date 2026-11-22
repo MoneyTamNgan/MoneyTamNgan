@@ -126,6 +126,20 @@ await runFlow(browser, {
       const tg = () => page.getByRole('button', { name: /ย่อเมนูด้านข้าง|ขยายเมนูด้านข้าง/ }); const e0 = await tg().getAttribute('aria-expanded');
       await tg().click(); await page.waitForTimeout(400); expect((await tg().getAttribute('aria-expanded')) !== e0, 'sidebar state did not change');
     });
+    await f.step('14', 'Open the public pages on a phone-sized screen (360 px) and a tablet (768 px)', 'No page is wider than the screen (no sideways scrolling) on /, /projects, /analytics and /dashboard', async () => {
+      const seen = [];
+      for (const width of [360, 768]) {
+        await page.setViewportSize({ width, height: 800 });
+        for (const route of ['/', '/projects', '/analytics', '/dashboard']) {
+          await page.goto(BASE + route); await page.waitForLoadState('networkidle');
+          const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+          seen.push(`${width}:${route}=${scrollWidth}`);
+          expect(scrollWidth <= width, `${route} is ${scrollWidth}px wide on a ${width}px screen`);
+        }
+      }
+      await page.setViewportSize({ width: 1280, height: 720 });
+      return seen.join(' ');
+    });
   },
 }, results);
 

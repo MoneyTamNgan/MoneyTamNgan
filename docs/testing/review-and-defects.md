@@ -1,6 +1,6 @@
 # Independent review of the tests, and defects found
 
-Results: [test-sheet.md](test-sheet.md) (81 steps passed, 4 failed of 85). Plan: [test-plan.md](test-plan.md).
+Results: [test-sheet.md](test-sheet.md) (first run 81 of 85 passed; after the fixes, full re-run 86 of 86, see section 4 and [evidence-index.md](evidence-index.md)). Plan: [test-plan.md](test-plan.md).
 
 ## 1. Independent review by `agy` (three rounds)
 After the first full run, the test code, `results.json`, the sheet and the product code were given to a second reviewer (`agy`, Gemini 4 Argon, read only). Its job was to find steps that pass when the feature is broken and expected texts that are false about the product. Every claim was checked against the code before acting. The tests were corrected and run again after each round.
@@ -36,13 +36,17 @@ Combined effect of D1 and D2: on the demo machine, no AI draft can be produced e
 - DOCX export needs every checklist item set to "ผ่าน" and the draft saved (F06-07, F06-10, F06-11); on a real TOR all items start as "ตรวจสอบเอง".
 - The sign-in and register endpoints share a limit of 30 per 15 minutes per address, so two test runs close together hit HTTP 429 (the runner waits for `Retry-After`).
 
-## 4. Re-run of F07 and F07b after the fixes (22 Nov 2026, later the same day)
-Result: 10 of 10 steps pass ([test-sheet-rerun-ai.md](test-sheet-rerun-ai.md), videos and screenshots in [../evidence/testing-2026-11-22-rerun-agy/](../evidence/testing-2026-11-22-rerun-agy/)).
+## 3b. Fallback after Vertex refuses (PR #249), checked on the demo machine
+The machine was set to `AI_PROVIDER=vertex`, `AI_FALLBACK_PROVIDER=ollama`, `OLLAMA_BASE_URL` = the agy bridge. There are no Vertex credentials on the machine, so Vertex refuses every request: the worker log shows `ai_fallback` with reason `credentials` and then `HTTP 401` for each draft, and **F07 and F07b pass 10 of 10** ([test-sheet-ai-fallback.md](test-sheet-ai-fallback.md), [evidence](../evidence/ai-fallback-2026-11-22/), worker log `worker-ai_fallback-log.txt`). F07 took 123 s (the request is sent to Vertex first, and the draft itself takes about 70 to 80 s). What is not covered: a Vertex that works and then fails halfway, and Vertex quota (429) as opposed to missing credentials; those are covered by the unit tests only (`tests/unit/ai-fallback.test.js`, 7 tests).
+
+## 4. Full re-run after the fixes (22 Nov 2026, later the same day)
+All 9 flows were run again on the demo machine with the fixes of PR #242, #243 and #245 (files copied to the machine by hand, not yet merged): **86 of 86 steps pass** (F01 got one new step, 14, for the layout at 360 and 768 px). Sheet: [test-sheet.md](test-sheet.md). Every function with its video and screenshot: [evidence-index.md](evidence-index.md). Evidence: [../evidence/testing-2026-11-22-full/](../evidence/testing-2026-11-22-full/). The evidence of the first run (81 of 85, with the defects) stays in [../evidence/testing-2026-11-22/](../evidence/testing-2026-11-22/).
 
 | Defect | Fix | Re-run |
 |---|---|---|
-| D1 AI time-out | PR #242: no time limit on the draft call (`PROPOSAL_DRAFT_TIMEOUT_MS=0`) | F07 03: draft ready after 81 s (the old limit was 60 to 90 s) |
-| D2 more than 40 sections | PR #243: limit 40 to 100 | F07b 03: draft for the 47-item TOR ready after 69 s |
-| D4 (new) a long scope item breaks the 200-character heading limit | PR #243: heading cut at 200 characters, full text kept in the body | seen in the first re-run ("heading must be at most 200 characters"), gone in the second |
+| D1 AI time-out | PR #242: no time limit on the draft call (`PROPOSAL_DRAFT_TIMEOUT_MS=0`) | F07 03: draft ready after the generation finished, no time-out |
+| D2 more than 40 sections | PR #243: limit 40 to 100 | F07b 03: draft for the 47-item TOR saved |
+| D4 (new) a long scope item breaks the 200-character heading limit | PR #243: heading cut at 200 characters, full text kept in the body | seen in an intermediate run ("heading must be at most 200 characters"), gone in the final run |
+| D3 `/projects` too wide at 360 px | PR #245: the card badges wrap | F01 14: no page scrolls sideways at 360 or 768 px (`/projects` was 437 px wide at 360 px before the fix, measured with Playwright, and 360 after). The step was not run against the unfixed code, so the 437 px figure is the proof that it detects the defect |
 
-**Caveat: the AI in this re-run was not the local model.** To get a draft quickly the worker was pointed at a throw-away bridge on the tester's laptop that answers Ollama-style requests by calling the `agy` CLI (Gemini 3.8 Flash). The bridge is not in the repo and the machine's `.env` was changed for it (`OLLAMA_BASE_URL`; backup `~/.env.bak-before-agy`). The worker log still prints `model: qwen2.5:3b` because that is only the configured label. The quality of the draft text was not assessed, only that a draft is produced, saved and opened. The result with `qwen2.5:3b` itself and no time limit has not been measured. F07 and F07b are the only flows re-run; the other flows come from the first run.
+**Caveat: the AI in F07 and F07b was not the local model.** The final full run (all 9 flows, 86 of 86) ran with `AI_PROVIDER=vertex`, `AI_FALLBACK_PROVIDER=agy` (PR #249): Vertex refused and each draft fell back to the bridge installed on the demo machine itself (systemd user service `agy-bridge`, `agy` at `/snap/bin/agy`); the intermediate runs used the same bridge on the tester's laptop. It answers Ollama-style requests by calling the `agy` CLI (Gemini 3.8 Flash). The bridge is now in the repo (PR #246, [../agy-bridge.md](../agy-bridge.md)) and the machine's `.env` was changed for it (`OLLAMA_BASE_URL`; backup `~/.env.bak-before-agy`). The worker log still prints `model: qwen2.5:3b` because that is only the configured label. The quality of the draft text was not assessed, only that a draft is produced, saved and opened. The result with `qwen2.5:3b` itself and no time limit has not been measured.
