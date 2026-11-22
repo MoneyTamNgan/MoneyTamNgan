@@ -89,7 +89,7 @@
     "id": "10",
     "action": "Clear the filters",
     "expected": "The filter returns to its first option and the data reloads",
-    "at": 19,
+    "at": 20,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F01-guest-browse/10-10.png"
@@ -120,9 +120,18 @@
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F01-guest-browse/13-13.png"
+   },
+   {
+    "id": "14",
+    "action": "Open the public pages on a phone-sized screen (360 px) and a tablet (768 px)",
+    "expected": "No page is wider than the screen (no sideways scrolling) on /, /projects, /analytics and /dashboard",
+    "at": 26,
+    "result": "PASS",
+    "actual": "360:/=360 360:/projects=360 360:/analytics=360 360:/dashboard=360 768:/=768 768:/projects=768 768:/analytics=768 768:/dashboard=768",
+    "screenshot": "F01-guest-browse/14-14.png"
    }
   ],
-  "seconds": 26
+  "seconds": 38
  },
  {
   "id": "F02-auth",
@@ -196,7 +205,7 @@
     "id": "08",
     "action": "Log out, then log in with the username in upper case",
     "expected": "Signed in as the same account (username is case-insensitive)",
-    "at": 13,
+    "at": 12,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F02-auth/08-08.png"
@@ -223,7 +232,7 @@
     "id": "11",
     "action": "Cleanup: sign in and delete the test account (API)",
     "expected": "HTTP 200",
-    "at": 19,
+    "at": 20,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F02-auth/11-11.png"
@@ -285,7 +294,7 @@
     "id": "06",
     "action": "User A creates a draft (API); user B opens its URL in the browser and via the API",
     "expected": "B sees none of A's content in the page; the API answers 404 and B's list is empty",
-    "at": 5,
+    "at": 6,
     "result": "PASS",
     "actual": "UI shows no content; API 404; B has 0 drafts",
     "screenshot": "F03-access-control/06-06.png"
@@ -294,7 +303,7 @@
     "id": "07",
     "action": "Check the security headers of a normal page response",
     "expected": "Content-Security-Policy, X-Content-Type-Options and a frame-ancestors/X-Frame-Options rule are sent (this run disables CSP in the test browser, so the header is checked here)",
-    "at": 11,
+    "at": 12,
     "result": "PASS",
     "actual": "CSP + nosniff present",
     "screenshot": "F03-access-control/07-07.png"
@@ -303,7 +312,7 @@
     "id": "08",
     "action": "Cleanup: delete both test accounts",
     "expected": "Both deletions return HTTP 200",
-    "at": 12,
+    "at": 13,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F03-access-control/08-08.png"
@@ -419,7 +428,7 @@
     "id": "12",
     "action": "Click \"ลบบัญชีผู้ใช้\" and confirm",
     "expected": "The user is sent to the sign-in page and the session is gone",
-    "at": 21,
+    "at": 22,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F04-profile/12-12.png"
@@ -428,13 +437,13 @@
     "id": "13",
     "action": "Try to sign in with the deleted account",
     "expected": "Sign-in is refused with the generic error",
-    "at": 23,
+    "at": 24,
     "result": "PASS",
     "actual": "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือโปรดใช้ Google หากสมัครด้วย Google",
     "screenshot": "F04-profile/13-13.png"
    }
   ],
-  "seconds": 25
+  "seconds": 26
  },
  {
   "id": "F05-tor-detail",
@@ -481,7 +490,7 @@
     "id": "06",
     "action": "Page through the checklist (\"ถัดไป →\")",
     "expected": "A different first item is shown on the next page",
-    "at": 11,
+    "at": 10,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F05-tor-detail/05-06.png"
@@ -523,7 +532,7 @@
     "screenshot": "F05-tor-detail/09-10.png"
    }
   ],
-  "seconds": 22
+  "seconds": 21
  },
  {
   "id": "F06-bidprep-draft",
@@ -552,7 +561,7 @@
     "id": "03",
     "action": "Create a draft for a real TOR",
     "expected": "The draft editor opens for that TOR at version 1",
-    "at": 4,
+    "at": 5,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F06-bidprep-draft/03-03.png"
@@ -615,7 +624,7 @@
     "id": "10",
     "action": "Mark every item \"ผ่าน\" on all pages",
     "expected": "The \"ผ่าน\" counter equals 11 and the other two are 0",
-    "at": 16,
+    "at": 15,
     "result": "PASS",
     "actual": "11 clicks on 3 page(s), counters 11/0/0",
     "screenshot": "F06-bidprep-draft/10-10.png"
@@ -624,7 +633,7 @@
     "id": "11",
     "action": "Download the DOCX (saving first if the page reports unsaved changes)",
     "expected": "A .docx download starts and the file is a valid zip (first bytes \"PK\")",
-    "at": 30,
+    "at": 29,
     "result": "PASS",
     "actual": "download bid-draft-69109232352.docx (21795 bytes)",
     "screenshot": "F06-bidprep-draft/11-11.png"
@@ -651,13 +660,13 @@
     "id": "14",
     "action": "Cleanup: delete the test account",
     "expected": "HTTP 200",
-    "at": 37,
+    "at": 36,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F06-bidprep-draft/14-14.png"
    }
   ],
-  "seconds": 38
+  "seconds": 37
  },
  {
   "id": "F07-bidprep-ai",
@@ -688,14 +697,14 @@
     "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
     "at": 4,
     "result": "PASS",
-    "actual": "ready after 120 s",
+    "actual": "ready after 96 s",
     "screenshot": "F07-bidprep-ai/03-03.png"
    },
    {
     "id": "04",
     "action": "Open the AI draft",
     "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
-    "at": 125,
+    "at": 101,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07-bidprep-ai/04-04.png"
@@ -704,13 +713,13 @@
     "id": "05",
     "action": "Cleanup: delete the test account and its drafts",
     "expected": "HTTP 200",
-    "at": 126,
+    "at": 102,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07-bidprep-ai/05-05.png"
    }
   ],
-  "seconds": 138
+  "seconds": 111
  },
  {
   "id": "F07b-bidprep-ai-large-tor",
@@ -741,14 +750,14 @@
     "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
     "at": 4,
     "result": "PASS",
-    "actual": "ready after 78 s",
+    "actual": "ready after 81 s",
     "screenshot": "F07b-bidprep-ai-large-tor/03-03.png"
    },
    {
     "id": "04",
     "action": "Open the AI draft",
     "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
-    "at": 83,
+    "at": 86,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07b-bidprep-ai-large-tor/04-04.png"
@@ -757,13 +766,13 @@
     "id": "05",
     "action": "Cleanup: delete the test account and its drafts",
     "expected": "HTTP 200",
-    "at": 84,
+    "at": 87,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07b-bidprep-ai-large-tor/05-05.png"
    }
   ],
-  "seconds": 91
+  "seconds": 95
  },
  {
   "id": "F08-admin",
@@ -810,7 +819,7 @@
     "id": "05",
     "action": "Search the queue for text that matches nothing",
     "expected": "The queue shows no rows (or only the empty-state row)",
-    "at": 12,
+    "at": 13,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F08-admin/05-05.png"

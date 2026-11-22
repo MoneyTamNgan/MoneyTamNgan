@@ -1,6 +1,6 @@
 # Independent review of the tests, and defects found
 
-Results: [test-sheet.md](test-sheet.md) (first run 81 of 85 passed; after the fixes, full re-run 85 of 85, see section 4 and [evidence-index.md](evidence-index.md)). Plan: [test-plan.md](test-plan.md).
+Results: [test-sheet.md](test-sheet.md) (first run 81 of 85 passed; after the fixes, full re-run 86 of 86, see section 4 and [evidence-index.md](evidence-index.md)). Plan: [test-plan.md](test-plan.md).
 
 ## 1. Independent review by `agy` (three rounds)
 After the first full run, the test code, `results.json`, the sheet and the product code were given to a second reviewer (`agy`, Gemini 4 Argon, read only). Its job was to find steps that pass when the feature is broken and expected texts that are false about the product. Every claim was checked against the code before acting. The tests were corrected and run again after each round.
@@ -37,13 +37,13 @@ Combined effect of D1 and D2: on the demo machine, no AI draft can be produced e
 - The sign-in and register endpoints share a limit of 30 per 15 minutes per address, so two test runs close together hit HTTP 429 (the runner waits for `Retry-After`).
 
 ## 4. Full re-run after the fixes (22 Nov 2026, later the same day)
-All 9 flows were run again on the demo machine with the fixes of PR #242 and #243: **85 of 85 steps pass.** Sheet: [test-sheet.md](test-sheet.md). Every function with its video and screenshot: [evidence-index.md](evidence-index.md). Evidence: [../evidence/testing-2026-11-22-full/](../evidence/testing-2026-11-22-full/). The evidence of the first run (81 of 85, with the defects) stays in [../evidence/testing-2026-11-22/](../evidence/testing-2026-11-22/).
+All 9 flows were run again on the demo machine with the fixes of PR #242, #243 and #245 (files copied to the machine by hand, not yet merged): **86 of 86 steps pass** (F01 got one new step, 14, for the layout at 360 and 768 px). Sheet: [test-sheet.md](test-sheet.md). Every function with its video and screenshot: [evidence-index.md](evidence-index.md). Evidence: [../evidence/testing-2026-11-22-full/](../evidence/testing-2026-11-22-full/). The evidence of the first run (81 of 85, with the defects) stays in [../evidence/testing-2026-11-22/](../evidence/testing-2026-11-22/).
 
 | Defect | Fix | Re-run |
 |---|---|---|
 | D1 AI time-out | PR #242: no time limit on the draft call (`PROPOSAL_DRAFT_TIMEOUT_MS=0`) | F07 03: draft ready after the generation finished, no time-out |
 | D2 more than 40 sections | PR #243: limit 40 to 100 | F07b 03: draft for the 47-item TOR saved |
 | D4 (new) a long scope item breaks the 200-character heading limit | PR #243: heading cut at 200 characters, full text kept in the body | seen in an intermediate run ("heading must be at most 200 characters"), gone in the final run |
-| D3 `/projects` too wide at 360 px | not fixed | not re-tested |
+| D3 `/projects` too wide at 360 px | PR #245: the card badges wrap | F01 14: no page scrolls sideways at 360 or 768 px (`/projects` was 437 px wide at 360 px before the fix, measured with Playwright, and 360 after). The step was not run against the unfixed code, so the 437 px figure is the proof that it detects the defect |
 
-**Caveat: the AI in F07 and F07b was not the local model.** The worker was pointed at a throw-away bridge on the tester's laptop that answers Ollama-style requests by calling the `agy` CLI (Gemini 3.8 Flash). The bridge is not in the repo and the machine's `.env` was changed for it (`OLLAMA_BASE_URL`; backup `~/.env.bak-before-agy`). The worker log still prints `model: qwen2.5:3b` because that is only the configured label. The quality of the draft text was not assessed, only that a draft is produced, saved and opened. The result with `qwen2.5:3b` itself and no time limit has not been measured.
+**Caveat: the AI in F07 and F07b was not the local model.** The worker was pointed at a throw-away bridge on the tester's laptop that answers Ollama-style requests by calling the `agy` CLI (Gemini 3.8 Flash). The bridge is now in the repo (PR #246, [../agy-bridge.md](../agy-bridge.md)) and the machine's `.env` was changed for it (`OLLAMA_BASE_URL`; backup `~/.env.bak-before-agy`). The worker log still prints `model: qwen2.5:3b` because that is only the configured label. The quality of the draft text was not assessed, only that a draft is produced, saved and opened. The result with `qwen2.5:3b` itself and no time limit has not been measured.
