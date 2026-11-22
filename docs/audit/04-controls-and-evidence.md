@@ -68,7 +68,7 @@ Requirement IDs come from the BidPrep SRS (private Google Doc, v0.1, waiting for
 1. Run a real secret scanner and rotate any credential that appeared in chat or on test machines.
 2. Move admin rights to the new system owner; name the owner in [handover.md](../handover.md).
 3. Confirm Atlas encryption at rest and backup; add a restore drill.
-4. Fill the blanks in the incident runbook (roles, contacts), run one tabletop exercise, and get the privacy notice reviewed, completed and linked in the app (plus a delete-account button or a manual process).
+4. Fill the blanks in the incident runbook (roles, contacts), run one tabletop exercise, and get the privacy notice reviewed, completed and linked in the app.
 5. Reconcile the README "known gaps" line on copied tokens after logout with ASVS V7.4.1 (DONE).
 6. Attach the customer's written SRS confirmation.
 7. Fix `/projects` horizontal overflow at 360 px and test in Microsoft Word.
