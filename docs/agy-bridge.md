@@ -16,6 +16,8 @@ The demo AI was the local model `qwen2.5:3b` (Ollama). It was too slow for propo
 | Draft time | more than 60 to 90 s, failed | about 70 to 90 s, completes |
 | Time limit | `PROPOSAL_DRAFT_TIMEOUT_MS` 60 s default, 90 s cap | `PROPOSAL_DRAFT_TIMEOUT_MS=0` (no limit), PR #242 |
 
+**Role: fallback AI provider.** Vertex AI is the primary provider; this bridge is the fallback used when Vertex is not available (for the demo, it is the AI in use). The fallback is selected by configuration; the app does not switch to it by itself when Vertex fails.
+
 What did not change: the production path is still Vertex AI (`AI_PROVIDER=vertex`, also Gemini, billed through Google Cloud); the Ollama adapter stays as the fallback. This migration is for the demo only, because the bridge has no authentication and sends TOR text and the company profile to Gemini.
 
 ## On the machine that has `agy`
