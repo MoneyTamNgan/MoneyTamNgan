@@ -1,0 +1,219 @@
+% MoneyTamNgan process presentation (13 slides) -- compile: pdflatex moneytamngan-process-13slides.tex
+% Every slide carries a "Verified" footer: where the claim was checked in the repo / GitHub on 22 Nov 2026.
+\documentclass[aspectratio=169,10pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{booktabs,array,tabularx}
+\usetheme{metropolis}
+\setbeamertemplate{navigation symbols}{}
+\definecolor{ok}{RGB}{30,130,76}
+\definecolor{warn}{RGB}{200,110,0}
+\newcommand{\verified}[1]{\vfill{\footnotesize\color{ok}\textbf{Verified:} #1}}
+\newcommand{\caution}[1]{\vfill{\footnotesize\color{warn}\textbf{Check before presenting:} #1}}
+\newcommand{\shot}[1]{\fbox{\parbox{0.9\linewidth}{\centering\footnotesize\vspace{4pt}[#1]\vspace{4pt}}}}
+
+\title{MoneyTamNgan}
+\subtitle{Find and evaluate Thai government software procurement opportunities}
+\author{[Team member names]}
+\institute{Collaborative Software Process and Project Management}
+\date{}
+
+\begin{document}
+
+% 1
+\begin{frame}
+  \titlepage
+  \shot{Insert MoneyTamNgan dashboard screenshot --- wide crop, app name and a few TOR cards}
+  \note{MoneyTamNgan helps software companies find and evaluate relevant government Terms of Reference (TORs). We follow one TOR through the system, then show how we planned, tracked, and verified our work.}
+\end{frame}
+
+% 2
+\begin{frame}{What the TOR Tracker Does}
+  Software companies must find relevant tenders and understand requirements before deciding to bid.
+  \medskip
+  \begin{tabularx}{\linewidth}{@{}lX@{}}
+    \toprule
+    \textbf{TOR Collection} & Finds software-related procurements published through e-GP.\\
+    \textbf{Data Extraction} & Pulls scope and bidder qualifications from procurement documents.\\
+    \textbf{Anomaly Detection} & Flags conditions to check against the source document.\\
+    \textbf{TOR Matching} & Compares TOR requirements with a company profile.\\
+    \bottomrule
+  \end{tabularx}
+  \verified{README / SRS link; TOR matching and e-mail match scores in \texttt{docs/match-email-dispatcher.md}; restrictive-condition review in \texttt{docs/restrictive-condition-review-2026-10-17.md}.}
+  \note{Finding a TOR is only the first step. A company must understand what the agency asks for and whether it can meet it.}
+\end{frame}
+
+% 3
+\begin{frame}{How TOR Data Moves Through the System}
+  \begin{enumerate}\setlength\itemsep{2pt}
+    \item \textbf{Discover} --- collect project metadata from the e-GP portal; classify software projects.
+    \item \textbf{Download and extract} --- fetch documents; Poppler (\texttt{pdftotext}) for embedded text, Tesseract OCR for scanned pages.
+    \item \textbf{Summarize and store} --- Vertex AI (Gemini) extracts structured details; MongoDB stores projects and summaries. Demo: no Vertex billing, so Gemini runs through the \texttt{agy} bridge as an automatic fallback when Vertex refuses.
+    \item \textbf{Display} --- Next.js dashboard reads lists and details through the API.
+  \end{enumerate}
+  \shot{Insert simplified flow diagram from docs/tor-flow.md: e-GP $\to$ download $\to$ text/OCR $\to$ MongoDB $\to$ API $\to$ dashboard}
+  \verified{\texttt{docs/tor-flow.md}; \texttt{lib/text-extraction.js} (\texttt{pdftotext}, \texttt{pdftoppm}); \texttt{lib/vertex/tor-extractor.js} (fallback after Vertex refuses, \texttt{AI\_FALLBACK\_PROVIDER}); \texttt{docs/agy-bridge.md}. Note: the code names the protocol \texttt{ollama}; \texttt{agy} is an alias (\texttt{.env.example}).}
+  \note{We collect metadata, download the source document, extract text, use OCR for scans, and store the result so the dashboard can fetch it through the API.}
+\end{frame}
+
+% 4
+\begin{frame}{How We Manage Work Each Week}
+  \begin{tabularx}{\linewidth}{@{}lX@{}}
+    \toprule
+    \textbf{Monday} & Recap last week; assign tasks for the new sprint.\\
+    \textbf{Tuesday, Thursday} & Check progress, clarify questions, short meeting if an issue needs discussion.\\
+    \textbf{Between check-ins} & Work on assigned tasks.\\
+    \bottomrule
+  \end{tabularx}
+  \shot{Weekly timeline: Mon, Tue, Thu marked; task work between}
+  \caution{This cadence is NOT written anywhere in the repo (searched README, handover, docs). It is a team practice, confirm it with the team or show meeting notes/calendar.}
+  \note{Monday we review and assign. Tuesday and Thursday we clear questions and blockers. Between check-ins everyone works on their tasks.}
+\end{frame}
+
+% 5
+\begin{frame}{Project Documentation}
+  \begin{columns}[T]
+    \column{0.5\linewidth}
+    \begin{enumerate}
+      \item \textbf{MoneyTamNgan SRS} --- core requirements, use cases.
+      \item \textbf{Bid Prep Ad Hoc SRS} --- requirements for Bid Prep.
+      \item \textbf{Test Case Spreadsheet} --- tests mapped to modules and files.
+    \end{enumerate}
+    \column{0.5\linewidth}
+    \begin{enumerate}\setcounter{enumi}{3}
+      \item \textbf{Sprint API Plan} --- tickets, endpoints, responses, status.
+      \item \textbf{Security Test Catalog} --- STRIDE threats, ASVS checks.
+      \item \textbf{Technical Reference} --- \texttt{docs/reference.md}.
+    \end{enumerate}
+  \end{columns}
+  \verified{All six are listed under ``Project documents'' in \texttt{README.md}; \texttt{docs/reference.md} exists. The Google Docs/Sheets links were not opened (private). The README links the Test Case and Secure Test entries to the \emph{same} spreadsheet URL, so one link is probably wrong, fix before sharing.}
+  \note{The SRS records what we build. The API plan, test sheet and security catalog track and verify it. The technical reference lives in the repo for teammates and AI assistants.}
+\end{frame}
+
+% 6
+\begin{frame}{From User Stories to Requirements}
+  \begin{itemize}
+    \item \textbf{User story} --- As a seller, I want a first draft from a TOR and my company profile so I can review and complete it.
+    \item \textbf{FR-4.3} --- Draft from information supported by the TOR and company profile; placeholders for missing details.
+    \item \textbf{Task} --- GitHub issue \textbf{\#139}.
+    \item \textbf{Related} --- FR-4.7: Bid Prep access control and privacy.
+  \end{itemize}
+  \shot{Insert Bid Prep SRS excerpt showing FR-4.3}
+  \verified{Issue \#139 ``FR-4.3 Proposal draft generator'' (closed, owner NapatzZ, DoD requires \texttt{[to fill in: ...]} placeholders); \texttt{docs/bid-prep-decisions.md} row 3; FR-4.7 in \texttt{docs/security/bid-prep-fr-4.7.md}. These IDs come from the \emph{BidPrep} SRS, not the original SRS (as \#139 itself states).}
+  \note{The story says what the seller wants. FR-4.3 turns it into checkable behavior. Missing details stay as placeholders for the seller.}
+\end{frame}
+
+% 7
+\begin{frame}{Project Backlog}
+  \emph{Which functional requirements still have work left?}
+  \begin{itemize}
+    \item All project tasks, grouped by functional requirement (FR).
+    \item Which FRs still have tasks \textbf{To Do} or \textbf{In Progress}.
+    \item Open an issue for assignee, status and Definition of Done.
+  \end{itemize}
+  \shot{Insert GitHub Project backlog screenshot grouped by FR; include one FR with open work}
+  \caution{The Project board is not in the repo. Issues do carry a Definition of Done (\texttt{dod-v3}, e.g. \#39, \#139, \#143); take the screenshot live from the board.}
+  \note{Grouping issues under their FR shows which parts of scope still have open work and who owns them.}
+\end{frame}
+
+% 8
+\begin{frame}{Current Sprint Backlog}
+  \emph{What are we working on this sprint?}
+  \begin{itemize}
+    \item \textbf{Sprint [name/number] \textperiodcentered\ [start--end]}
+    \item Tasks selected for the sprint, each with assignee and status.
+    \item Progress and blockers reviewed at Tuesday/Thursday check-ins.
+  \end{itemize}
+  \shot{Insert GitHub Project screenshot filtered to the current sprint}
+  \caution{Sprint name/dates come from the Project board (not in the repo). Fill in from the board. Issues use milestones, e.g. ``BidPrep: Feature freeze (18 Nov)''.}
+  \note{On Monday we select work from the backlog. This view shows what is in progress now and who owns it.}
+\end{frame}
+
+% 9
+\begin{frame}{How Our Task Descriptions Improved}
+  \begin{tabularx}{\linewidth}{@{}XX@{}}
+    \toprule
+    \textbf{Earlier: Admin TOR review} & \textbf{Updated: SMTP / match e-mail}\\
+    \midrule
+    Linked to FR-1.2.1 and FR-1.2.3 & Notification issue \#39, PR \#164, provider setup \#165\\
+    Short DoD: pagination, TOR fields, admin access & Goal, scope, setup, detailed DoD\\
+    Listed expected behavior & Delivery evidence, handoff docs, open follow-ups\\
+    \bottomrule
+  \end{tabularx}
+  \shot{Earlier Admin TOR review card}\hfill\shot{SMTP card: goal + ``test e-mail arrives in a real inbox''}
+  \verified{\#39 (dod-v3 detailed DoD, closed 16 Nov), PR \#164 and \texttt{docs/smtp-delivery-verification-2026-11-18.md} exist. FR-1.2.3 appears in \texttt{docs/api/openapi.yaml}. \textbf{Not found:} an issue literally titled ``Admin TOR review'' with FR-1.2.1; locate it on the board before showing it. Note \#39's DoD text still mentions Resend; Gmail SMTP is documented in the report.}
+  \note{The earlier card gave requirement IDs and a short checklist. The newer card also stated scope, what the reviewer checks, and handoff needs.}
+\end{frame}
+
+% 10
+\begin{frame}{How We Verify Task Completion}
+  \begin{itemize}
+    \item \textbf{Delivery verified 18 Nov 2026} --- sample match e-mail sent through Gmail SMTP reached the authorized test inbox.
+    \item \textbf{Contents checked} --- sample title, budget, \textbf{85\% sample match score}, notification-settings link.
+    \item \textbf{Follow-up at the time} --- setup and provider limits documented; GitHub screenshot and independent review pending. \textbf{Since then:} PR \#164 merged 19 Nov.
+  \end{itemize}
+  \shot{Redacted screenshot of the received SMTP test e-mail (hide recipient and account details)}
+  \verified{\texttt{docs/smtp-delivery-verification-2026-11-18.md}; \texttt{docs/evidence/notification-smtp-delivery-2026-11-18.json}. The report says the screenshot was supplied in conversation and not yet attached to GitHub, so you must supply the image yourself.}
+  \note{The DoD required delivery to a real inbox. We checked the sample arrived with the expected content and recorded what was still open.}
+\end{frame}
+
+% 11
+\begin{frame}{How We Keep Documentation Up to Date}
+  \begin{itemize}
+    \item \textbf{API contract} --- \texttt{docs/api/openapi.yaml} defines \texttt{POST /bid-prep/drafts/\{id\}/export}.
+    \item \textbf{Implementation report} --- \texttt{docs/bid-draft-editor-export-report.md}: saving, checklist review, DOCX export.
+    \item \textbf{Practice} --- update affected documents as part of finishing the task.
+  \end{itemize}
+  \shot{OpenAPI excerpt, line 2314}\hfill\shot{Report excerpt: checklist review + DOCX export}
+  \verified{Endpoint at \texttt{openapi.yaml:2314}; report exists and describes checklist review before DOCX download. \textbf{Caveat:} \texttt{README.md} says the 19 Nov documentation audit \emph{failed} (OpenAPI lacks 18 live operations). Don't claim the docs are complete, only that this feature is documented.}
+  \note{OpenAPI tells a teammate how to call export; the report explains the workflow from save to checklist to DOCX.}
+\end{frame}
+
+% 12
+\begin{frame}{How We Adapted to Feedback and Team Changes}
+  \begin{itemize}
+    \item \textbf{Team change} --- a project-manager transition; coordination work was redistributed.
+    \item \textbf{Scope question} --- how much should Bid Prep draft when information is incomplete?
+    \item \textbf{Decision} --- draft only what the TOR and profile support; leave \texttt{[to fill in: ...]}.
+    \item \textbf{Follow-up} --- recorded 16 Nov 2026. No written customer sign-off: on 17 Nov the team proceeded with defaults; \#143 was closed on that basis (19 Nov); answers remain assumptions.
+  \end{itemize}
+  \shot{Decision table excerpt, row 3, docs/bid-prep-decisions.md}
+  \verified{\texttt{docs/bid-prep-decisions.md} (16 Nov, ``customer has not confirmed''); issue \#143 closed 19 Nov with ``Superseded 17 Nov 2026'' notes. Decision row 7 mentions the ``previous project manager''. A concrete \emph{responsibility that changed hands} is not recorded in the repo, add one only if the team confirms it.}
+  \note{We agreed to draft from available sources and leave the rest to the seller, and recorded it, keeping customer confirmation visible as a follow-up.}
+\end{frame}
+
+% 13
+\begin{frame}{What We Delivered and Learned}
+  \begin{columns}[T]
+    \column{0.32\linewidth}\textbf{Product}\\ Tracker that collects, extracts, displays and matches software procurement information.
+    \column{0.32\linewidth}\textbf{Evidence}\\ Sample match e-mail reached a real inbox. Recorded UI test of 9 flows: \textbf{86/86 steps} passed on 22 Nov 2026, one video per flow.
+    \column{0.32\linewidth}\textbf{Lesson}\\ Write down what counts as done and what evidence the reviewer should expect.
+  \end{columns}
+  \medskip\hrule\smallskip
+  {\footnotesize \textbf{Follow-up:} Acceptance marked FR-4.3 \emph{partial} (2 of 3 real TORs exceeded 90\,s). The time limit was removed in PR \#242, \textbf{merged 22 Nov 2026}. Keep open reviews and customer confirmations visible.}
+  \verified{\texttt{docs/testing/evidence-index.md} (86/86, flows F01--F08 plus F07b = 9); PR \#242 \emph{merged} (corrects the draft text, which said ``waiting for review''); \texttt{docs/acceptance-bidprep-2026-11.md} still says Partial, and issue \#139 still has its 90\,s box unticked. The new 90\,s-free path took about 70--90\,s (\texttt{docs/agy-bridge.md}).}
+  \note{The change we would keep: deciding what proof a task needs when we write it. For the whole site we recorded every flow, 86 of 86 steps passed, and the one partial result, AI draft time, is documented with its fix, now merged.}
+\end{frame}
+
+% Appendix
+\begin{frame}{Appendix: Verification Summary (22 Nov 2026)}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{@{}cXl@{}}
+    \toprule
+    \textbf{Slide} & \textbf{Result} & \textbf{Status}\\
+    \midrule
+    1--3 & Product, features, pipeline, Poppler/Tesseract/Vertex/\texttt{agy} fallback match code & \textcolor{ok}{True}\\
+    4 & Weekly cadence not in repo & \textcolor{warn}{Unverified}\\
+    5 & Docs listed in README; Test Case/Secure Test share one URL & \textcolor{warn}{Fix link}\\
+    6 & FR-4.3, \#139, decisions row 3 & \textcolor{ok}{True}\\
+    7--8 & GitHub Project board not in repo & \textcolor{warn}{Screenshot live}\\
+    9 & \#39, \#164 exist; ``Admin TOR review'' card not found & \textcolor{warn}{Partly}\\
+    10 & SMTP report, 85\% sample, evidence JSON & \textcolor{ok}{True}; image missing\\
+    11 & Export endpoint and report exist; doc audit failed 19 Nov & \textcolor{ok}{True} (caveat)\\
+    12 & 16 Nov decisions, \#143 superseded 17 Nov & \textcolor{ok}{True}\\
+    13 & 86/86 true; PR \#242 is merged, not waiting & \textcolor{ok}{Corrected}\\
+    \bottomrule
+  \end{tabularx}
+\end{frame}
+
+\end{document}
