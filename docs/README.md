@@ -3,6 +3,12 @@
 ## Audit
 - [audit/README.md](audit/README.md): audit pack (architecture, ER diagram, design patterns, controls and evidence)
 
+## Testing
+- [testing/test-plan.md](testing/test-plan.md): UI test plan (every user function as a flow)
+- [testing/test-sheet.md](testing/test-sheet.md): test sheet with a video and screenshot for every step
+- [testing/review-and-defects.md](testing/review-and-defects.md): independent review and defects found
+- [evidence/testing-2026-11-22/](evidence/testing-2026-11-22/): videos, screenshots and `results.json`
+
 ## Start here
 - [handover.md](handover.md): owner, external services, rotating secrets, known limitations
 - [user-guide.md](user-guide.md): short guide for end users

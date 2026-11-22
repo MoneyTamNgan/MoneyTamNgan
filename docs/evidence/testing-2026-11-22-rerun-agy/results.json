@@ -1,0 +1,108 @@
+[
+ {
+  "id": "F07-bidprep-ai",
+  "title": "BidPrep: generate an AI draft (queued job, local model), TOR with a small scope",
+  "video": "F07-bidprep-ai/F07-bidprep-ai.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Sign in, fill a profile and open \"เตรียมข้อเสนอ\"",
+    "expected": "The page loads with the AI warning",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07-bidprep-ai/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Enter a TOR id and click \"สร้างร่างด้วย AI\"",
+    "expected": "A job is queued (HTTP 202) and the page shows \"กำลังรอผล AI\" with a job number",
+    "at": 3,
+    "result": "PASS",
+    "actual": "queued -> 202",
+    "screenshot": "F07-bidprep-ai/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Wait for the job to finish (up to 5.5 minutes)",
+    "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
+    "at": 5,
+    "result": "PASS",
+    "actual": "ready after 81 s",
+    "screenshot": "F07-bidprep-ai/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Open the AI draft",
+    "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
+    "at": 88,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07-bidprep-ai/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Cleanup: delete the test account and its drafts",
+    "expected": "HTTP 200",
+    "at": 88,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07-bidprep-ai/05-05.png"
+   }
+  ],
+  "seconds": 97
+ },
+ {
+  "id": "F07b-bidprep-ai-large-tor",
+  "title": "BidPrep: generate an AI draft for a TOR with a large scope (47 items)",
+  "video": "F07b-bidprep-ai-large-tor/F07b-bidprep-ai-large-tor.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Sign in, fill a profile and open \"เตรียมข้อเสนอ\"",
+    "expected": "The page loads with the AI warning",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07b-bidprep-ai-large-tor/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Enter a TOR id and click \"สร้างร่างด้วย AI\"",
+    "expected": "A job is queued (HTTP 202) and the page shows \"กำลังรอผล AI\" with a job number",
+    "at": 2,
+    "result": "PASS",
+    "actual": "queued -> 202",
+    "screenshot": "F07b-bidprep-ai-large-tor/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Wait for the job to finish (up to 5.5 minutes)",
+    "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
+    "at": 4,
+    "result": "PASS",
+    "actual": "ready after 69 s",
+    "screenshot": "F07b-bidprep-ai-large-tor/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Open the AI draft",
+    "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
+    "at": 74,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07b-bidprep-ai-large-tor/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Cleanup: delete the test account and its drafts",
+    "expected": "HTTP 200",
+    "at": 75,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07b-bidprep-ai-large-tor/05-05.png"
+   }
+  ],
+  "seconds": 80
+ }
+]

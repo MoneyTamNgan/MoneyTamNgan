@@ -47,7 +47,8 @@
 ### 6. สิทธิของท่าน
 ท่านมีสิทธิขอเข้าถึงและขอสำเนา ขอแก้ไขให้ถูกต้อง ขอให้ลบหรือทำให้ไม่สามารถระบุตัวตนได้ คัดค้านหรือจำกัดการประมวลผล ขอให้โอนย้ายข้อมูล และเพิกถอนความยินยอมได้ทุกเมื่อ โดยไม่กระทบการประมวลผลก่อนหน้านั้น
 - **ลบร่างรายฉบับ:** ใช้ปุ่ม "ลบร่างนี้" ในหน้าแก้ไขร่าง
-- **ลบบัญชีและร่างทั้งหมด หรือลบเฉพาะข้อมูลบริษัทและร่างโดยคงบัญชีไว้:** ติดต่อ **[อีเมล]** เราดำเนินการให้ภายใน 30 วัน (ระบบรองรับการลบนี้ที่ระดับ API แล้ว แต่ยังไม่มีปุ่มในหน้าเว็บ)
+- **ลบข้อมูลบริษัทและร่างทั้งหมด โดยคงบัญชีไว้:** ใช้ปุ่ม "ลบข้อมูลบริษัท" ในหน้าโปรไฟล์
+- **ลบบัญชีและข้อมูลทั้งหมด:** ใช้ปุ่ม "ลบบัญชีผู้ใช้" ในหน้าโปรไฟล์ (ทดสอบแล้วใน [F04](../testing/test-sheet.md))
 - **สิทธิอื่น:** ติดต่อ **[อีเมล]** เราจะตอบภายใน 30 วัน
 หากเห็นว่าเราไม่ปฏิบัติตามกฎหมาย ท่านมีสิทธิร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล (สคส.)
 
@@ -109,7 +110,8 @@ We do not sell data or use it for advertising. Some providers may process data o
 ### 6. Your rights
 You may ask for access and a copy, correction, erasure or anonymisation, to object to or restrict processing, data portability, and withdraw consent at any time without affecting earlier processing.
 - **Delete one draft:** use the "delete this draft" button in the draft editor.
-- **Delete your account and all drafts, or only your company details and drafts while keeping the account:** contact **[email]** and we do it within 30 days (the system supports this deletion at the API level, but there is no button on the website yet).
+- **Delete your company details and drafts but keep the account:** use the "ลบข้อมูลบริษัท" button on the profile page.
+- **Delete your account and all data:** use the "ลบบัญชีผู้ใช้" button on the profile page (both tested in flow F04 of the [test sheet](../testing/test-sheet.md)).
 - **Other rights:** contact **[email]**; we reply within 30 days.
 If you believe we do not comply with the law you may complain to the Personal Data Protection Committee (PDPC) of Thailand.
 
@@ -129,7 +131,7 @@ We show the date of the latest update and tell you about material changes. Last 
 
 ## Notes for the team (delete before publishing)
 1. **Fill every [fill in]** and have the text reviewed by someone qualified for the PDPA. In particular: the controller identity, retention of audit records, regions of Atlas and GCP, and the contact process (30-day reply is our proposal).
-2. Account and company-data deletion exist only as API calls (`DELETE /api/profiles`, `DELETE /api/bid-prep/data`); add buttons on the profile page or keep a manual process with an owner and the 30-day promise.
+2. Deletion is self-service on the profile page (verified by test F04); only requests for access, correction, portability and objection go through the contact email.
 3. Put the notice in the application: link in the footer and a link next to the registration form. Today there is none.
 4. Facts above are taken from `models/User.js`, `lib/auth.js`, `docs/API_VALIDATION.md` (deletion), `docs/bid-prep-decisions.md` (retention) and `docs/handover.md` (providers). Recheck them if the code changes.
 5. "No advertising or tracking cookies" is based on the code reviewed; confirm no analytics script is added to the pages.
