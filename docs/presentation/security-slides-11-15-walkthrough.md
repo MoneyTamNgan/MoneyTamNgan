@@ -19,14 +19,19 @@ SAST (scan the code) -> DAST (scan the running app) -> STRIDE (which threats, in
 - **Code:** `lib/auth-audit.js`, function `logAuthAudit(request, event, reason, extra)`. It writes one JSON line
   (event, reason, timestamp, path, clientAddress, optional userId/role) with `console.warn`. It never logs
   passwords, tokens or OAuth query strings, and a logging failure cannot break login (it is wrapped in try/catch).
-- **Events that exist (grep of the code):** `auth_login_success`, `auth_register_success`, `auth_register_conflict`,
-  `auth_rate_limited`, `auth_logout`, `oauth_login_success`, `oauth_callback_denied`, `oauth_callback_failed`,
-  `oauth_invalid_state`, `oauth_rate_limited`, `oauth_callback_conflict`.
-- **The gap on the slide:** I found no event for a *failed* password login, and nothing about log retention or
-  tamper-protection (logs go to stdout only). Be precise: success events do exist now, so say
-  "failed-login logging and retention are not complete", not "login logging doesn't exist".
+- **Events that exist (checked in code, including multi-line calls):** `auth_login_success`, `auth_login_failed`
+  (wrong password or disabled account), `auth_register_success`, `auth_register_conflict`, `auth_rate_limited`,
+  `auth_logout`, `oauth_login_success`, `oauth_callback_denied`, `oauth_callback_failed`, `oauth_invalid_state`,
+  `oauth_rate_limited`, `oauth_callback_conflict`.
+- **CORRECTION (22 Nov): the slide is out of date.** Slide 11 says password signup/login/logout logging is "not yet
+  complete". That was true in the 19 Nov audit, but commit `212e1fd` (21 Nov) added the rest, and
+  `docs/security/THREAT_MODEL.md` now marks TH-4 as Mitigated. **Update the slide** to say login success/failure,
+  signup, rate limits and logout are logged. The remaining honest limits: logs go to stdout only (no central
+  store, no tamper protection), and the "90-day retention" is a written policy, not something the code enforces.
+  (An earlier version of this guide wrongly said failed logins were not logged; my grep missed multi-line calls.)
 - **Say:** "We log security-relevant auth events with an allow-listed set of fields, so we never leak secrets into
-  logs. The gap is failed-login events and retention; that maps to STRIDE threat TH-4, repudiation."
+  logs. Logs go to stdout; centralised storage and tamper protection are future work. This addresses STRIDE
+  threat TH-4, repudiation."
 - **Likely questions:**
   - *Why not log the password/token?* Logs are widely readable and long-lived; secrets in logs are a leak (OWASP logging guidance).
   - *Where do logs go?* stdout (container logs). No central store yet; we say so.
@@ -103,12 +108,16 @@ SAST (scan the code) -> DAST (scan the running app) -> STRIDE (which threats, in
   recommendations, not something the team formally approved**. Say that.
   - **P0 credentials:** an API key was exposed earlier. The owner confirmed on 21 Nov that the old Resend key was
     revoked. Excluding `.env` from git cannot revoke a leaked key.
-  - **P1 access/session:** copied JWT still works after logout (no server-side revocation), some routes expose
-    raw error details, rate-limit counters are per process, and URL-safety checks were called partial in the audit
-    (the threat model lists TH-10 as mitigated: be careful, say "partial in the audit").
+  - **P1 access/session:** **CORRECTION (22 Nov):** the slide says logout revocation is partial. Since commit
+    `212e1fd` (21 Nov), `POST /api/auth/logout` revokes the presented token (`revokeSessionToken` in
+    `lib/account-status.js`) and increments `session_version`, and `tests/security/session-disabled.test.js`
+    ("revokes a copied JWT immediately when POST /api/auth/logout is called") covers it. The threat model also now
+    lists URL checks (TH-10) as mitigated, with a DNS-resolution check in `lib/url-safety.js`. Still true: rate-limit
+    counters are per process (several instances don't share them), and the 19 Nov audit found some routes exposing
+    raw error details (not re-checked by me after 21 Nov). Update slides 15 and 18 accordingly.
   - **P2 residual risk:** review and adopt the priorities.
 - **Say:** "STRIDE tells us what can go wrong; we mapped each threat to code and a test, and ranked what's left.
-  The top item is credentials, then session revocation after logout."
+  The top item is credentials; after that, per-process rate limits and ongoing review."
 
 ## How to prepare (about 45 minutes)
 
@@ -119,11 +128,15 @@ SAST (scan the code) -> DAST (scan the running app) -> STRIDE (which threats, in
    ```
 3. Open these files once so you can say "it's here": `lib/auth-audit.js`, `lib/security-policy.js`,
    `.github/workflows/semgrep.yml`, `.github/workflows/zap-dast.yml`, `docs/security/THREAT_MODEL.md`.
-4. Know your three honest limits: failed-login logging/retention, `unsafe-inline` styles (Medium), logout doesn't
-   revoke a copied token. Admitting these *earns* marks (the rubric asks for known gaps); hiding them loses them.
+4. Know your honest limits: logs only go to stdout (no central store), `unsafe-inline` styles (Medium),
+   rate-limit counters are per process, 0 High does not mean secure. Admitting these *earns* marks (the rubric asks
+   for known gaps); hiding them loses them.
+5. **Fix the slides before presenting:** slides 11, 15 and 18 still describe the 19 Nov state (incomplete logging,
+   logout not revoking a copied token). The code and `THREAT_MODEL.md` moved on 21 Nov. A grader who opens the repo
+   would see a mismatch.
 
 ## Things not to claim
 
 - "Fully OWASP ASVS compliant" (the audit rates 13 criteria covered, 5 partial; the slides say no full claim).
 - "No vulnerabilities" (0 High is a scanner result, not proof).
-- "Logging is complete" or "logout invalidates the session".
+- "Logging is centralised / tamper-proof" (it is stdout only), or "90-day retention is enforced" (it is a written policy).
