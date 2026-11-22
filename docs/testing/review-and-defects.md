@@ -35,3 +35,14 @@ Combined effect of D1 and D2: on the demo machine, no AI draft can be produced e
 - The admin queue shows 9,223 items waiting for review and the scraper health reads "ต้องตรวจสอบ" (last run failed) on the live data (F08 screenshots).
 - DOCX export needs every checklist item set to "ผ่าน" and the draft saved (F06-07, F06-10, F06-11); on a real TOR all items start as "ตรวจสอบเอง".
 - The sign-in and register endpoints share a limit of 30 per 15 minutes per address, so two test runs close together hit HTTP 429 (the runner waits for `Retry-After`).
+
+## 4. Re-run of F07 and F07b after the fixes (22 Nov 2026, later the same day)
+Result: 10 of 10 steps pass ([test-sheet-rerun-ai.md](test-sheet-rerun-ai.md), videos and screenshots in [../evidence/testing-2026-11-22-rerun-agy/](../evidence/testing-2026-11-22-rerun-agy/)).
+
+| Defect | Fix | Re-run |
+|---|---|---|
+| D1 AI time-out | PR #242: no time limit on the draft call (`PROPOSAL_DRAFT_TIMEOUT_MS=0`) | F07 03: draft ready after 81 s (the old limit was 60 to 90 s) |
+| D2 more than 40 sections | PR #243: limit 40 to 100 | F07b 03: draft for the 47-item TOR ready after 69 s |
+| D4 (new) a long scope item breaks the 200-character heading limit | PR #243: heading cut at 200 characters, full text kept in the body | seen in the first re-run ("heading must be at most 200 characters"), gone in the second |
+
+**Caveat: the AI in this re-run was not the local model.** To get a draft quickly the worker was pointed at a throw-away bridge on the tester's laptop that answers Ollama-style requests by calling the `agy` CLI (Gemini 3.8 Flash). The bridge is not in the repo and the machine's `.env` was changed for it (`OLLAMA_BASE_URL`; backup `~/.env.bak-before-agy`). The worker log still prints `model: qwen2.5:3b` because that is only the configured label. The quality of the draft text was not assessed, only that a draft is produced, saved and opened. The result with `qwen2.5:3b` itself and no time limit has not been measured. F07 and F07b are the only flows re-run; the other flows come from the first run.
