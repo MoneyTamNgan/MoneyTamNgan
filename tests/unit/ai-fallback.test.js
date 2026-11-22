@@ -72,3 +72,21 @@ describe('fallback after Vertex refuses', () => {
         await assert.rejects(safeAccessHeaders(refused), /no credentials/);
     });
 });
+
+describe('agy as a name for the Ollama-protocol provider', () => {
+    test('AI_PROVIDER=agy and AI_FALLBACK_PROVIDER=agy work like ollama; AGY_BASE_URL wins over OLLAMA_BASE_URL', async () => {
+        const { aiProvider, ollamaBaseUrl } = await import('../../lib/ai/ollama.js');
+        const { embeddingConfig } = await import('../../lib/embedding-config.js');
+        assert.equal(aiProvider({ AI_PROVIDER: 'agy' }), 'ollama');
+        assert.equal(aiProvider({ AI_PROVIDER: 'AGY' }), 'ollama');
+        assert.equal(aiProvider({ AI_PROVIDER: 'other' }), 'vertex');
+        assert.equal(ollamaBaseUrl({ AGY_BASE_URL: 'http://bridge:11500/', OLLAMA_BASE_URL: 'http://local:11434' }), 'http://bridge:11500');
+        assert.equal(ollamaBaseUrl({ OLLAMA_BASE_URL: 'http://local:11434' }), 'http://local:11434');
+        assert.equal(embeddingConfig({ VERTEX_AI_ENABLED: 'true', AI_PROVIDER: 'agy' }).enabled, false);
+        const saved = ['AI_PROVIDER', 'AI_FALLBACK_PROVIDER'].map(k => process.env[k]);
+        process.env.AI_PROVIDER = 'vertex'; process.env.AI_FALLBACK_PROVIDER = 'agy';
+        try { assert.equal(fallbackEnabled(VERTEX), true); } finally {
+            ['AI_PROVIDER', 'AI_FALLBACK_PROVIDER'].forEach((k, i) => { if (saved[i] === undefined) delete process.env[k]; else process.env[k] = saved[i]; });
+        }
+    });
+});
