@@ -1731,6 +1731,9 @@ dd {
 .feed-card-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  min-width: 0;
   min-height: 38px
 }
 
@@ -1746,6 +1749,9 @@ dd {
   justify-content: flex-end;
   gap: 7px;
   flex-wrap: wrap
+;
+  min-width: 0;
+  max-width: 100%
 }
 
 .bidding-badge {
