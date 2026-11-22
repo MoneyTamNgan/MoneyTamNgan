@@ -142,30 +142,34 @@ flowchart LR
 
 Stage details, statuses and failure paths: [docs/pipeline.md](docs/pipeline.md). Actor-by-actor sequence: [docs/tor-flow.md](docs/tor-flow.md).
 
-## Quick start
+## Run (Docker only)
 
-Requires Node.js 22 and a MongoDB (Atlas or local).
-
-```bash
-cp .env.example .env     # set MONGODB_URI, JWT_SECRET and EGP_API_KEY at minimum
-npm install
-npm run dev              # http://localhost:3000
-```
-
-Vertex AI is off by default, so ingestion and PDF downloads work without Google Cloud credentials. To enable it, set `VERTEX_AI_ENABLED=true`, `GOOGLE_CLOUD_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS` (see [Vertex AI](docs/reference.md#vertex-ai)).
-
-## Run with Docker
+**Docker is the only supported way to run this project.** Do not start it with `npm run dev`, `npm start` or `node scripts/...` on the host: the worker needs Chromium, Poppler and Tesseract, and the app expects the compose network. Requirements: Docker with Compose v2. No Node or MongoDB is needed on the host (Python 3 only for the optional smoke test).
 
 ```bash
-cp .env.example .env
-docker compose up --build            # app on :3000, local mongo, worker
+cp .env.example .env                 # set JWT_SECRET (and EGP_API_KEY); see .env.example
+docker compose up --build -d         # app :3000, worker, scheduler, local mongo
 curl http://localhost:3000/api/health
+docker compose ps
+docker compose logs -f app worker
+docker compose down                  # stop (keeps data); add -v to delete the data
 ```
+
+Services: `app` (web + API), `worker` (OCR, AI extraction, drafts, emails), `scheduler` (ingestion at 06:00, 12:00 and 18:00 Asia/Bangkok), `scraper` (one-off scrape), `mongo` (local database).
+
+**Fetch and process data now** (instead of waiting for the schedule):
+
+```bash
+docker compose run --rm scheduler node scripts/ingestion-scheduler.js --once   # discover and download TORs
+docker compose logs -f worker                                                  # watch OCR, extraction, classification
+```
+
+AI: set `AI_PROVIDER=ollama` and `OLLAMA_BASE_URL` for a local model, or `VERTEX_AI_ENABLED=true` with Google credentials (see [Vertex AI](docs/reference.md#vertex-ai)). Without either, ingestion and downloads still work but extraction stays pending.
 
 Against Atlas, with the machine's IP allowed automatically (needs `ATLAS_PUBLIC_KEY`, `ATLAS_PRIVATE_KEY`, `ATLAS_PROJECT_ID` in `.env`):
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.atlas.yml up --build
+docker compose -f docker-compose.yml -f docker-compose.atlas.yml up --build -d
 ```
 
 ### Local database vs live database (Atlas)
@@ -187,22 +191,24 @@ curl http://localhost:3000/api/health          # 200, database: connected
 python3 tests/e2e/smoke-api.py                 # 32 steps; creates and deletes 2 test accounts
 ```
 
-Then follow the [BidPrep demo script](docs/demo-script-bidprep.md). The smoke test is safe on a live database because it removes its own accounts, but the AI draft step takes 1 to 2 minutes. On an empty local database the TOR-dependent steps (detail, checklist, draft) return 404 because there is no TOR yet: 21 of 25 steps pass and those 4 fail until you ingest data or use Atlas.
+Then follow the [BidPrep demo script](docs/demo-script-bidprep.md). The smoke test removes its own accounts, but the AI draft step takes 1 to 2 minutes. On an empty local database the TOR-dependent steps (detail, checklist, draft) return 404 until you ingest data (command above) or use Atlas.
 
 Start, stop and rollback on a demo machine: [docs/local-deployment.md](docs/local-deployment.md).
 
-## Common commands
+## Common commands (all through Docker)
 
-| Command | What it does |
+| Task | Command |
 |---|---|
-| `npm test` and `npm run test:vitest` | unit, integration and security tests (no network needed) |
-| `npm run build` | production build |
-| `npm run db:ensure-indexes` | create or update MongoDB and Atlas Vector Search indexes |
-| `npm run db:migrate-users` | backfill usernames (dry run; add `-- --apply` to write) |
-| `npm run worker` | process queued TOR jobs |
-| `npm run scrape` | download TOR PDFs (`--limit`, `--delay`, `--project-id`) |
-| `npm run embed -- --limit=50` | create embeddings for semantic search (needs Vertex) |
-| `docker compose run --rm scraper` | one scrape run in Docker |
+| Unit, integration and security tests | `docker build --target builder -t moneytamngan-test . && docker run --rm moneytamngan-test sh -c "npm test && npm run test:vitest"` |
+| Production build check | `docker compose build app` |
+| Create or update MongoDB and Atlas Vector Search indexes | `docker compose run --rm worker npm run db:ensure-indexes` |
+| Backfill usernames (dry run; add `-- --apply` to write) | `docker compose run --rm worker npm run db:migrate-users` |
+| Make a user an admin | `docker compose run --rm worker npm run user:promote -- <email>` |
+| Disable a user (dry run; add `--apply`) | `docker compose run --rm worker npm run user:disable -- --email=<email>` |
+| Process queued TOR jobs once | `docker compose logs -f worker` (the `worker` service already runs `--watch`) |
+| One scrape run | `docker compose run --rm scraper` |
+| Embeddings for semantic search (needs Vertex) | `docker compose run --rm worker npm run embed -- --limit=50` |
+| API smoke test (stack must be up) | `python3 tests/e2e/smoke-api.py` (uses only the Python standard library) |
 
 ## Documentation
 
