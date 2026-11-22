@@ -6,6 +6,18 @@ The app calls a local model through the Ollama protocol (`AI_PROVIDER=ollama`). 
 demo machine (docker: worker)  --Ollama /api/chat-->  bridge (on the demo machine or a laptop)  --agy -p-->  Gemini
 ```
 
+## Migration: the demo AI moved to Gemini (22 Nov 2026)
+The demo AI was the local model `qwen2.5:3b` (Ollama). It was too slow for proposal drafts: the job failed with `VERTEX_TIMEOUT`, and the first run of the UI tests recorded it as defect D1. Vertex AI could not be used because billing is not available. The demo therefore **migrated to Gemini, called through the `agy` CLI** by this bridge.
+
+| | Before | Now |
+|---|---|---|
+| Model | `qwen2.5:3b` on the demo machine (Ollama) | Gemini (`gemini-3.8-flash-medium`) through `agy` |
+| App setting | `OLLAMA_BASE_URL` = the Ollama server | `OLLAMA_BASE_URL` = the bridge (same protocol, no code change) |
+| Draft time | more than 60 to 90 s, failed | about 70 to 90 s, completes |
+| Time limit | `PROPOSAL_DRAFT_TIMEOUT_MS` 60 s default, 90 s cap | `PROPOSAL_DRAFT_TIMEOUT_MS=0` (no limit), PR #242 |
+
+What did not change: the production path is still Vertex AI (`AI_PROVIDER=vertex`, also Gemini, billed through Google Cloud); the Ollama adapter stays as the fallback. This migration is for the demo only, because the bridge has no authentication and sends TOR text and the company profile to Gemini.
+
 ## On the machine that has `agy`
 ```bash
 HOST=<address to listen on> python3 tools/agy-bridge/server.py          # port 11500
