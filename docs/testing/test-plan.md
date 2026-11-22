@@ -43,7 +43,7 @@ Show, with a recording of each sequence, that every function a user or an admin 
 | Code | tag `v1.0.0` (`origin/main` 1df8573) |
 | Machine | `napat-gf63-8rd`, Docker Compose: `app`, `worker`, `mongo` (database not used here), `scheduler` off |
 | Database | MongoDB Atlas, real data (838 TORs) via `docker-compose.real-db.yml` |
-| AI | Local model `qwen2.5:3b` through Ollama on the same machine (Vertex billing not available) |
+| AI | First run: local model `qwen2.5:3b` through Ollama. Re-runs after 22 Nov 2026 (F07, F07b): migrated to Gemini through the `agy` CLI and the agy bridge ([../agy-bridge.md](../agy-bridge.md)); Vertex billing is not available |
 | Browser | Chromium 1.49 in `mcr.microsoft.com/playwright:v1.49.1-noble`, locale `th-TH`, 1280x720 |
 | Test TORs | 69109345522 (browse), 69109232352 (BidPrep, 11 checklist items), 66089621504 (large scope, 47 items) |
 
