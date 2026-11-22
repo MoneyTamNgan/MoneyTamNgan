@@ -1,6 +1,6 @@
 # UI test plan: every user function as a flow
 
-Version `v1.0.0`, plan written 22 Nov 2026. Results: [test-sheet.md](test-sheet.md). Review and defects: [review-and-defects.md](review-and-defects.md). Evidence (video per flow, screenshot per step): [../evidence/testing-2026-11-22/](../evidence/testing-2026-11-22/).
+Version `v1.0.0`, plan written 22 Nov 2026. Results: [test-sheet.md](test-sheet.md). Review and defects: [review-and-defects.md](review-and-defects.md). Evidence (video per flow, screenshot per step): [../evidence/testing-2026-11-22-full/](../evidence/testing-2026-11-22-full/).
 
 ## 1. Objective
 Show, with a recording of each sequence, that every function a user or an admin can reach on the website works as described, that the protections (login, roles, ownership) hold, and where it does not work. A failed step is recorded as a defect; it is not hidden or retried until green.

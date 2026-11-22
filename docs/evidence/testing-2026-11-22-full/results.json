@@ -1,0 +1,839 @@
+[
+ {
+  "id": "F01-guest-browse",
+  "title": "Guest browses TORs, searches, filters, pages, opens detail and analytics (no login)",
+  "video": "F01-guest-browse/F01-guest-browse.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Open the dashboard as a guest",
+    "expected": "Heading \"ค้นหาโครงการจากหน่วยงานภาครัฐ\" and at least one TOR card are visible",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F01-guest-browse/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Click the second hero slide indicator",
+    "expected": "The slide indicator state changes (markup of the indicators differs before and after)",
+    "at": 2,
+    "result": "PASS",
+    "actual": "indicator state changed",
+    "screenshot": "F01-guest-browse/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Type a keyword in the search box",
+    "expected": "After the 300 ms debounce the list is requested with q= (HTTP 200) and the URL carries q=",
+    "at": 4,
+    "result": "PASS",
+    "actual": "/tors?isSoftware=true&q=ระบบ&page=1&limit=10 -> 200",
+    "screenshot": "F01-guest-browse/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Go to the next page of results",
+    "expected": "The URL shows page=2 and the first card is a different project than on page 1",
+    "at": 6,
+    "result": "PASS",
+    "actual": "/?next=%2Ftors%2F69109345522 -> /?next=%2Ftors%2F69109271962",
+    "screenshot": "F01-guest-browse/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Use the filters: software toggle, agency, bidding status, minimum budget, sort",
+    "expected": "Software, agency, status and budget each change the URL; sorting by highest budget re-orders the list (sorting is applied on the page, not in the URL)",
+    "at": 7,
+    "result": "PASS",
+    "actual": "software=0, agency, status, budgetMin, sort re-ordered",
+    "screenshot": "F01-guest-browse/05-05.png"
+   },
+   {
+    "id": "06",
+    "action": "Click the first TOR card as a guest",
+    "expected": "Clicking a card as a guest goes to the sign-in page with ?next=/tors/<id>",
+    "at": 12,
+    "result": "PASS",
+    "actual": "url ?next=%2Ftors%2F69109345522",
+    "screenshot": "F01-guest-browse/06-06.png"
+   },
+   {
+    "id": "07",
+    "action": "Open a TOR detail page directly as a guest",
+    "expected": "URL is /tors/<id>; the TOR overview is shown with the notice \"เข้าสู่ระบบเพื่อดูรายละเอียดโครงการฉบับเต็ม\"; the comparison card with the company profile (\"มูลค่าผลงานขั้นต่ำตาม TOR\") is not shown to a guest",
+    "at": 15,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F01-guest-browse/07-07.png"
+   },
+   {
+    "id": "08",
+    "action": "Open the document page of the TOR",
+    "expected": "The page shows the same project title as the detail page",
+    "at": 16,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F01-guest-browse/08-08.png"
+   },
+   {
+    "id": "09",
+    "action": "Open Analytics and change a filter",
+    "expected": "The analytics API is called again with HTTP 200 and the page stays populated",
+    "at": 18,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F01-guest-browse/09-09.png"
+   },
+   {
+    "id": "10",
+    "action": "Clear the filters",
+    "expected": "The filter returns to its first option and the data reloads",
+    "at": 19,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F01-guest-browse/10-10.png"
+   },
+   {
+    "id": "11",
+    "action": "Switch the chart mode to \"ความพร้อมเอกสาร\" and back",
+    "expected": "The chart heading changes to \"ความพร้อมของเอกสาร TOR\" and returns to \"TOR ตามปีงบประมาณ\"",
+    "at": 21,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F01-guest-browse/11-11.png"
+   },
+   {
+    "id": "12",
+    "action": "Export the analytics as CSV and as JSON",
+    "expected": "Two downloads start: a .csv and a .json file",
+    "at": 22,
+    "result": "PASS",
+    "actual": "tor-analytics-2026-11-22.csv, tor-analytics-2026-11-22.json",
+    "screenshot": "F01-guest-browse/12-12.png"
+   },
+   {
+    "id": "13",
+    "action": "Toggle the theme and collapse the sidebar",
+    "expected": "The theme control changes the page theme and the sidebar toggle flips aria-expanded",
+    "at": 24,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F01-guest-browse/13-13.png"
+   }
+  ],
+  "seconds": 26
+ },
+ {
+  "id": "F02-auth",
+  "title": "Register, log out, log in by email and username, error cases, Google redirect",
+  "video": "F02-auth/F02-auth.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Open the sign-in page",
+    "expected": "The login form (identifier and password) is shown",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F02-auth/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Switch to \"สร้างบัญชี\" and submit with mismatching passwords",
+    "expected": "The alert says the two passwords do not match (\"ไม่ตรงกัน\")",
+    "at": 1,
+    "result": "PASS",
+    "actual": "รหัสผ่านทั้งสองช่องไม่ตรงกัน",
+    "screenshot": "F02-auth/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Submit with a password shorter than 15 characters",
+    "expected": "The browser blocks the submit (password field reports \"too short\") and no account is created",
+    "at": 2,
+    "result": "PASS",
+    "actual": "validity.tooShort = true",
+    "screenshot": "F02-auth/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Register with a valid email, username and password",
+    "expected": "The account is created and the user lands inside the app; the session belongs to the new email",
+    "at": 4,
+    "result": "PASS",
+    "actual": "landed on /dashboard",
+    "screenshot": "F02-auth/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Log out",
+    "expected": "Returns to the sign-in page and the session is gone (/api/auth/me = 401)",
+    "at": 6,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F02-auth/05-05.png"
+   },
+   {
+    "id": "06",
+    "action": "Log in with a wrong password",
+    "expected": "The same generic error is shown for a wrong password on a real account and for an account that does not exist (no account enumeration)",
+    "at": 7,
+    "result": "PASS",
+    "actual": "same message for known and unknown account: อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือโปรดใช้ Google หากสมัครด้วย Google",
+    "screenshot": "F02-auth/06-06.png"
+   },
+   {
+    "id": "07",
+    "action": "Log in with the email",
+    "expected": "Signed in as the new account",
+    "at": 9,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F02-auth/07-07.png"
+   },
+   {
+    "id": "08",
+    "action": "Log out, then log in with the username in upper case",
+    "expected": "Signed in as the same account (username is case-insensitive)",
+    "at": 13,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F02-auth/08-08.png"
+   },
+   {
+    "id": "09",
+    "action": "Register again with the same email",
+    "expected": "An alert says the email already has an account (\"มีบัญชีอยู่แล้ว\")",
+    "at": 15,
+    "result": "PASS",
+    "actual": "อีเมลนี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบด้วยวิธีเดิม",
+    "screenshot": "F02-auth/09-09.png"
+   },
+   {
+    "id": "10",
+    "action": "Click \"เข้าสู่ระบบด้วย Google\"",
+    "expected": "The browser is sent to accounts.google.com (we stop there; no real Google sign-in)",
+    "at": 18,
+    "result": "PASS",
+    "actual": "redirected to accounts.google.com",
+    "screenshot": "F02-auth/10-10.png"
+   },
+   {
+    "id": "11",
+    "action": "Cleanup: sign in and delete the test account (API)",
+    "expected": "HTTP 200",
+    "at": 19,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F02-auth/11-11.png"
+   }
+  ],
+  "seconds": 21
+ },
+ {
+  "id": "F03-access-control",
+  "title": "Guests and normal users cannot reach protected pages and APIs; users cannot see each other's drafts",
+  "video": "F03-access-control/F03-access-control.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Guest opens /profile",
+    "expected": "Redirected to the sign-in page",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F03-access-control/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Guest opens /admin",
+    "expected": "Redirected to the sign-in page",
+    "at": 1,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F03-access-control/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Guest calls the drafts API and the admin API",
+    "expected": "401 for both",
+    "at": 2,
+    "result": "PASS",
+    "actual": "drafts 401, admin 401",
+    "screenshot": "F03-access-control/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Sign in as a normal user and open /admin",
+    "expected": "The page says admin permission is required and shows no admin console",
+    "at": 3,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F03-access-control/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Normal user calls the admin API",
+    "expected": "403",
+    "at": 5,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F03-access-control/05-05.png"
+   },
+   {
+    "id": "06",
+    "action": "User A creates a draft (API); user B opens its URL in the browser and via the API",
+    "expected": "B sees none of A's content in the page; the API answers 404 and B's list is empty",
+    "at": 5,
+    "result": "PASS",
+    "actual": "UI shows no content; API 404; B has 0 drafts",
+    "screenshot": "F03-access-control/06-06.png"
+   },
+   {
+    "id": "07",
+    "action": "Check the security headers of a normal page response",
+    "expected": "Content-Security-Policy, X-Content-Type-Options and a frame-ancestors/X-Frame-Options rule are sent (this run disables CSP in the test browser, so the header is checked here)",
+    "at": 11,
+    "result": "PASS",
+    "actual": "CSP + nosniff present",
+    "screenshot": "F03-access-control/07-07.png"
+   },
+   {
+    "id": "08",
+    "action": "Cleanup: delete both test accounts",
+    "expected": "Both deletions return HTTP 200",
+    "at": 12,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F03-access-control/08-08.png"
+   }
+  ],
+  "seconds": 15
+ },
+ {
+  "id": "F04-profile",
+  "title": "Edit the company profile, validation, persistence, delete company data, delete account",
+  "video": "F04-profile/F04-profile.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Sign in and open the profile page",
+    "expected": "Heading \"ตั้งค่าโปรไฟล์และทักษะบริษัท\" is shown with an empty company name",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Fill company name, capital, highest past-project value and capacity",
+    "expected": "The fields hold exactly what was typed",
+    "at": 2,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Fill registration number, signatory and address",
+    "expected": "The fields hold exactly what was typed",
+    "at": 3,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Add a past project and fill it in",
+    "expected": "The counter shows \"ผลงานที่ผ่านมา (1/50)\" and the four fields keep their values",
+    "at": 4,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Pick three skills and one certification",
+    "expected": "The skills counter shows \"3 รายการ\" and a picked chip looks different from an unpicked one",
+    "at": 5,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/05-05.png"
+   },
+   {
+    "id": "06",
+    "action": "Turn email notifications on and set threshold and frequency",
+    "expected": "The switch is on and the frequency select holds a non-default option",
+    "at": 6,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/06-06.png"
+   },
+   {
+    "id": "07",
+    "action": "Click \"บันทึกข้อมูลโปรไฟล์\"",
+    "expected": "The save request (PATCH) succeeds with HTTP 200",
+    "at": 7,
+    "result": "PASS",
+    "actual": "PATCH -> 200",
+    "screenshot": "F04-profile/07-07.png"
+   },
+   {
+    "id": "08",
+    "action": "Reload the page",
+    "expected": "Company name, address, skills, certification, notification switch and the past project are all still there (screen and API)",
+    "at": 8,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/08-08.png"
+   },
+   {
+    "id": "09",
+    "action": "Enter a negative capital and save",
+    "expected": "The form shows a field error, no save request is sent and the stored value is unchanged",
+    "at": 10,
+    "result": "PASS",
+    "actual": "Must be a number between 0 and 1000000000000000.",
+    "screenshot": "F04-profile/09-09.png"
+   },
+   {
+    "id": "10",
+    "action": "Remove the past project",
+    "expected": "The counter returns to \"ผลงานที่ผ่านมา (0/50)\"; after saving, the API stores no past project",
+    "at": 12,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/10-10.png"
+   },
+   {
+    "id": "11",
+    "action": "Create a draft (API), then click \"ลบข้อมูลบริษัท\" and confirm",
+    "expected": "Company data and drafts are cleared (checked in the API); the account stays",
+    "at": 15,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/11-11.png"
+   },
+   {
+    "id": "12",
+    "action": "Click \"ลบบัญชีผู้ใช้\" and confirm",
+    "expected": "The user is sent to the sign-in page and the session is gone",
+    "at": 21,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F04-profile/12-12.png"
+   },
+   {
+    "id": "13",
+    "action": "Try to sign in with the deleted account",
+    "expected": "Sign-in is refused with the generic error",
+    "at": 23,
+    "result": "PASS",
+    "actual": "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือโปรดใช้ Google หากสมัครด้วย Google",
+    "screenshot": "F04-profile/13-13.png"
+   }
+  ],
+  "seconds": 25
+ },
+ {
+  "id": "F05-tor-detail",
+  "title": "Signed-in user reads a TOR: summary, qualification checklist (own status), prepare-draft link, dashboard",
+  "video": "F05-tor-detail/F05-tor-detail.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Sign in and open a TOR detail page",
+    "expected": "No guest notice is shown, and the signed-in-only comparison cards (qualification value and checklist) are present",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F05-tor-detail/01-01.png"
+   },
+   {
+    "id": "03",
+    "action": "Scroll to the qualification checklist card",
+    "expected": "Items with the status buttons per item are visible",
+    "at": 3,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F05-tor-detail/02-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Mark the first item \"ผ่าน\"",
+    "expected": "The button is pressed (aria-pressed) and the API reports status pass for that item",
+    "at": 4,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F05-tor-detail/03-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Change the first item to \"ไม่ผ่าน\", then press it again",
+    "expected": "The API reports fail; pressing the same button again returns the item to the system value (manual)",
+    "at": 7,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F05-tor-detail/04-05.png"
+   },
+   {
+    "id": "06",
+    "action": "Page through the checklist (\"ถัดไป →\")",
+    "expected": "A different first item is shown on the next page",
+    "at": 11,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F05-tor-detail/05-06.png"
+   },
+   {
+    "id": "07",
+    "action": "Click \"เตรียมร่างข้อเสนอ\"",
+    "expected": "The BidPrep page opens with projectId in the URL",
+    "at": 12,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F05-tor-detail/06-07.png"
+   },
+   {
+    "id": "08",
+    "action": "Open the document page of the TOR",
+    "expected": "The document view shows a project heading",
+    "at": 13,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F05-tor-detail/07-08.png"
+   },
+   {
+    "id": "09",
+    "action": "Open the dashboard",
+    "expected": "Cards link to /tors/<id> (not to sign-in), unlike the guest view",
+    "at": 15,
+    "result": "PASS",
+    "actual": "first card -> /tors/69109345522",
+    "screenshot": "F05-tor-detail/08-09.png"
+   },
+   {
+    "id": "10",
+    "action": "Cleanup: delete the test account",
+    "expected": "HTTP 200",
+    "at": 20,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F05-tor-detail/09-10.png"
+   }
+  ],
+  "seconds": 22
+ },
+ {
+  "id": "F06-bidprep-draft",
+  "title": "BidPrep: create a draft, edit, sections, checklist gate, export DOCX, delete",
+  "video": "F06-bidprep-draft/F06-bidprep-draft.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Sign in, fill a minimal profile (API) and open \"เตรียมข้อเสนอ\"",
+    "expected": "Heading \"ร่างข้อเสนอของฉัน\" and the empty-list message are shown",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F06-bidprep-draft/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Create a draft with an unknown TOR id",
+    "expected": "The message \"TOR not found\" is shown and no draft page opens",
+    "at": 3,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F06-bidprep-draft/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Create a draft for a real TOR",
+    "expected": "The draft editor opens for that TOR at version 1",
+    "at": 4,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F06-bidprep-draft/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Edit the title and the first section, then save",
+    "expected": "The save returns HTTP 200 and the version shown becomes 2",
+    "at": 7,
+    "result": "PASS",
+    "actual": "save -> 200, version 2",
+    "screenshot": "F06-bidprep-draft/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Add a section",
+    "expected": "The number of sections goes up by one",
+    "at": 9,
+    "result": "PASS",
+    "actual": "2 -> 3 sections",
+    "screenshot": "F06-bidprep-draft/05-05.png"
+   },
+   {
+    "id": "06",
+    "action": "Delete the added section",
+    "expected": "The number of sections goes back down by one",
+    "at": 10,
+    "result": "PASS",
+    "actual": "back to 2 sections",
+    "screenshot": "F06-bidprep-draft/06-06.png"
+   },
+   {
+    "id": "07",
+    "action": "Save, then look at the export button before the checklist passes",
+    "expected": "With nothing unsaved, the DOCX button is still disabled and the page asks for every item to be \"ผ่าน\"",
+    "at": 11,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F06-bidprep-draft/07-07.png"
+   },
+   {
+    "id": "08",
+    "action": "Open the checklist tab",
+    "expected": "The summary cards (ผ่าน / ไม่ผ่าน / ตรวจสอบเอง) are shown and the three numbers add up to the 11 items",
+    "at": 12,
+    "result": "PASS",
+    "actual": "11 items",
+    "screenshot": "F06-bidprep-draft/08-08.png"
+   },
+   {
+    "id": "09",
+    "action": "Mark one item \"ไม่ผ่าน\"",
+    "expected": "The \"ไม่ผ่าน\" counter becomes 1",
+    "at": 13,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F06-bidprep-draft/09-09.png"
+   },
+   {
+    "id": "10",
+    "action": "Mark every item \"ผ่าน\" on all pages",
+    "expected": "The \"ผ่าน\" counter equals 11 and the other two are 0",
+    "at": 16,
+    "result": "PASS",
+    "actual": "11 clicks on 3 page(s), counters 11/0/0",
+    "screenshot": "F06-bidprep-draft/10-10.png"
+   },
+   {
+    "id": "11",
+    "action": "Download the DOCX (saving first if the page reports unsaved changes)",
+    "expected": "A .docx download starts and the file is a valid zip (first bytes \"PK\")",
+    "at": 30,
+    "result": "PASS",
+    "actual": "download bid-draft-69109232352.docx (21795 bytes)",
+    "screenshot": "F06-bidprep-draft/11-11.png"
+   },
+   {
+    "id": "12",
+    "action": "Return to the list and open the saved draft",
+    "expected": "The draft is listed with its title and opens at version 3 or higher, showing the saved title and first section heading",
+    "at": 31,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F06-bidprep-draft/12-12.png"
+   },
+   {
+    "id": "13",
+    "action": "Delete the draft",
+    "expected": "The list shows the empty message and the API has 0 drafts",
+    "at": 34,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F06-bidprep-draft/13-13.png"
+   },
+   {
+    "id": "14",
+    "action": "Cleanup: delete the test account",
+    "expected": "HTTP 200",
+    "at": 37,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F06-bidprep-draft/14-14.png"
+   }
+  ],
+  "seconds": 38
+ },
+ {
+  "id": "F07-bidprep-ai",
+  "title": "BidPrep: generate an AI draft (queued job, local model), TOR with a small scope",
+  "video": "F07-bidprep-ai/F07-bidprep-ai.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Sign in, fill a profile and open \"เตรียมข้อเสนอ\"",
+    "expected": "The page loads with the AI warning",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07-bidprep-ai/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Enter a TOR id and click \"สร้างร่างด้วย AI\"",
+    "expected": "A job is queued (HTTP 202) and the page shows \"กำลังรอผล AI\" with a job number",
+    "at": 2,
+    "result": "PASS",
+    "actual": "queued -> 202",
+    "screenshot": "F07-bidprep-ai/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Wait for the job to finish (up to 5.5 minutes)",
+    "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
+    "at": 4,
+    "result": "PASS",
+    "actual": "ready after 120 s",
+    "screenshot": "F07-bidprep-ai/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Open the AI draft",
+    "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
+    "at": 125,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07-bidprep-ai/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Cleanup: delete the test account and its drafts",
+    "expected": "HTTP 200",
+    "at": 126,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07-bidprep-ai/05-05.png"
+   }
+  ],
+  "seconds": 138
+ },
+ {
+  "id": "F07b-bidprep-ai-large-tor",
+  "title": "BidPrep: generate an AI draft for a TOR with a large scope (47 items)",
+  "video": "F07b-bidprep-ai-large-tor/F07b-bidprep-ai-large-tor.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Sign in, fill a profile and open \"เตรียมข้อเสนอ\"",
+    "expected": "The page loads with the AI warning",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07b-bidprep-ai-large-tor/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Enter a TOR id and click \"สร้างร่างด้วย AI\"",
+    "expected": "A job is queued (HTTP 202) and the page shows \"กำลังรอผล AI\" with a job number",
+    "at": 2,
+    "result": "PASS",
+    "actual": "queued -> 202",
+    "screenshot": "F07b-bidprep-ai-large-tor/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Wait for the job to finish (up to 5.5 minutes)",
+    "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
+    "at": 4,
+    "result": "PASS",
+    "actual": "ready after 78 s",
+    "screenshot": "F07b-bidprep-ai-large-tor/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Open the AI draft",
+    "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
+    "at": 83,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07b-bidprep-ai-large-tor/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Cleanup: delete the test account and its drafts",
+    "expected": "HTTP 200",
+    "at": 84,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F07b-bidprep-ai-large-tor/05-05.png"
+   }
+  ],
+  "seconds": 91
+ },
+ {
+  "id": "F08-admin",
+  "title": "Admin console: ingestion status, health, review queue (read only, nothing is triggered)",
+  "video": "F08-admin/F08-admin.webm",
+  "steps": [
+   {
+    "id": "01",
+    "action": "Sign in as an admin",
+    "expected": "Signed in; the session role is admin",
+    "at": 0,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F08-admin/01-01.png"
+   },
+   {
+    "id": "02",
+    "action": "Open /admin",
+    "expected": "The console shows the ingestion status and the scraper health section",
+    "at": 2,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F08-admin/02-02.png"
+   },
+   {
+    "id": "03",
+    "action": "Read the review queue",
+    "expected": "The queue finishes loading and shows rows or an empty-state message (not the loading text)",
+    "at": 3,
+    "result": "PASS",
+    "actual": "5 row(s) in the queue",
+    "screenshot": "F08-admin/03-03.png"
+   },
+   {
+    "id": "04",
+    "action": "Filter the queue by reason",
+    "expected": "The reason filter is applied to the rows on the page: the row count does not grow",
+    "at": 10,
+    "result": "PASS",
+    "actual": "5 -> 3 rows",
+    "screenshot": "F08-admin/04-04.png"
+   },
+   {
+    "id": "05",
+    "action": "Search the queue for text that matches nothing",
+    "expected": "The queue shows no rows (or only the empty-state row)",
+    "at": 12,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F08-admin/05-05.png"
+   },
+   {
+    "id": "06",
+    "action": "Admin API status call",
+    "expected": "HTTP 200 with a pipeline status body",
+    "at": 15,
+    "result": "PASS",
+    "actual": "status -> 200",
+    "screenshot": "F08-admin/06-06.png"
+   },
+   {
+    "id": "07",
+    "action": "Cleanup: delete the admin test account",
+    "expected": "HTTP 200",
+    "at": 16,
+    "result": "PASS",
+    "actual": "as expected",
+    "screenshot": "F08-admin/07-07.png"
+   }
+  ],
+  "seconds": 17
+ }
+]
