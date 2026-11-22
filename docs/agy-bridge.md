@@ -25,7 +25,7 @@ What did not change: the production path is still Vertex AI (`AI_PROVIDER=vertex
 HOST=<address to listen on> python3 tools/agy-bridge/server.py          # port 11500
 curl http://<that ip>:11500/health                                        # -> ok
 ```
-`HOST` is the docker bridge address (`172.17.0.1`) when the worker runs on the same machine, or the tailscale IP for other machines. Options: `PORT`, `AGY` (path of the CLI), `AGY_MODEL` (default `gemini-3.8-flash-medium`), `MAX_PARALLEL` (default 2, more gets HTTP 429), `TIMEOUT_S` (default 900).
+`HOST` is the docker bridge address (`172.17.0.1`) when the worker runs on the same machine, or the tailscale IP for other machines. It must be a specific address: `0.0.0.0` and `::` are rejected. Options: `PORT`, `AGY` (the command `agy`, or an absolute path to an executable named `agy`; other names and shell characters are rejected), `AGY_MODEL` (default `gemini-3.8-flash-medium`; one token of letters, digits, `.`, `_`, `+`, `-`), `MAX_PARALLEL` (default 2, more gets HTTP 429), `TIMEOUT_S` (default 900; an integer from 1 to 86400). The CLI is started without a shell.
 
 ## On the demo machine (`.env`)
 ```

@@ -7,17 +7,73 @@ Not for production: no authentication, one CLI process per request.
     HOST=172.17.0.1 python3 tools/agy-bridge/server.py
 
 env: HOST (required), PORT=11500, AGY_MODEL=gemini-3.8-flash-medium, AGY=agy, MAX_PARALLEL=2, TIMEOUT_S=900
+
+AGY is the command name "agy" or an absolute path to an executable named agy.
+AGY_MODEL is one token (letters, digits, . _ + -). TIMEOUT_S is 1..86400 seconds.
+The CLI is started with shell=False, so those values are arguments, not a shell command.
 """
-import json, os, re, subprocess, sys, tempfile, threading, time
+import json, os, re, shlex, shutil, subprocess, sys, tempfile, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+# Operator configuration is checked before it is placed on the argv list.
+# For the character sets accepted below, shlex.quote() returns the value unchanged.
+_TOKEN = re.compile(r'[A-Za-z0-9][A-Za-z0-9._+-]{0,80}')
+_ABS_AGY = re.compile(r'/(?:[A-Za-z0-9._+-]+/)*agy')
+
+
+def checked_token(value, label):
+    if not isinstance(value, str) or not _TOKEN.fullmatch(value):
+        sys.exit(f'{label} must be one token of letters, digits, and . _ + -')
+    return value
+
+
+def checked_agy(value):
+    """Resolve AGY to an absolute executable path whose basename is agy."""
+    if not isinstance(value, str) or value == '' or '\x00' in value:
+        sys.exit('AGY must be "agy" or an absolute path to an executable named agy')
+    if '/' not in value:
+        if value != 'agy':
+            sys.exit('AGY command name must be agy')
+        resolved = shutil.which('agy')
+        if not resolved:
+            sys.exit('agy was not found on PATH')
+        value = resolved
+    parts = value.split('/')
+    if (not value.startswith('/') or parts[0] != '' or parts[-1] != 'agy'
+            or any(part in ('', '.', '..') for part in parts[1:])
+            or not _ABS_AGY.fullmatch(value)
+            or not os.path.isfile(value) or not os.access(value, os.X_OK)):
+        sys.exit('AGY must be an absolute path to an executable file named agy, without shell characters')
+    return value
+
+
+def checked_timeout(value):
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        sys.exit('TIMEOUT_S must be an integer number of seconds')
+    if isinstance(value, bool) or not 1 <= seconds <= 86400:
+        sys.exit('TIMEOUT_S must be between 1 and 86400')
+    return seconds
+
 
 HOST = os.environ.get('HOST')
 PORT = int(os.environ.get('PORT', '11500'))
-MODEL = os.environ.get('AGY_MODEL', 'gemini-3.8-flash-medium')
-AGY = os.environ.get('AGY', 'agy')
 MAX_PARALLEL = int(os.environ.get('MAX_PARALLEL', '2'))
-TIMEOUT_S = int(os.environ.get('TIMEOUT_S', '900'))
+MODEL = 'gemini-3.8-flash-medium'
+AGY = 'agy'
+TIMEOUT_S = 900
 SLOTS = threading.BoundedSemaphore(MAX_PARALLEL)
+
+
+def configure():
+    """Validate operator settings before the process listens or runs agy."""
+    global MODEL, AGY, TIMEOUT_S
+    if not HOST or HOST in {'0.0.0.0', '::'}:
+        sys.exit('Set HOST to a specific address to listen on (for example the docker bridge 172.17.0.1 or a tailscale IP). Do not listen on every interface.')
+    MODEL = checked_token(os.environ.get('AGY_MODEL', MODEL), 'AGY_MODEL')
+    AGY = checked_agy(os.environ.get('AGY', AGY))
+    TIMEOUT_S = checked_timeout(os.environ.get('TIMEOUT_S', str(TIMEOUT_S)))
 
 
 def build_prompt(body):
@@ -39,9 +95,12 @@ def extract_json(output):
 
 
 def run_agy(prompt, workdir):
-    cmd = [AGY, '-p', prompt, '--model', MODEL, '--mode', 'plan', '--dangerously-skip-permissions',
-           '--output-format', 'json', '--print-timeout', f'{TIMEOUT_S}s']
-    done = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, timeout=TIMEOUT_S + 60)
+    # shell=False, so the prompt is one argument and cannot add shell commands.
+    # quote() is a no-op for the executable, model, and timeout that checked_* allow.
+    cmd = [shlex.quote(AGY), '-p', prompt, '--model', shlex.quote(MODEL), '--mode', 'plan',
+           '--dangerously-skip-permissions', '--output-format', 'json',
+           '--print-timeout', shlex.quote(f'{TIMEOUT_S}s')]
+    done = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, shell=False, timeout=TIMEOUT_S + 60)
     data = json.loads(done.stdout)
     if data.get('status') != 'SUCCESS':
         raise RuntimeError(f"agy status {data.get('status')}")
@@ -92,8 +151,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    if not HOST:
-        sys.exit('Set HOST to the address to listen on (for example the docker bridge 172.17.0.1 or a tailscale IP).')
+    configure()
     # agy runs in an empty directory so it cannot read this repository.
     Handler.workdir = tempfile.mkdtemp(prefix='agy-bridge-')
     print(f'agy bridge on http://{HOST}:{PORT} (model {MODEL}, parallel {MAX_PARALLEL})', flush=True)
