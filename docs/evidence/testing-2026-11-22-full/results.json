@@ -98,7 +98,7 @@
     "id": "11",
     "action": "Switch the chart mode to \"ความพร้อมเอกสาร\" and back",
     "expected": "The chart heading changes to \"ความพร้อมของเอกสาร TOR\" and returns to \"TOR ตามปีงบประมาณ\"",
-    "at": 20,
+    "at": 21,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F01-guest-browse/11-11.png"
@@ -116,7 +116,7 @@
     "id": "13",
     "action": "Toggle the theme and collapse the sidebar",
     "expected": "The theme control changes the page theme and the sidebar toggle flips aria-expanded",
-    "at": 23,
+    "at": 24,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F01-guest-browse/13-13.png"
@@ -125,13 +125,13 @@
     "id": "14",
     "action": "Open the public pages on a phone-sized screen (360 px) and a tablet (768 px)",
     "expected": "No page is wider than the screen (no sideways scrolling) on /, /projects, /analytics and /dashboard",
-    "at": 25,
+    "at": 26,
     "result": "PASS",
     "actual": "360:/=360 360:/projects=360 360:/analytics=360 360:/dashboard=360 768:/=768 768:/projects=768 768:/analytics=768 768:/dashboard=768",
     "screenshot": "F01-guest-browse/14-14.png"
    }
   ],
-  "seconds": 38
+  "seconds": 39
  },
  {
   "id": "F02-auth",
@@ -205,7 +205,7 @@
     "id": "08",
     "action": "Log out, then log in with the username in upper case",
     "expected": "Signed in as the same account (username is case-insensitive)",
-    "at": 12,
+    "at": 11,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F02-auth/08-08.png"
@@ -214,7 +214,7 @@
     "id": "09",
     "action": "Register again with the same email",
     "expected": "An alert says the email already has an account (\"มีบัญชีอยู่แล้ว\")",
-    "at": 15,
+    "at": 14,
     "result": "PASS",
     "actual": "อีเมลนี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบด้วยวิธีเดิม",
     "screenshot": "F02-auth/09-09.png"
@@ -223,7 +223,7 @@
     "id": "10",
     "action": "Click \"เข้าสู่ระบบด้วย Google\"",
     "expected": "The browser is sent to accounts.google.com (we stop there; no real Google sign-in)",
-    "at": 16,
+    "at": 15,
     "result": "PASS",
     "actual": "redirected to accounts.google.com",
     "screenshot": "F02-auth/10-10.png"
@@ -232,13 +232,13 @@
     "id": "11",
     "action": "Cleanup: sign in and delete the test account (API)",
     "expected": "HTTP 200",
-    "at": 18,
+    "at": 17,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F02-auth/11-11.png"
    }
   ],
-  "seconds": 20
+  "seconds": 19
  },
  {
   "id": "F03-access-control",
@@ -294,7 +294,7 @@
     "id": "06",
     "action": "User A creates a draft (API); user B opens its URL in the browser and via the API",
     "expected": "B sees none of A's content in the page; the API answers 404 and B's list is empty",
-    "at": 6,
+    "at": 5,
     "result": "PASS",
     "actual": "UI shows no content; API 404; B has 0 drafts",
     "screenshot": "F03-access-control/06-06.png"
@@ -303,7 +303,7 @@
     "id": "07",
     "action": "Check the security headers of a normal page response",
     "expected": "Content-Security-Policy, X-Content-Type-Options and a frame-ancestors/X-Frame-Options rule are sent (this run disables CSP in the test browser, so the header is checked here)",
-    "at": 12,
+    "at": 11,
     "result": "PASS",
     "actual": "CSP + nosniff present",
     "screenshot": "F03-access-control/07-07.png"
@@ -312,7 +312,7 @@
     "id": "08",
     "action": "Cleanup: delete both test accounts",
     "expected": "Both deletions return HTTP 200",
-    "at": 13,
+    "at": 12,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F03-access-control/08-08.png"
@@ -383,7 +383,7 @@
     "id": "07",
     "action": "Click \"บันทึกข้อมูลโปรไฟล์\"",
     "expected": "The save request (PATCH) succeeds with HTTP 200",
-    "at": 7,
+    "at": 6,
     "result": "PASS",
     "actual": "PATCH -> 200",
     "screenshot": "F04-profile/07-07.png"
@@ -401,7 +401,7 @@
     "id": "09",
     "action": "Enter a negative capital and save",
     "expected": "The form shows a field error, no save request is sent and the stored value is unchanged",
-    "at": 10,
+    "at": 9,
     "result": "PASS",
     "actual": "Must be a number between 0 and 1000000000000000.",
     "screenshot": "F04-profile/09-09.png"
@@ -419,7 +419,7 @@
     "id": "11",
     "action": "Create a draft (API), then click \"ลบข้อมูลบริษัท\" and confirm",
     "expected": "Company data and drafts are cleared (checked in the API); the account stays",
-    "at": 15,
+    "at": 14,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F04-profile/11-11.png"
@@ -428,7 +428,7 @@
     "id": "12",
     "action": "Click \"ลบบัญชีผู้ใช้\" and confirm",
     "expected": "The user is sent to the sign-in page and the session is gone",
-    "at": 22,
+    "at": 21,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F04-profile/12-12.png"
@@ -437,13 +437,13 @@
     "id": "13",
     "action": "Try to sign in with the deleted account",
     "expected": "Sign-in is refused with the generic error",
-    "at": 24,
+    "at": 23,
     "result": "PASS",
     "actual": "อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือโปรดใช้ Google หากสมัครด้วย Google",
     "screenshot": "F04-profile/13-13.png"
    }
   ],
-  "seconds": 25
+  "seconds": 24
  },
  {
   "id": "F05-tor-detail",
@@ -508,7 +508,7 @@
     "id": "08",
     "action": "Open the document page of the TOR",
     "expected": "The document view shows a project heading",
-    "at": 12,
+    "at": 13,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F05-tor-detail/07-08.png"
@@ -517,7 +517,7 @@
     "id": "09",
     "action": "Open the dashboard",
     "expected": "Cards link to /tors/<id> (not to sign-in), unlike the guest view",
-    "at": 14,
+    "at": 15,
     "result": "PASS",
     "actual": "first card -> /tors/69109345522",
     "screenshot": "F05-tor-detail/08-09.png"
@@ -526,7 +526,7 @@
     "id": "10",
     "action": "Cleanup: delete the test account",
     "expected": "HTTP 200",
-    "at": 19,
+    "at": 20,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F05-tor-detail/09-10.png"
@@ -579,7 +579,7 @@
     "id": "05",
     "action": "Add a section",
     "expected": "The number of sections goes up by one",
-    "at": 9,
+    "at": 8,
     "result": "PASS",
     "actual": "2 -> 3 sections",
     "screenshot": "F06-bidprep-draft/05-05.png"
@@ -697,14 +697,14 @@
     "expected": "When the job completes the page opens the saved draft (or lists it under \"ร่างที่บันทึกไว้\"); if the job fails, the page must show why",
     "at": 4,
     "result": "PASS",
-    "actual": "ready after 87 s",
+    "actual": "ready after 75 s",
     "screenshot": "F07-bidprep-ai/03-03.png"
    },
    {
     "id": "04",
     "action": "Open the AI draft",
     "expected": "The editor shows at least 3 sections, source lists and at least one \"[to fill in: ...]\" placeholder",
-    "at": 92,
+    "at": 80,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07-bidprep-ai/04-04.png"
@@ -713,13 +713,13 @@
     "id": "05",
     "action": "Cleanup: delete the test account and its drafts",
     "expected": "HTTP 200",
-    "at": 93,
+    "at": 81,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F07-bidprep-ai/05-05.png"
    }
   ],
-  "seconds": 103
+  "seconds": 90
  },
  {
   "id": "F07b-bidprep-ai-large-tor",
@@ -772,7 +772,7 @@
     "screenshot": "F07b-bidprep-ai-large-tor/05-05.png"
    }
   ],
-  "seconds": 82
+  "seconds": 83
  },
  {
   "id": "F08-admin",
@@ -819,7 +819,7 @@
     "id": "05",
     "action": "Search the queue for text that matches nothing",
     "expected": "The queue shows no rows (or only the empty-state row)",
-    "at": 12,
+    "at": 13,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F08-admin/05-05.png"
@@ -828,7 +828,7 @@
     "id": "06",
     "action": "Admin API status call",
     "expected": "HTTP 200 with a pipeline status body",
-    "at": 14,
+    "at": 15,
     "result": "PASS",
     "actual": "status -> 200",
     "screenshot": "F08-admin/06-06.png"
@@ -837,12 +837,12 @@
     "id": "07",
     "action": "Cleanup: delete the admin test account",
     "expected": "HTTP 200",
-    "at": 15,
+    "at": 16,
     "result": "PASS",
     "actual": "as expected",
     "screenshot": "F08-admin/07-07.png"
    }
   ],
-  "seconds": 17
+  "seconds": 18
  }
 ]

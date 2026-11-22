@@ -9,7 +9,7 @@ mm = lambda s: f'{s // 60:02d}:{s % 60:02d}'
 total = sum(len(r['steps']) for r in res); ok = sum(s['result'] == 'PASS' for r in res for s in r['steps'])
 L = ['# Evidence index: every function, with its video and screenshot', '',
      f'Run of 22 Nov 2026 on the demo machine, `v1.0.0` plus the fixes of PR #242, #243 and #245, real Atlas. {ok} of {total} steps pass ([test-sheet.md](test-sheet.md)). '
-     'One video per flow; each row gives the time in the video and the screenshot of that step. The AI draft flows (F07, F07b) used the `agy` CLI as the AI through [the bridge](../agy-bridge.md) running on the demo machine itself, not the local model. '
+     'One video per flow; each row gives the time in the video and the screenshot of that step. The AI draft flows (F07, F07b) used the `agy` CLI as the AI not the local model: the machine was set to `AI_PROVIDER=vertex` with `AI_FALLBACK_PROVIDER=agy`, Vertex refused (no credentials) and the request fell back to [the bridge](../agy-bridge.md) running on the demo machine itself. '
      'Evidence from before the fixes (81 of 85) is kept in [../evidence/testing-2026-11-22/](../evidence/testing-2026-11-22/).', '']
 for r in res:
     L += [f"## {r['id']}: {r['title']}", '', f"Video: [{r['video']}]({base}/{r['video']})", '',
