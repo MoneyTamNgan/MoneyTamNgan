@@ -4,6 +4,7 @@ BidPrep FR-4.7 (issue #142) is recorded in [bid-prep-fr-4.7.md](bid-prep-fr-4.7.
 
 ## API security specifications
 
+- [Admin access](ADMIN_ACCESS.md): who can be an admin, how the role is granted and revoked, audit and review.
 - [RBAC access matrix](RBAC_SPEC.md) (#192 / ASVS V8.1.1): every implemented method, roles/scopes, ownership, machine-principal boundaries and linked tests.
 - [API input validation dictionary](../API_VALIDATION.md) (#193 / ASVS V2.1.1): field limits, actual error behavior and explicit OpenAPI gaps.
 - Run `node scripts/audit-api-documentation.js` to check route coverage and local evidence links. Sheet completion for these two cards remains pending teammate review and merge into develop.
