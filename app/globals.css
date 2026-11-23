@@ -9281,3 +9281,78 @@ body {
   .profile-setup .profile-card { padding: 18px; }
   .profile-setup .profile-hero { padding: 20px; }
 }
+
+
+/* Login and register page: orange theme, using the same tokens as the rest of the app */
+.auth-page {
+  background: var(--cream-background)
+}
+
+.auth-page .brand-panel {
+  background: linear-gradient(145deg, var(--orange-deep), #7a3a1c 55%, var(--orange-primary-hover));
+  color: #fff7ed
+}
+
+.city-grid {
+  background-image: linear-gradient(rgba(255, 214, 178, .22) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 214, 178, .22) 1px, transparent 1px)
+}
+
+.auth-page .brand-panel h1 em,
+.auth-page .eyebrow {
+  color: #ffc58f
+}
+
+.login-area {
+  background: radial-gradient(circle at 90% 10%, var(--cream-soft) 0, transparent 28%), var(--cream-background)
+}
+
+.auth-page .login-card {
+  background: var(--paper);
+  border: 1.5px solid var(--orange-border);
+  border-top: 6px solid var(--orange-primary);
+  box-shadow: 18px 18px 0 rgba(232, 111, 42, .1), 0 30px 75px var(--shadow)
+}
+
+.auth-page .login-header h2,
+.auth-page form>label {
+  color: var(--ink)
+}
+
+.auth-page .section-label,
+.auth-page .text-button,
+.auth-page .guest-link {
+  color: var(--orange-primary-hover)
+}
+
+.google-button {
+  border-color: var(--orange-border);
+  background: var(--paper);
+  color: var(--ink)
+}
+
+.google-button:hover {
+  background: var(--cream-input)
+}
+
+.auth-page input[type=text],
+.auth-page input[type=email],
+.auth-page input[type=password] {
+  border-color: var(--orange-border);
+  background: var(--cream-input);
+  color: var(--ink)
+}
+
+.auth-page input:focus {
+  border-color: var(--orange-primary);
+  box-shadow: 0 0 0 3px rgba(232, 111, 42, .2)
+}
+
+.sign-in {
+  border-color: var(--orange-primary-hover);
+  background: var(--orange-primary);
+  color: #fff
+}
+
+.sign-in:hover {
+  background: var(--orange-primary-hover)
+}
