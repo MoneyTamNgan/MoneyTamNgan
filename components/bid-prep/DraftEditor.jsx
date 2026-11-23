@@ -207,7 +207,7 @@ function DraftEditorForm({ draftId, draft, setDraft }) {
                         {draft.sections.some(section => section.heading) && (
                             <nav className="bid-toc" aria-label="สารบัญ">
                                 <h3>สารบัญ</h3>
-                                <ol>{[...new Set(draft.sections.map(section => section.heading).filter(Boolean))].map(heading => <li key={heading}>{heading}</li>)}</ol>
+                                <ul>{[...new Set(draft.sections.map(section => section.heading).filter(Boolean))].map(heading => <li key={heading}>{heading}</li>)}</ul>
                             </nav>
                         )}
                         {draft.sections.map((section, i) => {

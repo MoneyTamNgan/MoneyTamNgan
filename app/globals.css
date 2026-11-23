@@ -9447,7 +9447,7 @@ body {
 .bid-cover-details dd { margin: 0; overflow-wrap: anywhere; }
 .bid-toc { margin: 0 0 30px; padding: 0 6px 18px; border-bottom: 1px solid var(--orange-border-soft); }
 .bid-toc h3 { margin: 0 0 8px; font-size: 1.25rem; }
-.bid-toc ol { margin: 0; padding-left: 1.4em; columns: 2; column-gap: 32px; color: var(--ink-secondary); }
+.bid-toc ul { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 32px; color: var(--ink-secondary); }
 .bid-toc li { break-inside: avoid; margin: 0 0 3px; }
 .bid-workspace .bid-paper .bid-paper-heading { color: var(--ink); border-bottom: 2px solid var(--ink); border-radius: 0; font-size: 1.3rem; }
 .bid-paper-section.is-repeat { margin-top: -10px; }
@@ -9456,4 +9456,4 @@ body {
 .bid-signature { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--orange-border-soft); break-inside: avoid; }
 .bid-signature-box { margin: 24px 0 8px auto; width: min(100%, 420px); text-align: center; }
 .bid-signature-box p { margin: 10px 0; }
-@media (max-width: 600px) { .bid-toc ol { columns: 1; } .bid-cover-details > div { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 600px) { .bid-toc ul { columns: 1; } .bid-cover-details > div { grid-template-columns: 1fr; gap: 0; } }
