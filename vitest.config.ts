@@ -14,6 +14,7 @@ export default defineConfig({
             'tests/contract/**/*.test.{js,ts}',
             // Vitest-based unit tests (use vitest/vi mocking, @/ alias imports)
             'tests/unit/analytics.test.js',
+            'tests/unit/checklist-bulk-status.test.js',
             'tests/unit/analytics-export-route.test.js',
             'tests/unit/ingestion-trigger-route.test.js',
             'tests/unit/scraping-trigger-route.test.js',
