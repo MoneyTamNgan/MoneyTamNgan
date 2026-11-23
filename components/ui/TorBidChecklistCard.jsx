@@ -5,7 +5,6 @@ import { useId, useState } from 'react';
 import { NO_EGP_SUBMISSION_NOTICE_TH } from '@/lib/bid-prep/notices';
 import { useTorChecklist } from './TorChecklistProvider';
 
-const PAGE_SIZE = 5;
 const DECISIONS = [
     ['pass', 'ผ่าน'],
     ['fail', 'ไม่ผ่าน'],
@@ -34,16 +33,12 @@ function errorMessage(error) {
 
 export default function TorBidChecklistCard({ projectId, pdfUrl, loginReturnPath = `/tors/${projectId}`, showSubmissionNotice = true }) {
     const headingId = useId();
-    const [page, setPage] = useState(1);
     const [savingItem, setSavingItem] = useState(null);
     const [saveError, setSaveError] = useState('');
     const { current, retry, saveStatus } = useTorChecklist();
     const { checklist, error } = current ?? {};
     const items = checklist?.items ?? [];
     const missing = checklist?.missingProfileFields ?? [];
-    const lastPage = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-    const visiblePage = Math.min(page, lastPage);
-    const start = (visiblePage - 1) * PAGE_SIZE;
     const sourcePdf = pdfUrl?.split('#')[0];
 
     async function changeStatus(itemId, status) {
@@ -64,6 +59,13 @@ export default function TorBidChecklistCard({ projectId, pdfUrl, loginReturnPath
             setSavingItem(null);
         }
     }
+
+    async function passAll() {
+        for (const item of items) {
+            if (item.id && item.status !== 'pass') await changeStatus(item.id, 'pass');
+        }
+    }
+    const undecided = items.filter(item => item.id && item.status !== 'pass').length;
 
     return (
         <section className="tor-summary-card tor-bid-checklist" aria-labelledby={headingId}>
@@ -100,49 +102,49 @@ export default function TorBidChecklistCard({ projectId, pdfUrl, loginReturnPath
                         </div>
                     )}
                     {items.length === 0 ? <p role="status">ยังไม่มีรายการคุณสมบัติสำหรับตรวจสอบใน TOR นี้</p> : (
-                        <ul className="tor-bid-checklist-items">
-                            {items.slice(start, start + PAGE_SIZE).map((item, offset) => (
-                                <li key={item.id ?? start + offset}>
-                                    <div className="tor-bid-checklist-item-heading">
-                                        <p>{item.requirement}</p>
-                                        <span data-status={item.status}>{STATUSES.find(([status]) => status === item.status)?.[1] ?? 'ตรวจสอบเอง'}</span>
-                                    </div>
-                                    {!item.overrideStatus && !item.needsReview && item.reason && (
-                                        <p className="tor-bid-checklist-reason">{item.reason}</p>
-                                    )}
-                                    <div className="tor-bid-checklist-pages">
-                                        <span>หน้าอ้างอิง</span>
-                                        {item.evidencePages.length > 0 ? item.evidencePages.map(pageNumber => sourcePdf
-                                            ? <a key={pageNumber} href={`${sourcePdf}#page=${pageNumber}`} target="_blank" rel="noreferrer" aria-label={`เปิด TOR หน้า ${pageNumber}`}>{pageNumber} ↗</a>
-                                            : <span key={pageNumber}>{pageNumber}</span>) : <span>ไม่ระบุ</span>}
-                                    </div>
-                                    {item.id && (
-                                        <div className="tor-bid-checklist-status-control" role="group" aria-label={`กำหนดสถานะเอง ข้อ ${start + offset + 1}`}>
-                                            {DECISIONS.map(([status, label]) => (
-                                                <button
-                                                    key={status}
-                                                    type="button"
-                                                    data-status={status}
-                                                    aria-pressed={item.overrideStatus === status}
-                                                    title={item.overrideStatus === status ? 'กดอีกครั้งเพื่อใช้ผลจากระบบ' : undefined}
-                                                    onClick={() => void changeStatus(item.id, item.overrideStatus === status ? null : status)}
-                                                >
-                                                    {label}
-                                                </button>
-                                            ))}
-                                            {savingItem === item.id && <span role="status">กำลังบันทึก…</span>}
-                                        </div>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    {lastPage > 1 && (
-                        <nav className="tor-qualification-pagination" aria-label="หน้ารายการตรวจสอบคุณสมบัติ">
-                            <button type="button" disabled={visiblePage === 1} onClick={() => setPage(visiblePage - 1)}>← ก่อนหน้า</button>
-                            <p aria-live="polite">หน้า {visiblePage} / {lastPage}</p>
-                            <button type="button" disabled={visiblePage === lastPage} onClick={() => setPage(visiblePage + 1)}>ถัดไป →</button>
-                        </nav>
+                        <>
+                            <div className="tor-check-bar">
+                                <p>ตรวจแล้ว <strong>{items.length - undecided}</strong> จาก {items.length} ข้อ</p>
+                                {undecided > 0 && <button type="button" className="tor-check-all" onClick={() => void passAll()}>✓ ติ๊กผ่านทั้งหมด ({undecided} ข้อ)</button>}
+                            </div>
+                            <ul className="tor-check-list">
+                                {items.map((item, index) => {
+                                    const label = STATUSES.find(([status]) => status === item.status)?.[1] ?? 'ตรวจสอบเอง';
+                                    return (
+                                        <li key={item.id ?? index} data-status={item.status}>
+                                            <span className="tor-check-mark" data-status={item.status} aria-label={label}>{item.status === 'pass' ? '✓' : item.status === 'fail' ? '✕' : '?'}</span>
+                                            <div className="tor-check-main">
+                                                <p>{item.requirement}</p>
+                                                <small>
+                                                    {item.evidencePages.length > 0
+                                                        ? <>หน้า {item.evidencePages.map((pageNumber, i) => <span key={pageNumber}>{i > 0 && ', '}{sourcePdf
+                                                            ? <a href={`${sourcePdf}#page=${pageNumber}`} target="_blank" rel="noreferrer" aria-label={`เปิด TOR หน้า ${pageNumber}`}>{pageNumber}</a>
+                                                            : pageNumber}</span>)}</>
+                                                        : 'ไม่ระบุหน้า'}
+                                                    {item.status === 'manual' && ' · ต้องตรวจเอง'}
+                                                </small>
+                                            </div>
+                                            {item.id && (
+                                                <div className="tor-check-actions" role="group" aria-label={`กำหนดสถานะ ข้อ ${index + 1}`}>
+                                                    {DECISIONS.map(([status, text]) => (
+                                                        <button
+                                                            key={status}
+                                                            type="button"
+                                                            data-status={status}
+                                                            aria-pressed={item.overrideStatus === status}
+                                                            title={item.overrideStatus === status ? 'กดอีกครั้งเพื่อใช้ผลจากระบบ' : undefined}
+                                                            onClick={() => void changeStatus(item.id, item.overrideStatus === status ? null : status)}
+                                                        >
+                                                            {text}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </>
                     )}
                     {checklist.truncated && <p>มีข้อกำหนดเพิ่มเติมในเอกสาร TOR ต้นฉบับ</p>}
                 </>
