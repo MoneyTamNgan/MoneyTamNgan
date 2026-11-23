@@ -1,0 +1,349 @@
+// MongoDB documentation view generated from Mongoose models, 2026-11-17.
+// Not a SQL migration. Ref lines are logical associations, not enforced MongoDB foreign keys.
+// ObjectIds use varchar here; embedded objects/maps/arrays use json.
+// Partial/compound/TTL indexes are documented in database-schema.json and README.md.
+
+Table acquisitionattempts {
+  attempt_key varchar
+  project_id varchar
+  run_id varchar
+  source varchar
+  status varchar
+  reason_code varchar
+  route varchar
+  duration_ms double
+  started_at timestamp
+  completed_at timestamp
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  Note: 'Mongoose source: models/AcquisitionAttempt.js; embedded subdocuments are not separate collections.'
+}
+
+Table adminpipelinestates {
+  _id varchar [pk]
+  owner varchar
+  lease_until timestamp
+  run json [note: 'Mixed JSON']
+  Note: 'Mongoose source: models/AdminPipelineState.js; embedded subdocuments are not separate collections.'
+}
+
+Table bid_prep_drafts {
+  userId varchar
+  projectId varchar
+  title varchar
+  sections json [note: 'Embedded array']
+  version double
+  createdAt timestamp
+  updatedAt timestamp
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  Note: 'Mongoose source: models/BidPrepDraft.js; embedded subdocuments are not separate collections.'
+}
+
+Table classificationoverrides {
+  project_id varchar
+  target varchar
+  reviewer json [note: 'Embedded object']
+  reason varchar
+  before json [note: 'Embedded object']
+  after json [note: 'Embedded object']
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  Note: 'Mongoose source: models/ClassificationOverride.js; embedded subdocuments are not separate collections.'
+}
+
+Table discoverycandidates {
+  project_id varchar [unique]
+  payload json [note: 'Mixed JSON']
+  classification json [note: 'Mixed JSON']
+  eligibility json [note: 'Mixed JSON']
+  status varchar
+  error varchar
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/DiscoveryCandidate.js; embedded subdocuments are not separate collections.'
+}
+
+Table documents {
+  project_id varchar
+  project_ref varchar [note: 'MongoDB ObjectId']
+  sha256 varchar
+  filename varchar
+  entry_name varchar
+  document_type varchar
+  is_primary boolean
+  is_current_primary boolean
+  version double
+  previous_document_id varchar [note: 'MongoDB ObjectId']
+  discovered_at timestamp
+  source_url varchar
+  source_type varchar
+  official_detail_url varchar
+  storage json [note: 'Embedded object']
+  archive json [note: 'Embedded object']
+  text json [note: 'Embedded object']
+  ocr json [note: 'Embedded object']
+  processing_status varchar
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/Document.js; embedded subdocuments are not separate collections.'
+}
+
+Table documentpages {
+  project_id varchar
+  document_id varchar [note: 'MongoDB ObjectId']
+  extraction_run_id varchar [note: 'MongoDB ObjectId']
+  page_number double
+  text varchar
+  text_sha256 varchar
+  extraction_method varchar
+  confidence double
+  render_dpi double
+  ocr_psm double
+  warnings json [note: 'Embedded array']
+  needs_review boolean
+  processor_fingerprint varchar
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/DocumentPage.js; embedded subdocuments are not separate collections.'
+}
+
+Table documentsummaries {
+  project_id varchar
+  document_id varchar [note: 'MongoDB ObjectId']
+  extraction_run_id varchar [note: 'MongoDB ObjectId']
+  document_sha256 varchar
+  text_sha256 varchar
+  model varchar
+  model_version varchar
+  prompt_version varchar
+  extraction json [note: 'Mixed JSON']
+  usage json [note: 'Embedded object']
+  confidence double
+  needs_review boolean
+  processed_at timestamp
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/DocumentSummary.js; embedded subdocuments are not separate collections.'
+}
+
+Table extractionruns {
+  project_id varchar
+  project_ref varchar [note: 'MongoDB ObjectId']
+  document_id varchar [note: 'MongoDB ObjectId']
+  run_key varchar [unique]
+  processor_fingerprint varchar
+  provider varchar
+  configuration json [note: 'Mixed JSON']
+  text_sha256 varchar
+  text_storage varchar
+  text_artifact_uri varchar
+  page_count double
+  ocr_pages double
+  needs_review boolean
+  review_pages json [note: 'Embedded array']
+  status varchar
+  started_at timestamp
+  completed_at timestamp
+  error varchar
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/ExtractionRun.js; embedded subdocuments are not separate collections.'
+}
+
+Table fiscalbudgetanalyses {
+  project_id varchar
+  project_ref varchar [note: 'MongoDB ObjectId']
+  input_key varchar [unique]
+  parser_version varchar
+  source_snapshot json [note: 'Mixed JSON']
+  sources json [note: 'Embedded array']
+  result json [note: 'Mixed JSON']
+  processed_at timestamp
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/FiscalBudgetAnalysis.js; embedded subdocuments are not separate collections.'
+}
+
+Table ingestionruns {
+  scheduled_for timestamp [unique]
+  trigger varchar
+  status varchar
+  attempts double
+  max_retries double
+  started_at timestamp
+  finished_at timestamp
+  next_retry_at timestamp
+  lock_key varchar
+  lease_until timestamp
+  fetched_count double
+  stored_count double
+  scraped_count double
+  pdf_paths json [note: 'Embedded array']
+  summary json [note: 'Mixed JSON']
+  last_error json [note: 'Embedded object']
+  failure_reason varchar
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/IngestionRun.js; embedded subdocuments are not separate collections.'
+}
+
+Table keywords {
+  keyword varchar
+  category varchar
+  updated_by varchar
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/Keyword.js; embedded subdocuments are not separate collections.'
+}
+
+Table pipelinetriggeraudits {
+  request_id varchar [unique]
+  run_id varchar
+  at timestamp
+  actor_id varchar
+  actor_role varchar
+  ip varchar
+  outcome varchar
+  http_status double
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  Note: 'Mongoose source: models/PipelineTriggerAudit.js; embedded subdocuments are not separate collections.'
+}
+
+Table processingjobs {
+  type varchar
+  project_id varchar
+  owner_id varchar
+  active_key varchar
+  status varchar
+  attempts double
+  priority double
+  max_attempts double
+  available_at timestamp
+  lease_until timestamp
+  started_at timestamp
+  completed_at timestamp
+  result json [note: 'Mixed JSON']
+  error varchar
+  error_code varchar
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/ProcessingJob.js; embedded subdocuments are not separate collections.'
+}
+
+Table projects {
+  project_id varchar [unique]
+  project_name varchar
+  dept_name varchar
+  dept_sub_name varchar
+  budget double
+  project_status varchar
+  is_software boolean
+  procurement_eligibility json [note: 'Embedded object']
+  primary_document_id varchar [note: 'MongoDB ObjectId']
+  latest_extraction_run_id varchar [note: 'MongoDB ObjectId']
+  latest_summary_id varchar [note: 'MongoDB ObjectId']
+  vectorEmbedding json [note: 'Embedded array']
+  embedding json [note: 'Embedded object']
+  latest_fiscal_analysis_id varchar [note: 'MongoDB ObjectId']
+  fiscal_budget json [note: 'Mixed JSON']
+  fiscal_budget_meta json [note: 'Mixed JSON']
+  announcement_document_id varchar [note: 'MongoDB ObjectId']
+  announcement_extraction_run_id varchar [note: 'MongoDB ObjectId']
+  announcement_summary_id varchar [note: 'MongoDB ObjectId']
+  announcement_fiscal_budget json [note: 'Mixed JSON']
+  announcement_analysis json [note: 'Embedded object']
+  bidding_date json
+  submission_schedule json [note: 'Embedded object']
+  announcement_schedule json [note: 'Embedded object']
+  tender json [note: 'Embedded object']
+  timeline json [note: 'Embedded object']
+  source json [note: 'Embedded object']
+  classification json [note: 'Embedded object']
+  processing json [note: 'Embedded object']
+  lineage_key varchar
+  version_info json [note: 'Embedded object']
+  anomalies json [note: 'Embedded object']
+  flagged_clauses json [note: 'Embedded array']
+  flagged_clauses_meta json [note: 'Embedded object']
+  workflow json [note: 'Embedded object']
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/Project.js; embedded subdocuments are not separate collections.'
+}
+
+Table users {
+  email varchar [unique]
+  name varchar
+  username varchar
+  googleId varchar
+  passwordHash varchar
+  picture varchar
+  role varchar
+  disabled boolean
+  disabled_at timestamp
+  bid_prep_revision double
+  bid_checklist_revision double
+  bid_checklist_statuses json [note: 'Embedded map']
+  techStack json [note: 'Embedded array']
+  company_name varchar
+  registration_number varchar
+  address varchar
+  authorized_signatory varchar
+  past_projects json [note: 'Embedded array']
+  skills json [note: 'Embedded array']
+  registered_capital double
+  highest_past_project_value double
+  concurrent_project_capacity double
+  certifications json [note: 'Embedded array']
+  email_notifications_enabled boolean
+  match_score_threshold double
+  notification_frequency varchar
+  updatedAt timestamp
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  Note: 'Mongoose source: models/User.js; embedded subdocuments are not separate collections.'
+}
+
+Table vertexchunks {
+  checkpoint_key varchar [unique]
+  extraction_run_id varchar [note: 'MongoDB ObjectId']
+  chunk_index double
+  model varchar
+  prompt_version varchar
+  result json [note: 'Mixed JSON']
+  _id varchar [pk, note: 'MongoDB ObjectId']
+  created_at timestamp
+  updated_at timestamp
+  Note: 'Mongoose source: models/VertexChunk.js; embedded subdocuments are not separate collections.'
+}
+
+Ref: documents.project_ref > projects._id
+Ref: documents.previous_document_id > documents._id
+Ref: documentpages.document_id > documents._id
+Ref: documentpages.extraction_run_id > extractionruns._id
+Ref: documentsummaries.document_id > documents._id
+Ref: documentsummaries.extraction_run_id > extractionruns._id
+Ref: extractionruns.project_ref > projects._id
+Ref: extractionruns.document_id > documents._id
+Ref: fiscalbudgetanalyses.project_ref > projects._id
+Ref: projects.primary_document_id > documents._id
+Ref: projects.latest_extraction_run_id > extractionruns._id
+Ref: projects.latest_summary_id > documentsummaries._id
+Ref: projects.latest_fiscal_analysis_id > fiscalbudgetanalyses._id
+Ref: projects.announcement_document_id > documents._id
+Ref: projects.announcement_extraction_run_id > extractionruns._id
+Ref: projects.announcement_summary_id > documentsummaries._id
+Ref: vertexchunks.extraction_run_id > extractionruns._id
+
+// String joins used by application ownership/admission logic.
+Ref: bid_prep_drafts.userId > users._id
+Ref: bid_prep_drafts.projectId > projects.project_id
+Ref: processingjobs.owner_id > users._id

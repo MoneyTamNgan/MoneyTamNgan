@@ -1,0 +1,60 @@
+---
+title: MoneyTamNgan MongoDB collection overview
+---
+flowchart TB
+    subgraph Procurement["Discovery and project catalog"]
+        C["discoverycandidates<br/>Unverified metadata and eligibility"]
+        P["projects<br/>Metadata, bidding schedule, fiscal-year cache<br/>Current document/run/summary pointers"]
+        K["keywords<br/>Software classification rules"]
+        C -. "verified promotion by project_id" .-> P
+        K -. "classification input" .-> C
+    end
+    subgraph Evidence["Documents and versioned analysis"]
+        D["documents<br/>TOR and announcement URLs, hashes, versions"]
+        R["extractionruns<br/>OCR processor, configuration and text hash"]
+        PG["documentpages<br/>Page text, method, confidence and warnings"]
+        S["documentsummaries<br/>Vertex extraction, fiscal year, evidence and risks"]
+        V["vertexchunks<br/>Resumable AI checkpoints"]
+        F["fiscalbudgetanalyses<br/>Combined fiscal-year evidence and result"]
+        D -->|document_id| R
+        R -->|extraction_run_id when present| PG
+        R -->|extraction_run_id when present| S
+        R -->|extraction_run_id| V
+    end
+    P -->|primary_document_id and announcement_document_id| D
+    P -->|latest_extraction_run_id and announcement_extraction_run_id| R
+    P -->|latest_summary_id and announcement_summary_id| S
+    P -->|latest_fiscal_analysis_id| F
+    F -->|project_ref| P
+    subgraph Contractor["Account and bid preparation"]
+        U["users<br/>Sign-in, company profile and preferences"]
+        B["bid_prep_drafts<br/>Owned sections, sources and edit version"]
+        U -->|String userId from session.sub| B
+        B -->|projectId matches project_id| P
+    end
+    subgraph Operations["Queues, leases, health and audit"]
+        J["processingjobs<br/>Project/candidate/proposal jobs and leases"]
+        I["ingestionruns<br/>Scheduled metadata-run history and locks"]
+        A["adminpipelinestates<br/>One current admin runner snapshot and lease"]
+        T["pipelinetriggeraudits<br/>Who triggered what and when"]
+        H["acquisitionattempts<br/>Retrieval health events, 90-day TTL"]
+        O["classificationoverrides<br/>Reviewer and before/after snapshots"]
+        I -. "discovers and queues work; no direct FK" .-> J
+        A -. "run.id correlated with run_id" .-> T
+        A -. "admin run.id correlated with run_id" .-> H
+        J -. "worker job id correlated with run_id" .-> H
+        O -. "project_id targets project or candidate" .-> P
+        O -. "target candidate" .-> C
+    end
+    J -->|project_id when project exists| P
+    J -. "verify_candidate project_id" .-> C
+    U -. "proposal job owner_id only" .-> J
+    P -. "logical project_id association" .-> H
+    classDef catalog fill:#e9f2ff,stroke:#35638b,color:#152d42
+    classDef evidence fill:#e8f7ef,stroke:#39805a,color:#173e2a
+    classDef account fill:#fff4df,stroke:#98722b,color:#48380f
+    classDef operations fill:#f2ebfa,stroke:#7a6096,color:#342448
+    class P,C,K catalog
+    class D,R,PG,S,V,F evidence
+    class U,B account
+    class J,I,A,T,H,O operations

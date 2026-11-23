@@ -1,0 +1,3462 @@
+{
+  "generatedOn": "2026-11-17",
+  "baseline": "7ee74b2",
+  "collections": [
+    {
+      "name": "acquisitionattempts",
+      "model": "AcquisitionAttempt",
+      "source": "models/AcquisitionAttempt.js",
+      "paths": [
+        {
+          "name": "attempt_key",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "run_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "source",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "reason_code",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "route",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "duration_ms",
+          "type": "Number",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "started_at",
+          "type": "Date",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "completed_at",
+          "type": "Date",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "attempt_key": 1
+          },
+          {
+            "unique": true,
+            "name": "uniq_acquisition_attempt"
+          }
+        ],
+        [
+          {
+            "completed_at": -1
+          },
+          {}
+        ],
+        [
+          {
+            "source": 1,
+            "completed_at": -1
+          },
+          {}
+        ],
+        [
+          {
+            "completed_at": 1
+          },
+          {
+            "expireAfterSeconds": 7776000
+          }
+        ]
+      ]
+    },
+    {
+      "name": "adminpipelinestates",
+      "model": "AdminPipelineState",
+      "source": "models/AdminPipelineState.js",
+      "paths": [
+        {
+          "name": "_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "owner",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": false
+        },
+        {
+          "name": "lease_until",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "run",
+          "type": "Mixed",
+          "ref": null,
+          "required": true,
+          "select": null
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "bid_prep_drafts",
+      "model": "BidPrepDraft",
+      "source": "models/BidPrepDraft.js",
+      "paths": [
+        {
+          "name": "userId",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "projectId",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "title",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "sections",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "createdAt",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "userId": 1,
+            "updatedAt": -1
+          },
+          {}
+        ],
+        [
+          {
+            "userId": 1,
+            "projectId": 1
+          },
+          {}
+        ]
+      ]
+    },
+    {
+      "name": "classificationoverrides",
+      "model": "ClassificationOverride",
+      "source": "models/ClassificationOverride.js",
+      "paths": [
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "target",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "reviewer.user_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "reviewer.email",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "reviewer.via",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "reason",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "before.is_software",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "before.classification_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "before.tags",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "before.processing_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "before.document_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "after.is_software",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "after.classification_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "after.tags",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "after.processing_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "after.document_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "project_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "project_id": 1,
+            "created_at": -1
+          },
+          {}
+        ]
+      ]
+    },
+    {
+      "name": "discoverycandidates",
+      "model": "DiscoveryCandidate",
+      "source": "models/DiscoveryCandidate.js",
+      "paths": [
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "payload",
+          "type": "Mixed",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "classification",
+          "type": "Mixed",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "eligibility",
+          "type": "Mixed",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "project_id": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "status": 1
+          },
+          {}
+        ]
+      ]
+    },
+    {
+      "name": "documents",
+      "model": "Document",
+      "source": "models/Document.js",
+      "paths": [
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "project_ref",
+          "type": "ObjectId",
+          "ref": "Project",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "sha256",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "filename",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "entry_name",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "document_type",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "is_primary",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "is_current_primary",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "previous_document_id",
+          "type": "ObjectId",
+          "ref": "Document",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "discovered_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "source_url",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "source_type",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "official_detail_url",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "storage.backend",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "storage.local_path",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "storage.gcs_uri",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "storage.gridfs_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "storage.mime_type",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "storage.size_bytes",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "archive.filename",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "archive.local_path",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "archive.mime_type",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "archive.size_bytes",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "text.storage",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "text.artifact_uri",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "text.sha256",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "text.page_count",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "text.processor_fingerprint",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "ocr.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "ocr.provider",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "ocr.pages_processed",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "ocr.ocr_pages",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "ocr.needs_review",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "ocr.completed_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "ocr.error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processing_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "project_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "project_ref": 1
+          },
+          {}
+        ],
+        [
+          {
+            "document_type": 1
+          },
+          {}
+        ],
+        [
+          {
+            "is_primary": 1
+          },
+          {}
+        ],
+        [
+          {
+            "is_current_primary": 1
+          },
+          {}
+        ],
+        [
+          {
+            "ocr.status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "processing_status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "project_id": 1,
+            "sha256": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "project_id": 1,
+            "is_current_primary": 1
+          },
+          {
+            "name": "uniq_current_primary_document",
+            "unique": true,
+            "partialFilterExpression": {
+              "is_current_primary": true
+            }
+          }
+        ],
+        [
+          {
+            "project_id": 1,
+            "source_url": 1,
+            "entry_name": 1,
+            "sha256": 1
+          },
+          {
+            "name": "uniq_document_source_entry_version",
+            "unique": true,
+            "partialFilterExpression": {
+              "source_url": {
+                "$type": "string"
+              },
+              "entry_name": {
+                "$type": "string"
+              }
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "documentpages",
+      "model": "DocumentPage",
+      "source": "models/DocumentPage.js",
+      "paths": [
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "document_id",
+          "type": "ObjectId",
+          "ref": "Document",
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "extraction_run_id",
+          "type": "ObjectId",
+          "ref": "ExtractionRun",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "page_number",
+          "type": "Number",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "text",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "text_sha256",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "extraction_method",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "confidence",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "render_dpi",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "ocr_psm",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "warnings",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "needs_review",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processor_fingerprint",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "project_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "document_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "extraction_run_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "needs_review": 1
+          },
+          {}
+        ],
+        [
+          {
+            "document_id": 1,
+            "page_number": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "extraction_run_id": 1,
+            "page_number": 1
+          },
+          {
+            "unique": true,
+            "name": "uniq_extraction_run_page",
+            "partialFilterExpression": {
+              "extraction_run_id": {
+                "$type": "objectId"
+              }
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "documentsummaries",
+      "model": "DocumentSummary",
+      "source": "models/DocumentSummary.js",
+      "paths": [
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "document_id",
+          "type": "ObjectId",
+          "ref": "Document",
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "extraction_run_id",
+          "type": "ObjectId",
+          "ref": "ExtractionRun",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "document_sha256",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "text_sha256",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "model",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "model_version",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "prompt_version",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "extraction",
+          "type": "Mixed",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "usage.input_tokens",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "usage.output_tokens",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "confidence",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "needs_review",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processed_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "project_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "document_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "extraction_run_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "needs_review": 1
+          },
+          {}
+        ],
+        [
+          {
+            "document_id": 1,
+            "text_sha256": 1,
+            "model": 1,
+            "prompt_version": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "extraction_run_id": 1,
+            "model": 1,
+            "model_version": 1,
+            "prompt_version": 1
+          },
+          {
+            "unique": true,
+            "name": "uniq_extraction_model_prompt",
+            "partialFilterExpression": {
+              "extraction_run_id": {
+                "$type": "objectId"
+              }
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "extractionruns",
+      "model": "ExtractionRun",
+      "source": "models/ExtractionRun.js",
+      "paths": [
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "project_ref",
+          "type": "ObjectId",
+          "ref": "Project",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "document_id",
+          "type": "ObjectId",
+          "ref": "Document",
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "run_key",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "processor_fingerprint",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "provider",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "configuration",
+          "type": "Mixed",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "text_sha256",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "text_storage",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "text_artifact_uri",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "page_count",
+          "type": "Number",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "ocr_pages",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "needs_review",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "review_pages",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "started_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "completed_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "project_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "project_ref": 1
+          },
+          {}
+        ],
+        [
+          {
+            "document_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "run_key": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "needs_review": 1
+          },
+          {}
+        ],
+        [
+          {
+            "status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "document_id": 1,
+            "processor_fingerprint": 1,
+            "text_sha256": 1
+          },
+          {
+            "unique": true,
+            "name": "uniq_document_extraction_result"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "fiscalbudgetanalyses",
+      "model": "FiscalBudgetAnalysis",
+      "source": "models/FiscalBudgetAnalysis.js",
+      "paths": [
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "project_ref",
+          "type": "ObjectId",
+          "ref": "Project",
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "input_key",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "parser_version",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "source_snapshot",
+          "type": "Mixed",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "sources",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "result",
+          "type": "Mixed",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "processed_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "project_id": 1
+          },
+          {
+            "_autoIndex": false
+          }
+        ],
+        [
+          {
+            "input_key": 1
+          },
+          {
+            "unique": true,
+            "_autoIndex": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "ingestionruns",
+      "model": "IngestionRun",
+      "source": "models/IngestionRun.js",
+      "paths": [
+        {
+          "name": "scheduled_for",
+          "type": "Date",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "trigger",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "attempts",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "max_retries",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "started_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "finished_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "next_retry_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "lock_key",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "lease_until",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "fetched_count",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "stored_count",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "scraped_count",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "pdf_paths",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "summary",
+          "type": "Mixed",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "last_error.message",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "last_error.status",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "last_error.transient",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "last_error.at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "failure_reason",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "scheduled_for": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "lease_until": 1
+          },
+          {}
+        ],
+        [
+          {
+            "started_at": -1
+          },
+          {}
+        ],
+        [
+          {
+            "lock_key": 1
+          },
+          {
+            "name": "uniq_active_ingestion_run",
+            "unique": true,
+            "partialFilterExpression": {
+              "lock_key": {
+                "$type": "string"
+              }
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "keywords",
+      "model": "Keyword",
+      "source": "models/Keyword.js",
+      "paths": [
+        {
+          "name": "keyword",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "category",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "updated_by",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "keyword": 1,
+            "category": 1
+          },
+          {
+            "unique": true
+          }
+        ]
+      ]
+    },
+    {
+      "name": "pipelinetriggeraudits",
+      "model": "PipelineTriggerAudit",
+      "source": "models/PipelineTriggerAudit.js",
+      "paths": [
+        {
+          "name": "request_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "run_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "at",
+          "type": "Date",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "actor_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "actor_role",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "ip",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "outcome",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "http_status",
+          "type": "Number",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "request_id": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "at": 1
+          },
+          {}
+        ]
+      ]
+    },
+    {
+      "name": "processingjobs",
+      "model": "ProcessingJob",
+      "source": "models/ProcessingJob.js",
+      "paths": [
+        {
+          "name": "type",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "owner_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "active_key",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "attempts",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "priority",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "max_attempts",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "available_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "lease_until",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "started_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "completed_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "result",
+          "type": "Mixed",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "error_code",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "type": 1
+          },
+          {}
+        ],
+        [
+          {
+            "project_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "owner_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "available_at": 1
+          },
+          {}
+        ],
+        [
+          {
+            "lease_until": 1
+          },
+          {}
+        ],
+        [
+          {
+            "status": 1,
+            "available_at": 1,
+            "created_at": 1
+          },
+          {}
+        ],
+        [
+          {
+            "active_key": 1
+          },
+          {
+            "name": "uniq_active_processing_job",
+            "unique": true,
+            "partialFilterExpression": {
+              "active_key": {
+                "$type": "string"
+              }
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "projects",
+      "model": "Project",
+      "source": "models/Project.js",
+      "paths": [
+        {
+          "name": "project_id",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "project_name",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "dept_name",
+          "type": "String",
+          "ref": null,
+          "required": "conditional",
+          "select": null
+        },
+        {
+          "name": "dept_sub_name",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "budget",
+          "type": "Number",
+          "ref": null,
+          "required": "conditional",
+          "select": null
+        },
+        {
+          "name": "project_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "is_software",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "procurement_eligibility.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "procurement_eligibility.reason",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "procurement_eligibility.bid_deadline",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "procurement_eligibility.checked_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "procurement_eligibility.source_url",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "primary_document_id",
+          "type": "ObjectId",
+          "ref": "Document",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "latest_extraction_run_id",
+          "type": "ObjectId",
+          "ref": "ExtractionRun",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "latest_summary_id",
+          "type": "ObjectId",
+          "ref": "DocumentSummary",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "vectorEmbedding",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": false
+        },
+        {
+          "name": "embedding.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "embedding.model",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "embedding.dimensions",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "embedding.source_hash",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "embedding.summary_id",
+          "type": "ObjectId",
+          "ref": "DocumentSummary",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "embedding.attempts",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "embedding.error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "embedding.updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "latest_fiscal_analysis_id",
+          "type": "ObjectId",
+          "ref": "FiscalBudgetAnalysis",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "fiscal_budget",
+          "type": "Mixed",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "fiscal_budget_meta",
+          "type": "Mixed",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_document_id",
+          "type": "ObjectId",
+          "ref": "Document",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_extraction_run_id",
+          "type": "ObjectId",
+          "ref": "ExtractionRun",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_summary_id",
+          "type": "ObjectId",
+          "ref": "DocumentSummary",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_fiscal_budget",
+          "type": "Mixed",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_analysis.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_analysis.error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_analysis.updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "bidding_date",
+          "type": "Embedded",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "submission_schedule.date",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "submission_schedule.start_time",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "submission_schedule.end_time",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "submission_schedule.starts_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "submission_schedule.ends_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "submission_schedule.timezone",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.parser_version",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.document_id",
+          "type": "ObjectId",
+          "ref": "Document",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.source_url",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.extraction_method",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.text_sha256",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.extracted_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.warnings",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "announcement_schedule.evidence",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.rss_dept_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.method",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.draft_url",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.invitation_url",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.published_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.submission_date",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.submission_start_time",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.submission_end_time",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.closes_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.reference_price",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.tor_route",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.checked_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "tender.error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "timeline.announce_date",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "timeline.contract_start",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "timeline.contract_end",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "timeline.duration_days",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "source.rss_dept_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "source.provider",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "source.fetched_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "source.payload_hash",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.confidence",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.method",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.model",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.classified_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.reason",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.tags",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.reviewed_by.user_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.reviewed_by.email",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.reviewed_by.via",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "classification.reviewed_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processing.download_attempts",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processing.ai_attempts",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processing.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processing.attempts",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processing.error_code",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "processing.error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "lineage_key",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version_info.version",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version_info.is_latest",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version_info.lineage_id",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version_info.supersedes",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version_info.superseded_by",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version_info.status_before_superseded",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "version_info.linked_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "anomalies.high_budget_flag",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "anomalies.budget_deviation_multiplier",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "anomalies.baseline_price",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "anomalies.baseline_sample_count",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "anomalies.baseline_method",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "anomalies.baseline_category",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "anomalies.baseline_reference_date",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "anomalies.tags",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.summary_id",
+          "type": "ObjectId",
+          "ref": "DocumentSummary",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.document_id",
+          "type": "ObjectId",
+          "ref": "Document",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.extraction_run_id",
+          "type": "ObjectId",
+          "ref": "ExtractionRun",
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.prompt_version",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.model",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.analysis_status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.skipped_pages",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.warnings",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.total_flags",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.truncated",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "flagged_clauses_meta.updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "workflow.status",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "workflow.error_code",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "workflow.error",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "workflow.updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "project_id": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "is_software": 1
+          },
+          {}
+        ],
+        [
+          {
+            "procurement_eligibility.status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "primary_document_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "latest_extraction_run_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "latest_summary_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "announcement_document_id": 1
+          },
+          {}
+        ],
+        [
+          {
+            "tender.status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "tender.closes_at": 1
+          },
+          {}
+        ],
+        [
+          {
+            "classification.status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "processing.status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "lineage_key": 1
+          },
+          {}
+        ],
+        [
+          {
+            "version_info.superseded_by": 1
+          },
+          {}
+        ],
+        [
+          {
+            "workflow.status": 1
+          },
+          {}
+        ],
+        [
+          {
+            "project_name": "text",
+            "dept_name": "text",
+            "extracted_data.tech_stack": "text"
+          },
+          {
+            "name": "tor_search_text_index",
+            "weights": {
+              "project_name": 5,
+              "dept_name": 3,
+              "extracted_data.tech_stack": 2
+            }
+          }
+        ],
+        [
+          {
+            "dept_name": 1,
+            "budget": -1
+          },
+          {
+            "name": "agency_budget_index"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "users",
+      "model": "User",
+      "source": "models/User.js",
+      "paths": [
+        {
+          "name": "email",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "username",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "googleId",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "passwordHash",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": false
+        },
+        {
+          "name": "picture",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "role",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "disabled",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "disabled_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "bid_prep_revision",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": false
+        },
+        {
+          "name": "bid_checklist_revision",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": false
+        },
+        {
+          "name": "bid_checklist_statuses",
+          "type": "Map",
+          "ref": null,
+          "required": false,
+          "select": false
+        },
+        {
+          "name": "bid_checklist_statuses.$*",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "techStack",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "company_name",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "registration_number",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "address",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "authorized_signatory",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "past_projects",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "skills",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "registered_capital",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "highest_past_project_value",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "concurrent_project_capacity",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "certifications",
+          "type": "Array",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "email_notifications_enabled",
+          "type": "Boolean",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "match_score_threshold",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "notification_frequency",
+          "type": "String",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "email": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "username": 1
+          },
+          {
+            "unique": true,
+            "name": "uniq_user_username",
+            "partialFilterExpression": {
+              "username": {
+                "$type": "string"
+              }
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "vertexchunks",
+      "model": "VertexChunk",
+      "source": "models/VertexChunk.js",
+      "paths": [
+        {
+          "name": "checkpoint_key",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "extraction_run_id",
+          "type": "ObjectId",
+          "ref": "ExtractionRun",
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "chunk_index",
+          "type": "Number",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "model",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "prompt_version",
+          "type": "String",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "result",
+          "type": "Mixed",
+          "ref": null,
+          "required": true,
+          "select": null
+        },
+        {
+          "name": "_id",
+          "type": "ObjectId",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "created_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "updated_at",
+          "type": "Date",
+          "ref": null,
+          "required": false,
+          "select": null
+        },
+        {
+          "name": "__v",
+          "type": "Number",
+          "ref": null,
+          "required": false,
+          "select": null
+        }
+      ],
+      "indexes": [
+        [
+          {
+            "checkpoint_key": 1
+          },
+          {
+            "unique": true
+          }
+        ],
+        [
+          {
+            "extraction_run_id": 1
+          },
+          {}
+        ]
+      ]
+    }
+  ]
+}

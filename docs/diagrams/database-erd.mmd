@@ -1,0 +1,213 @@
+---
+title: MoneyTamNgan database ERD — implemented collections
+---
+erDiagram
+    direction LR
+    projects {
+        ObjectId _id PK
+        string project_id UK
+        string project_name
+        string dept_name
+        number budget
+        boolean is_software
+        ObjectId primary_document_id
+        ObjectId announcement_document_id
+        ObjectId latest_extraction_run_id
+        ObjectId latest_summary_id
+        ObjectId latest_fiscal_analysis_id
+        object bidding_date
+        object submission_schedule
+        object fiscal_budget
+        array flagged_clauses
+        object version_info
+        object workflow
+    }
+    documents {
+        ObjectId _id PK
+        string project_id
+        ObjectId project_ref
+        string sha256
+        string source_url
+        string entry_name
+        string document_type
+        number version
+        boolean is_current_primary
+        ObjectId previous_document_id
+        object storage
+        object ocr
+    }
+    extractionruns {
+        ObjectId _id PK
+        string project_id
+        ObjectId document_id
+        string run_key UK
+        string processor_fingerprint
+        string text_sha256
+        number page_count
+        number ocr_pages
+        boolean needs_review
+        string status
+    }
+    documentpages {
+        ObjectId _id PK
+        ObjectId document_id
+        ObjectId extraction_run_id
+        number page_number
+        string text
+        string text_sha256
+        string extraction_method
+        number confidence
+        array warnings
+    }
+    documentsummaries {
+        ObjectId _id PK
+        ObjectId document_id
+        ObjectId extraction_run_id
+        string model
+        string model_version
+        string prompt_version
+        object extraction
+        object usage
+        number confidence
+        boolean needs_review
+    }
+    vertexchunks {
+        ObjectId _id PK
+        string checkpoint_key UK
+        ObjectId extraction_run_id
+        number chunk_index
+        string model
+        string prompt_version
+        object result
+    }
+    fiscalbudgetanalyses {
+        ObjectId _id PK
+        string project_id
+        ObjectId project_ref
+        string input_key UK
+        string parser_version
+        object source_snapshot
+        array sources
+        object result
+    }
+    users {
+        ObjectId _id PK
+        string email UK
+        string username
+        string passwordHash
+        string googleId
+        string role
+        boolean disabled
+        string company_name
+        array past_projects
+        array skills
+        object bid_checklist_statuses
+        boolean email_notifications_enabled
+        number match_score_threshold
+    }
+    bid_prep_drafts {
+        ObjectId _id PK
+        string userId
+        string projectId
+        string title
+        array sections
+        number version
+        date createdAt
+        date updatedAt
+    }
+    processingjobs {
+        ObjectId _id PK
+        string project_id
+        string owner_id
+        string active_key
+        string type
+        string status
+        number attempts
+        number max_attempts
+        date lease_until
+        string error_code
+        object result
+    }
+    discoverycandidates {
+        ObjectId _id PK
+        string project_id UK
+        object payload
+        object classification
+        object eligibility
+        string status
+    }
+    classificationoverrides {
+        ObjectId _id PK
+        string project_id
+        string target
+        object reviewer
+        string reason
+        object before
+        object after
+        date created_at
+    }
+    acquisitionattempts {
+        ObjectId _id PK
+        string attempt_key UK
+        string project_id
+        string run_id
+        string source
+        string status
+        string reason_code
+        number duration_ms
+        date completed_at
+    }
+    adminpipelinestates {
+        string _id PK
+        string owner
+        date lease_until
+        object run
+    }
+    pipelinetriggeraudits {
+        ObjectId _id PK
+        string request_id UK
+        string run_id
+        string actor_id
+        string actor_role
+        string outcome
+        number http_status
+        date at
+    }
+    ingestionruns {
+        ObjectId _id PK
+        date scheduled_for UK
+        string trigger
+        string status
+        string lock_key
+        date lease_until
+        number fetched_count
+        number stored_count
+        object summary
+    }
+    keywords {
+        ObjectId _id PK
+        string keyword
+        string category
+        string updated_by
+    }
+
+    projects o|..o{ documents : "project_ref or project_id"
+    documents ||..o{ extractionruns : "document_id"
+    documents ||..o{ documentpages : "document_id"
+    documents ||..o{ documentsummaries : "document_id"
+    extractionruns o|..o{ documentpages : "optional extraction_run_id"
+    extractionruns o|..o{ documentsummaries : "optional extraction_run_id"
+    extractionruns ||..o{ vertexchunks : "extraction_run_id"
+    projects ||..o{ fiscalbudgetanalyses : "project_ref"
+    documents o|..o{ documents : "previous_document_id"
+    users ||..o{ bid_prep_drafts : "String userId from session.sub"
+    projects ||..o{ bid_prep_drafts : "projectId matches project_id"
+    users o|..o{ processingjobs : "owner_id for proposal drafts"
+    projects o|..o{ processingjobs : "project_id after admission"
+    discoverycandidates o|..o{ processingjobs : "verify_candidate project_id"
+    projects o|..o| discoverycandidates : "project_id after promotion"
+    projects o|..o{ classificationoverrides : "target project"
+    discoverycandidates o|..o{ classificationoverrides : "target candidate"
+    users o|..o{ classificationoverrides : "reviewer.user_id when present"
+    projects o|..o{ acquisitionattempts : "project_id when project exists"
+    processingjobs o|..o{ acquisitionattempts : "worker run_id equals job id"

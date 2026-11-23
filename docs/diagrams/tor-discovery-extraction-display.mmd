@@ -74,6 +74,8 @@ sequenceDiagram
     end
     end
 
+    Note over NextAPI,MongoDB: Admin and worker acquisition attempts are recorded in acquisitionattempts.<br/>Protected pipeline status exposes health counters separately from OCR and AI results.
+
     rect rgb(255, 247, 237)
     Note over Browser,VertexAI: Extract text, structured fields and embeddings
     opt A primary TOR PDF is available for extraction
