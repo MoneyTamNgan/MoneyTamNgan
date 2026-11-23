@@ -9379,3 +9379,12 @@ body {
 .bid-progress-steps li.is-done span { border-color: var(--success); background: var(--success); color: #fff; }
 @media (prefers-reduced-motion: reduce) { .bid-progress-bar span { animation: none; width: 100%; } .bid-workspace .bid-cta { transition: none; } }
 @media (max-width: 480px) { .bid-hero { padding: 22px; } .bid-workspace .bid-cta { width: 100%; } }
+
+
+/* Draft editor: keep the save bar in view on long drafts and say why a button is off */
+.bid-workspace .bid-card.bid-editor-actions { position: sticky; bottom: 0; z-index: 20; margin-bottom: 0; box-shadow: 0 -8px 24px rgba(58, 29, 18, .12); }
+.bid-save-hint { margin: 6px 0 0; color: var(--ink-muted); font-size: .9rem; }
+.bid-workspace .bid-card.bid-editor-actions { padding: 10px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.bid-workspace .bid-card.bid-editor-actions .bid-actions { margin: 0; }
+.bid-workspace .bid-card.bid-editor-actions p { margin: 0; font-size: .88rem; }
+.bid-workspace .bid-card.bid-editor-actions .bid-error { flex-basis: 100%; }
