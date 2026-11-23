@@ -82,3 +82,7 @@ Not yet done on this machine: a screenshot of a logged-in page, the Google OAuth
 - [ ] The machine's IP is allowed in Atlas (if Atlas is used) and the OAuth redirect URI is in the Google Cloud Console
 - [ ] Restart time recorded, specs and versions copied into the delivery docs (#132)
 - [ ] The previous working version is written down for rollback
+
+## Admin access
+
+Granting and revoking the admin role, the audit trail and the review routine are in [docs/security/ADMIN_ACCESS.md](security/ADMIN_ACCESS.md). On this machine, run `promote-admin.js` inside the app container.

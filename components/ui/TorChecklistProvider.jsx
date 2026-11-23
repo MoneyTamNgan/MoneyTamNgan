@@ -35,24 +35,37 @@ export default function TorChecklistProvider({ projectId, children }) {
 
     // Show a manual pass or fail at once. Clearing an override (status null) needs the
     // server's own result, so that case still waits for the response.
-    function applyOptimistic(itemId, status) {
+    function applyOptimistic(itemIds, status) {
+        const ids = new Set(itemIds);
         setResult(previous => {
             const checklist = previous?.checklist;
             if (!checklist || previous.projectId !== projectId || previous.attempt !== attempt) return previous;
-            const item = checklist.items.find(entry => entry.id === itemId);
-            if (!item || item.status === status) return previous;
-            const summary = { ...checklist.summary, [item.status]: Math.max(0, checklist.summary[item.status] - 1), [status]: (checklist.summary[status] ?? 0) + 1 };
-            const items = checklist.items.map(entry => entry.id === itemId ? { ...entry, status, overrideStatus: status, reason: 'Status set manually.' } : entry);
+            const summary = { ...checklist.summary };
+            const items = checklist.items.map(entry => {
+                if (!ids.has(entry.id) || entry.status === status) return entry;
+                summary[entry.status] = Math.max(0, summary[entry.status] - 1);
+                summary[status] = (summary[status] ?? 0) + 1;
+                return { ...entry, status, overrideStatus: status, reason: 'Status set manually.' };
+            });
             return { ...previous, checklist: { ...checklist, items, summary } };
         });
     }
 
     function saveStatus(itemId, status) {
-        if (status !== null) applyOptimistic(itemId, status);
+        return send(status === null ? [] : [itemId], status, { itemId, status });
+    }
+
+    // One request for many items, for example "mark everything as passed".
+    function saveStatuses(itemIds, status) {
+        return send(itemIds, status, { itemIds, status });
+    }
+
+    function send(optimisticIds, status, body) {
+        if (optimisticIds.length) applyOptimistic(optimisticIds, status);
         inFlight.current += 1;
         setPendingSaves(count => count + 1);
         const run = queue.current.then(async () => {
-            const checklist = await bidPrepRequest(url, { method: 'PATCH', body: { itemId, status } });
+            const checklist = await bidPrepRequest(url, { method: 'PATCH', body });
             // Only the last pending save replaces the screen, so earlier answers cannot undo newer clicks.
             if (inFlight.current === 1) {
                 setResult(previous => previous?.projectId === projectId && previous?.attempt === attempt
@@ -71,7 +84,7 @@ export default function TorChecklistProvider({ projectId, children }) {
     }
 
     return (
-        <TorChecklistContext.Provider value={{ current, saveStatus, isSaving: pendingSaves > 0, retry: () => setAttempt(value => value + 1) }}>
+        <TorChecklistContext.Provider value={{ current, saveStatus, saveStatuses, isSaving: pendingSaves > 0, retry: () => setAttempt(value => value + 1) }}>
             {children}
         </TorChecklistContext.Provider>
     );
