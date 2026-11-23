@@ -35,7 +35,7 @@ export default function TorBidChecklistCard({ projectId, pdfUrl, loginReturnPath
     const headingId = useId();
     const [savingItem, setSavingItem] = useState(null);
     const [saveError, setSaveError] = useState('');
-    const { current, retry, saveStatus } = useTorChecklist();
+    const { current, retry, saveStatus, saveStatuses } = useTorChecklist();
     const { checklist, error } = current ?? {};
     const items = checklist?.items ?? [];
     const missing = checklist?.missingProfileFields ?? [];
@@ -61,8 +61,13 @@ export default function TorBidChecklistCard({ projectId, pdfUrl, loginReturnPath
     }
 
     async function passAll() {
-        for (const item of items) {
-            if (item.id && item.status !== 'pass') await changeStatus(item.id, 'pass');
+        const ids = items.filter(item => item.id && item.status !== 'pass').map(item => item.id);
+        if (!ids.length) return;
+        setSaveError('');
+        try {
+            await saveStatuses(ids, 'pass');
+        } catch (error) {
+            setSaveError(error.status === 409 ? errorMessage(error) : 'บันทึกสถานะไม่สำเร็จ กรุณาลองอีกครั้ง');
         }
     }
     const undecided = items.filter(item => item.id && item.status !== 'pass').length;
