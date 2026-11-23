@@ -78,6 +78,7 @@ function biddingStatusPipeline(status, now = new Date()) {
  * - q (search: text index for Latin queries over title, agency and tech stack;
  *   substring match on title/agency for Thai queries; prefix match for project ids)
  * - budgetMin / budgetMax (inclusive budget range)
+ * - sort=deadline or deadline-far (open, unknown, closed; deadline direction within each group)
  */
 async function handleGET(request) {
     const { searchParams } = new URL(request.url);
@@ -115,6 +116,10 @@ async function handleGET(request) {
     }
 
     const q = searchParams.get('q')?.trim() || null;
+    const sortBy = searchParams.get('sort');
+    if (sortBy !== null && sortBy !== 'deadline' && sortBy !== 'deadline-far') {
+        return errorResponse('INVALID_SORT', 'sort must be deadline or deadline-far');
+    }
 
     try {
         await connectDB();
@@ -172,7 +177,37 @@ async function handleGET(request) {
         // cannot make a newer project appear open or closed incorrectly.
         pipeline.push(...biddingStatusPipeline(biddingStatusResult.value));
 
-        const sort = search.usesTextIndex ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1, _id: -1 };
+        let sort = search.usesTextIndex ? { score: { $meta: 'textScore' } } : { 'timeline.announce_date': -1, updated_at: -1, _id: -1 };
+        if (sortBy === 'deadline' || sortBy === 'deadline-far') {
+            const now = new Date();
+            pipeline.push({ $addFields: { _biddingCloseAt: biddingDeadlineExpression() } });
+            pipeline.push({ $addFields: {
+                _deadlineStatusRank: { $switch: {
+                    branches: [
+                        { case: { $eq: [{ $toLower: { $ifNull: ['$tender.status', ''] } }, 'cancelled'] }, then: 2 },
+                        { case: { $eq: ['$announcement_schedule.status', 'needs_review'] }, then: 1 },
+                        { case: { $ne: [{ $type: '$_biddingCloseAt' }, 'date'] }, then: 1 },
+                        { case: { $gt: ['$_biddingCloseAt', now] }, then: 0 },
+                    ],
+                    default: 2,
+                } },
+            } });
+            pipeline.push({ $addFields: {
+                _deadlineSort: { $cond: [
+                    { $eq: ['$_deadlineStatusRank', 1] },
+                    null,
+                    { $multiply: [
+                        { $toLong: '$_biddingCloseAt' },
+                        { $cond: [
+                            { $eq: ['$_deadlineStatusRank', 2] },
+                            sortBy === 'deadline' ? -1 : 1,
+                            sortBy === 'deadline' ? 1 : -1,
+                        ] },
+                    ] },
+                ] },
+            } });
+            sort = { _deadlineStatusRank: 1, _deadlineSort: 1, 'timeline.announce_date': -1, updated_at: -1, _id: -1 };
+        }
 
         const [projects, totalResult] = await Promise.all([
             Project.aggregate([

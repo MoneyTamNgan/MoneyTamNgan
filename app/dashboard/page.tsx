@@ -7,7 +7,7 @@ import { listTorCards, listTorFacets } from "@/lib/services/tor-service";
 import type { TorApiListItem, TorApiListResponse } from "@/types/tor";
 
 type DashboardTor = TorApiListItem;
-type SortOption = "newest" | "budget-high" | "budget-low" | "best-match";
+type SortOption = "deadline" | "deadline-far" | "newest" | "budget-high" | "budget-low" | "best-match";
 const DASHBOARD_PAGE_SIZE = 10;
 const BIDDING_STATUS_OPTIONS = [
   { value: "ทั้งหมด", label: "ทุกสถานะการยื่นข้อเสนอ" },
@@ -26,11 +26,12 @@ function feedCacheKey(
   softwareOnly: boolean,
   agency: string,
   biddingStatus: string,
+  sortBy: SortOption,
   page: number,
   liveBiddingFilterTick: number,
   search = "",
 ) {
-  return JSON.stringify({ softwareOnly, agency, biddingStatus, page, liveBiddingFilterTick, search });
+  return JSON.stringify({ softwareOnly, agency, biddingStatus, sortBy, page, liveBiddingFilterTick, search });
 }
 
 function cacheFeed(cache: Map<string, TorApiListResponse>, key: string, value: TorApiListResponse) {
@@ -139,7 +140,7 @@ function DashboardContent() {
     return value === "open" || value === "closed" || value === "unknown" ? value : "ทั้งหมด";
   });
   const [softwareOnly, setSoftwareOnly] = useState(() => searchParams.get("software") !== "0");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [sortBy, setSortBy] = useState<SortOption>("deadline");
   const [activeSlide, setActiveSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -150,7 +151,7 @@ function DashboardContent() {
   const filterBarRef = useRef<HTMLElement>(null);
   const itemsRef = useRef<DashboardTor[]>([]);
   const feedCacheRef = useRef(new Map<string, TorApiListResponse>());
-  const liveBiddingFilterTick = biddingStatus === "ทั้งหมด" ? 0 : Math.floor(currentTime / 30_000);
+  const liveBiddingFilterTick = biddingStatus === "ทั้งหมด" && !sortBy.startsWith("deadline") ? 0 : Math.floor(currentTime / 30_000);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -170,6 +171,7 @@ function DashboardContent() {
       const requestParams = {
         isSoftware: softwareOnly ? true : undefined,
         page,
+        sort: sortBy === "deadline" || sortBy === "deadline-far" ? sortBy : undefined,
         pageSize: DASHBOARD_PAGE_SIZE,
         agency: agency === "ทั้งหมด" ? undefined : agency,
         biddingStatus: biddingStatus === "ทั้งหมด" ? undefined : biddingStatus as "open" | "closed" | "unknown",
@@ -184,7 +186,7 @@ function DashboardContent() {
         return;
       }
       const searchKey = `${requestParams.q ?? ""}|${requestParams.budgetMin ?? ""}|${requestParams.budgetMax ?? ""}`;
-      const cacheKey = feedCacheKey(softwareOnly, agency, biddingStatus, page, liveBiddingFilterTick, searchKey);
+      const cacheKey = feedCacheKey(softwareOnly, agency, biddingStatus, sortBy, page, liveBiddingFilterTick, searchKey);
       const cached = feedCacheRef.current.get(cacheKey);
 
       if (cached) {
@@ -209,7 +211,7 @@ function DashboardContent() {
         const totalPages = Math.max(1, Math.ceil(result.total / DASHBOARD_PAGE_SIZE));
         if (page < totalPages) {
           const nextPage = page + 1;
-          const nextKey = feedCacheKey(softwareOnly, agency, biddingStatus, nextPage, liveBiddingFilterTick, searchKey);
+          const nextKey = feedCacheKey(softwareOnly, agency, biddingStatus, sortBy, nextPage, liveBiddingFilterTick, searchKey);
           if (!feedCacheRef.current.has(nextKey)) {
             void listTorCards({ ...requestParams, page: nextPage }).then((nextResult) => {
               cacheFeed(feedCacheRef.current, nextKey, nextResult);
@@ -227,7 +229,7 @@ function DashboardContent() {
     }
     void loadFeed();
     return () => { cancelled = true; };
-  }, [agency, applied, biddingStatus, liveBiddingFilterTick, page, softwareOnly]);
+  }, [agency, applied, biddingStatus, liveBiddingFilterTick, page, softwareOnly, sortBy]);
 
   // Apply the search text and budget range 300 ms after the last keystroke.
   useEffect(() => {
@@ -284,6 +286,7 @@ function DashboardContent() {
   }, []);
 
   const visibleItems = useMemo(() => [...items].sort((first, second) => {
+    if (sortBy === "deadline" || sortBy === "deadline-far") return 0;
     if (sortBy === "best-match") return (second.matchScore ?? 0) - (first.matchScore ?? 0);
     if (sortBy === "budget-high") return budgetForSort(second.budget, "high") - budgetForSort(first.budget, "high");
     if (sortBy === "budget-low") return budgetForSort(first.budget, "low") - budgetForSort(second.budget, "low");
@@ -292,6 +295,7 @@ function DashboardContent() {
   const totalPages = Math.max(1, Math.ceil(total / DASHBOARD_PAGE_SIZE));
   const updateAgency = (value: string) => { setAgency(value); setPage(1); };
   const updateBiddingStatus = (value: string) => { setBiddingStatus(value); setPage(1); };
+  const updateSort = (value: SortOption) => { setSortBy(value); setPage(1); };
   const updateSoftwareOnly = () => { setSoftwareOnly((current) => !current); setAgency("ทั้งหมด"); setPage(1); };
 
   const isGuest = account === null;
@@ -299,7 +303,7 @@ function DashboardContent() {
   return <main className="tor-feed"><style jsx global>{`.feed-card{min-height:440px!important;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease!important}.feed-card .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card .budget-warning{margin:0}.feed-card .anomaly-clear{color:#8ea89d;font-size:.79rem}.feed-card .feed-budget{min-height:68px;margin:0 0 10px}.feed-card .document-availability{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:8px 0;border-bottom:1px solid #2b4a52;color:#a7bdb5;font-size:.8rem}.feed-card .document-availability strong{color:#b8dccc;font-size:.82rem}.feed-card .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;padding-top:12px}.feed-card footer{min-height:48px;border-top:1px solid #2b4a52}@media (hover:hover) and (min-width:651px){.feed-card:hover{z-index:5!important;transform:none!important;border-color:var(--orange-primary)!important;background:var(--cream-soft)!important;box-shadow:0 26px 42px var(--shadow)!important}}`}</style>
     <style jsx global>{`.feed-card-bottom{display:flex;flex-direction:column;margin-top:auto}.feed-card-bottom .anomaly-slot{display:flex;align-items:center;min-height:44px}.feed-card-bottom .feed-budget{min-height:68px;margin:0}.feed-card-bottom .technology-tags{align-content:flex-start;min-height:64px;max-height:64px;overflow:hidden;margin:0;padding-top:12px}.feed-card-bottom footer{min-height:48px;margin-top:0;padding-top:16px;border-top:1px solid #2b4a52}`}</style>
 
-        {showStickyTools && <div className="dashboard-sticky-tools" aria-label="ค้นหาและตัวกรอง TOR"><div className="dashboard-sticky-tools-inner"><label className="dashboard-sticky-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา TOR" aria-label="ค้นหา TOR" /></label><button type="button" className={`software-filter ${softwareOnly ? "is-active" : ""}`} onClick={updateSoftwareOnly} aria-pressed={softwareOnly}>ซอฟต์แวร์ / ไอที</button><label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label><label><span className="sr-only">สถานะการยื่นข้อเสนอ</span><select value={biddingStatus} onChange={(event) => updateBiddingStatus(event.target.value)}>{BIDDING_STATUS_OPTIONS.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label><label><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบสูงไปต่ำ</option><option value="budget-low">งบต่ำไปสูง</option><option value="best-match">ตรงกับโปรไฟล์</option></select></label></div></div>}
+        {showStickyTools && <div className="dashboard-sticky-tools" aria-label="ค้นหาและตัวกรอง TOR"><div className="dashboard-sticky-tools-inner"><label className="dashboard-sticky-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหา TOR" aria-label="ค้นหา TOR" /></label><button type="button" className={`software-filter ${softwareOnly ? "is-active" : ""}`} onClick={updateSoftwareOnly} aria-pressed={softwareOnly}>ซอฟต์แวร์ / ไอที</button><label><span className="sr-only">หน่วยงาน</span><select value={agency} onChange={(event) => updateAgency(event.target.value)}>{agencies.map((name) => <option value={name} key={name}>{name === "ทั้งหมด" ? "ทุกหน่วยงาน" : name}</option>)}</select></label><label><span className="sr-only">สถานะการยื่นข้อเสนอ</span><select value={biddingStatus} onChange={(event) => updateBiddingStatus(event.target.value)}>{BIDDING_STATUS_OPTIONS.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label><label><span className="sr-only">เรียงลำดับ</span><select value={sortBy} onChange={(event) => updateSort(event.target.value as SortOption)}><option value="deadline">เวลาปิดรับ (ใกล้ปิดรับมาก่อน)</option><option value="deadline-far">เวลาปิดรับ (ใกล้ปิดรับมาหลัง)</option><option value="newest">ล่าสุด</option><option value="budget-high">งบสูงไปต่ำ</option><option value="budget-low">งบต่ำไปสูง</option><option value="best-match">ตรงกับโปรไฟล์</option></select></label></div></div>}
 
     <section className="information-carousel" aria-label="ข้อมูลแนะนำ">
       <div className="information-track" style={{ transform: `translateX(-${activeSlide * 100}%)` }}>
@@ -337,7 +341,7 @@ function DashboardContent() {
         <label><span>สถานะการยื่นข้อเสนอ</span><select value={biddingStatus} onChange={(event) => updateBiddingStatus(event.target.value)}>{BIDDING_STATUS_OPTIONS.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
         <label><span>งบประมาณต่ำสุด (บาท)</span><input type="number" min="0" inputMode="numeric" value={budgetMin} onChange={(event) => setBudgetMin(event.target.value)} placeholder="ไม่จำกัด" /></label>
         <label><span>งบประมาณสูงสุด (บาท)</span><input type="number" min="0" inputMode="numeric" value={budgetMax} onChange={(event) => setBudgetMax(event.target.value)} placeholder="ไม่จำกัด" /></label>
-        <label className="sort-control"><span>เรียงลำดับ</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}><option value="newest">ล่าสุด</option><option value="budget-high">งบประมาณ: สูงไปต่ำ</option><option value="budget-low">งบประมาณ: ต่ำไปสูง</option><option value="best-match">ความตรงกับโปรไฟล์</option></select></label>
+        <label className="sort-control"><span>เรียงลำดับ</span><select value={sortBy} onChange={(event) => updateSort(event.target.value as SortOption)}><option value="deadline">เวลาปิดรับ (ใกล้ปิดรับมาก่อน)</option><option value="deadline-far">เวลาปิดรับ (ใกล้ปิดรับมาหลัง)</option><option value="newest">ล่าสุด</option><option value="budget-high">งบประมาณ: สูงไปต่ำ</option><option value="budget-low">งบประมาณ: ต่ำไปสูง</option><option value="best-match">ความตรงกับโปรไฟล์</option></select></label>
       </section>
 
       <section className="feed-grid" aria-label="รายการ TOR">

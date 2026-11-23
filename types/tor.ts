@@ -59,6 +59,7 @@ export interface TorListParams {
   status?: TorStatus;
   stage?: TorStage;
   biddingStatus?: "open" | "closed" | "unknown";
+  sort?: "deadline" | "deadline-far";
   agency?: string;
   q?: string;
   budgetMin?: number;
