@@ -193,6 +193,9 @@ function DraftEditorForm({ draftId, draft, setDraft }) {
                                 : 'ตรวจสอบคุณสมบัติให้ครบและให้ทุกข้อมีสถานะ “ผ่าน” ก่อนดาวน์โหลด'}
                         </p>
                     )}
+                    {error && <p className="bid-error" role="alert">{error}</p>}
+                    {!busy && !dirty && !conflict && <p className="bid-save-hint">ปุ่มบันทึกจะใช้ได้เมื่อมีการแก้ไขข้อความ</p>}
+                    {conflict && <p className="bid-save-hint">บันทึกไม่ได้เพราะร่างนี้ถูกแก้จากที่อื่น ใช้ปุ่ม “โหลดรุ่นล่าสุด” ด้านบน</p>}
                     <p role="status">{busy ? 'กำลังดำเนินการ...' : dirty ? 'มีการแก้ไขที่ยังไม่ได้บันทึก กรุณาบันทึกก่อนส่งออก' : saved ? 'บันทึกร่างลงฐานข้อมูลแล้ว' : 'กำลังแสดงร่างที่บันทึกไว้'}</p>
                 </div>
             </>}
