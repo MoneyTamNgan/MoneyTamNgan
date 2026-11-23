@@ -105,11 +105,12 @@ export async function proxy(request) {
         const session = cookieSession && await sessionAccountActive(cookieSession) ? cookieSession : null;
         pageHasSession = Boolean(session);
         if (!session && startsWithAny(pathname, PROTECTED_PAGES)) {
-            const loginUrl = new URL('/', request.url);
+            // Admin pages have their own sign-in page; everything else uses the public one.
+            const loginUrl = new URL(startsWithAny(pathname, ['/admin']) ? '/admin-login' : '/', request.url);
             loginUrl.searchParams.set('next', pathname);
             response = NextResponse.redirect(loginUrl);
-        } else if (pathname.startsWith('/admin') && !hasScope(session, 'admin:read')) response = new NextResponse('Admin permission required', { status: 403 });
-        else if (pathname.startsWith('/admin') && adminGateConfig().enabled) {
+        } else if (startsWithAny(pathname, ['/admin']) && !hasScope(session, 'admin:read')) response = new NextResponse('Admin permission required', { status: 403 });
+        else if (startsWithAny(pathname, ['/admin']) && adminGateConfig().enabled) {
             // The sign-in page for the access code only needs the address check.
             const onUnlockPage = pathname === '/admin/unlock';
             const gate = await checkAdminGate({
