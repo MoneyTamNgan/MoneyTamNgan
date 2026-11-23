@@ -17,6 +17,7 @@ export async function listTorCards(params: TorListParams = {}): Promise<TorApiLi
   if (params.status) query.set("status", params.status);
   if (params.stage) query.set("stage", params.stage);
   if (params.biddingStatus) query.set("biddingStatus", params.biddingStatus);
+  if (params.sort) query.set("sort", params.sort);
   if (params.agency) query.set("agency", params.agency);
   if (params.q) query.set("q", params.q);
   if (params.budgetMin !== undefined) query.set("budgetMin", String(params.budgetMin));
