@@ -49,7 +49,8 @@ export default function SidebarLayout({ children }) {
   const profileInitial = profileName.trim().charAt(0) || "บ";
   const roleLabel = isGuest ? "ดูข้อมูลสาธารณะ" : account?.role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ใช้งานระบบ";
 
-  if (pathname === "/") return <>{children}</>;
+  // The public sign-in page and the admin sign-in and unlock pages are full-screen, without the side menu.
+  if (pathname === "/" || pathname === "/admin-login" || pathname === "/admin/unlock") return <>{children}</>;
 
   return <div className={`sidebar-layout ${isOpen ? "is-open" : ""} ${isOrangeTheme ? "theme-orange" : "theme-mint"}`}>
     <aside className={`app-sidebar ${styles.sidebar}`} aria-label="เมนูหลัก">
