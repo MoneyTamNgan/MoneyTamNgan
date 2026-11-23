@@ -30,10 +30,26 @@ A normal account gets `403` on these. Everything else is deny-by-default (`lib/r
 - Review the admin list before each release: `db.users.find({ role: "admin" }, { email: 1 })`, and read `role_change_audit` for changes you do not recognise.
 - When someone leaves the team, revoke with `--demote` the same day (this also ends their sessions).
 
+## Extra conditions: allowed addresses and an access code (optional, off by default)
+Both add to the admin role; neither makes anyone an admin. To get into `/admin` and `/api/admin/*` an admin account must pass, in order:
+1. **Address check** when `ADMIN_IP_ALLOWLIST` is set (comma-separated: IPv4, IPv4 CIDR such as `10.0.0.0/24`, one IPv6 address, or `direct`). From any other address the answer is 403 `ADMIN_IP_NOT_ALLOWED`.
+2. **Sign-in** with an account whose role is `admin`.
+3. **Access code** when `ADMIN_ACCESS_CODE_HASH` is set (SHA-256 hex of the code). The admin enters the code on `/admin/unlock` (or `POST /api/admin/unlock`). A correct code sets a 30 minute cookie tied to that account and that address; without it admin pages redirect to the unlock page and admin APIs answer 403 `ADMIN_CODE_REQUIRED`. At most 5 tries per 15 minutes per account and address; every try is written to the auth audit log.
+
+Make a code and its hash (keep the code, put only the hash in `.env`):
+```
+node -e "const c=require('crypto');const code=c.randomBytes(16).toString('hex').toUpperCase().match(/.{4}/g).join('-');console.log(code, c.createHash('sha256').update(code).digest('hex'))"
+```
+The code is compared in capital letters: whoever enters it can type small letters, but the hash must be made from the capital-letter form (the command above already does this).
+
+How the address is read and what that means:
+- The address is the **last** `X-Forwarded-For` entry, which is the one the nearest proxy wrote; a caller cannot add an entry after it. No header at all counts as `direct`.
+- That is only safe if the app can be reached **through the proxy only**. Behind Tailscale Serve the real tailnet address is written by Tailscale. Bind the app port to `127.0.0.1` (for example `ports: ["127.0.0.1:3000:3000"]`) or block it with a firewall, otherwise a caller who goes straight to the port can send any header. `direct` means "no proxy header", so only list it when the port is bound to localhost.
+- Public addresses are a poor choice: machines on the same network share one. On a tailnet use the Tailscale addresses (`100.x.y.z`).
+- A set but unusable value does not switch the gate off: an allowlist with no valid entry denies everyone, and a code hash that is not 64 hex characters makes unlocking fail with 503.
+- To turn it off, empty both variables and restart the app.
+
 ## Not done yet (possible next steps)
 - An approval step so a second person must confirm each grant.
 - An admin-only screen with a reason field, instead of a script.
-- Limiting admin pages to an allowed IP range (`ADMIN_IP_ALLOWLIST`) and a short-lived admin code as a second step. An IP list alone is weak behind shared networks or changing addresses, and a shared code cannot show who did what, so treat both as extra layers on top of the role, not a replacement.
 - Time-limited admin rights, and multi-factor sign-in for admins.
-
-Background: OWASP Authorization Cheat Sheet (least privilege, review of permissions), NIST SP 800-53 AC-5 and AC-6.

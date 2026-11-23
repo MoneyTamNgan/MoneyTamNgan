@@ -5,6 +5,7 @@ import { authorizeScopeRequest, permissionFor } from '@/lib/request-authorizatio
 import { applyCors, contentSecurityPolicy, originError, securityHeaders } from '@/lib/security-policy';
 import { randomBytes } from 'node:crypto';
 import { isGoogleOAuthPath } from '@/lib/oauth-security';
+import { ADMIN_UNLOCK_COOKIE, adminGateConfig, checkAdminGate } from '@/lib/admin-gate';
 import { isPipelineTrigger, pipelineAuditContext, logPipelineAudit } from '@/lib/admin-pipeline-audit';
 import {
     clientAddress,
@@ -108,6 +109,20 @@ export async function proxy(request) {
             loginUrl.searchParams.set('next', pathname);
             response = NextResponse.redirect(loginUrl);
         } else if (pathname.startsWith('/admin') && !hasScope(session, 'admin:read')) response = new NextResponse('Admin permission required', { status: 403 });
+        else if (pathname.startsWith('/admin') && adminGateConfig().enabled) {
+            // The sign-in page for the access code only needs the address check.
+            const onUnlockPage = pathname === '/admin/unlock';
+            const gate = await checkAdminGate({
+                config: adminGateConfig(), headers: request.headers, session,
+                unlockToken: request.cookies.get(ADMIN_UNLOCK_COOKIE)?.value, requireCode: !onUnlockPage,
+            });
+            if (gate.ok) response = next();
+            else if (gate.code === 'ADMIN_CODE_REQUIRED') {
+                const unlockUrl = new URL('/admin/unlock', request.url);
+                unlockUrl.searchParams.set('next', pathname);
+                response = NextResponse.redirect(unlockUrl);
+            } else response = new NextResponse(gate.message, { status: 403 });
+        }
         else if (startsWithAny(pathname, ['/profile']) && !hasScope(session, 'profile:read')) response = new NextResponse('Profile permission required', { status: 403 });
         else response = next();
     }

@@ -191,6 +191,10 @@ Same owned draft ID rule; optional query `version` converted with Number, must b
 
 [Handler](../app/api/admin/keywords/route.js): GET no business fields. PUT root must be JSON array; malformed/nonarray400 `INVALID_BODY`. Each row `keyword` is **coerced with String** and trimmed, must be nonempty (400 `EMPTY_KEYWORD`), no explicit maximum. `category` must equal `software`/`non-software` (400 `BAD_CATEGORY`). Unknown row fields ignored; duplicate keyword/category pairs removed case-insensitively; empty array accepted. No array-count or body-size cap, no strict Content-Type enforcement. Replaces whole list without a transaction; delete-then-insert failure may leave list empty. [Guard proof](../tests/security/scopes-cors-headers.test.js); no dedicated keyword validation suite currently.
 
+### POST /api/admin/unlock
+
+[Handler](../app/api/admin/unlock/route.js): body `{ "code": string }` (JSON, at most 512 bytes, code trimmed, upper-cased and at most 64 characters). Compares the SHA-256 of the code with `ADMIN_ACCESS_CODE_HASH` in constant time; at most 5 tries per 15 minutes per account and address. [Proof](../tests/unit/admin-gate.test.js).
+
 ### POST /api/admin/classification/run
 
 [Handler](../app/api/admin/classification/run/route.js): no accepted query/body. Reclassifies unresolved projects with current keyword sets; preserves manual overrides. [Proof](../tests/unit/classification-run-route.test.js).
