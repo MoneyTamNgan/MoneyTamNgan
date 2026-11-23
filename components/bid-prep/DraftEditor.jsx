@@ -44,6 +44,26 @@ function DraftEditorForm({ draftId, draft, setDraft }) {
     const [dirty, setDirty] = useState(false), [saved, setSaved] = useState(false), [conflict, setConflict] = useState(false);
     const [confirmExport, setConfirmExport] = useState(false), [confirmDelete, setConfirmDelete] = useState(false);
     const [activeTab, setActiveTab] = useState('draft');
+    const [meta, setMeta] = useState({});
+    useEffect(() => {
+        if (!draft?.projectId) return;
+        const controller = new AbortController();
+        const id = encodeURIComponent(draft.projectId);
+        Promise.allSettled([
+            bidPrepRequest(`/api/tors/${id}`, { signal: controller.signal }),
+            bidPrepRequest('/api/profiles', { signal: controller.signal }),
+        ]).then(([tor, profile]) => {
+            if (controller.signal.aborted) return;
+            setMeta({
+                torTitle: tor.status === 'fulfilled' ? tor.value.title : '',
+                agency: tor.status === 'fulfilled' ? tor.value.agency?.name : '',
+                method: tor.status === 'fulfilled' ? tor.value.bidding?.method : '',
+                company: profile.status === 'fulfilled' ? profile.value.data?.company_name : '',
+                signatory: profile.status === 'fulfilled' ? profile.value.data?.authorized_signatory : '',
+            });
+        });
+        return () => controller.abort();
+    }, [draft?.projectId]);
     async function load() {
         setError('');
         try {
@@ -172,12 +192,30 @@ function DraftEditorForm({ draftId, draft, setDraft }) {
                 <div id="bid-panel-draft" className="bid-editor-panel" role="tabpanel" aria-labelledby="bid-tab-draft" hidden={activeTab !== 'draft'}>
                     <p className="bid-paper-hint">พิมพ์แก้ไขในเอกสารได้เลย ระบบบันทึกให้อัตโนมัติ (หรือกด Ctrl/⌘ + S) {placeholders.length > 0 && <strong className="bid-incomplete">· มี {placeholders.length} จุดที่ต้องเติมข้อมูล</strong>}</p>
                     <article className="bid-paper">
-                        <PaperText id="draft-title" className="bid-paper-title" maxLength={DRAFT_LIMITS.title} value={draft.title} placeholder="ชื่อเอกสาร" onChange={e => change({ title: e.target.value.replace(/\n/g, ' ') })} />
+                        <header className="bid-cover">
+                            <p className="bid-cover-kicker">ข้อเสนอทางเทคนิคและราคา</p>
+                            <PaperText id="draft-title" className="bid-paper-title" maxLength={DRAFT_LIMITS.title} value={draft.title} placeholder="ชื่อเอกสาร" onChange={e => change({ title: e.target.value.replace(/\n/g, ' ') })} />
+                            <dl className="bid-cover-details">
+                                <div><dt>เลขที่โครงการ</dt><dd>{draft.projectId}</dd></div>
+                                {meta.torTitle && <div><dt>โครงการ</dt><dd>{meta.torTitle}</dd></div>}
+                                {meta.method && <div><dt>วิธีการจัดซื้อจัดจ้าง</dt><dd>{meta.method}</dd></div>}
+                                {meta.agency && <div><dt>เสนอต่อ</dt><dd>{meta.agency}</dd></div>}
+                                {meta.company && <div><dt>ผู้ยื่นข้อเสนอ</dt><dd>{meta.company}</dd></div>}
+                                <div><dt>ลงวันที่</dt><dd>{new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</dd></div>
+                            </dl>
+                        </header>
+                        {draft.sections.some(section => section.heading) && (
+                            <nav className="bid-toc" aria-label="สารบัญ">
+                                <h3>สารบัญ</h3>
+                                <ol>{[...new Set(draft.sections.map(section => section.heading).filter(Boolean))].map(heading => <li key={heading}>{heading}</li>)}</ol>
+                            </nav>
+                        )}
                         {draft.sections.map((section, i) => {
+                            const repeated = i > 0 && section.heading && section.heading === draft.sections[i - 1].heading;
                             const open = draftPlaceholders({ sections: [section] });
                             const sources = section.sources.filter(Boolean);
                             return (
-                                <section className="bid-paper-section" key={i}>
+                                <section className={`bid-paper-section${repeated ? ' is-repeat' : ''}`} key={i}>
                                     <div className="bid-paper-section-head">
                                         <PaperText id={`section-heading-${i}`} className="bid-paper-heading" maxLength={DRAFT_LIMITS.heading} value={section.heading} placeholder="หัวข้อ" onChange={e => changeSection(i, { heading: e.target.value.replace(/\n/g, ' ') })} />
                                         <button type="button" className="bid-paper-remove" disabled={busy} title="ลบหัวข้อนี้" aria-label={`ลบหัวข้อ ${i + 1}`} onClick={() => change({ sections: draft.sections.filter((_, index) => i !== index) })}>✕</button>
@@ -192,6 +230,15 @@ function DraftEditorForm({ draftId, draft, setDraft }) {
                                 </section>
                             );
                         })}
+                        <footer className="bid-signature">
+                            <p>ข้าพเจ้าขอรับรองว่าข้อมูลและเอกสารที่เสนอข้างต้นถูกต้องและเป็นความจริงทุกประการ</p>
+                            <div className="bid-signature-box">
+                                <p>(ลงชื่อ) ........................................................ ผู้มีอำนาจลงนาม</p>
+                                <p>( {meta.signatory || '........................................'} )</p>
+                                <p>{meta.company ? `ตำแหน่ง กรรมการผู้มีอำนาจ ${meta.company}` : 'ตำแหน่ง ........................................'}</p>
+                                <p>(ประทับตราบริษัท ถ้ามี)</p>
+                            </div>
+                        </footer>
                         <button id="add-draft-section" type="button" className="bid-paper-add" disabled={busy || draft.sections.length >= DRAFT_LIMITS.sections} onClick={() => change({ sections: [...draft.sections, { heading: '', body: '', sources: [] }] })}>+ เพิ่มหัวข้อ</button>
                     </article>
                 </div>

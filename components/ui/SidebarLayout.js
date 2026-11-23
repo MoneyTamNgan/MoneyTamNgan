@@ -72,7 +72,6 @@ export default function SidebarLayout({ children }) {
           ? <button className={`sidebar-signout ${styles.accountAction}`} type="button" onClick={signOut} title="ออกจากระบบ" aria-label="ออกจากระบบ" disabled={signingOut}><span className="sidebar-icon" aria-hidden="true">⏻</span><span className={styles.accountText}><strong>{signingOut ? "กำลังออก…" : "ออกจากระบบ"}</strong>{isOpen && <small>{account.email}</small>}</span></button>
           : <Link className={`sidebar-signout ${styles.accountAction}`} href="/" title="เข้าสู่ระบบ"><span className="sidebar-icon" aria-hidden="true">⏻</span><span className={styles.accountText}><strong>เข้าสู่ระบบ</strong></span></Link>}
         {signOutError && <p className={styles.accountError} role="alert">{signOutError}</p>}
-        <p className="sidebar-version">โหมดข้อมูลตัวอย่าง</p>
       </div>
     </aside>
     <div className="sidebar-page">{children}</div>

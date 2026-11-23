@@ -9434,3 +9434,26 @@ body {
 .tor-bid-checklist .tor-check-actions button[data-status="fail"][aria-pressed="true"] { background: var(--danger); color: #fff; }
 .tor-check-actions button:focus-visible, .tor-check-all:focus-visible { outline: 3px solid var(--orange-primary); outline-offset: 2px; }
 @media (max-width: 560px) { .tor-check-list > li { grid-template-columns: 30px minmax(0, 1fr); } .tor-check-actions { grid-column: 1 / -1; } .tor-bid-checklist .tor-check-actions button { flex: 1; } }
+
+
+/* Draft page styled like a printed bid envelope: cover, contents, numbered sections, signature */
+.bid-paper { max-width: 794px; font-family: "TH Sarabun New", "Sarabun", "Noto Sans Thai", Tahoma, serif; font-size: 1.12rem; background-image: linear-gradient(#fff, #fff); }
+.bid-cover { margin: 0 0 28px; padding: 36px 24px 28px; border: 3px double var(--ink); text-align: center; }
+.bid-cover-kicker { margin: 0 0 10px; font-size: 1.15rem; letter-spacing: .06em; font-weight: 700; color: var(--ink-secondary); }
+.bid-workspace .bid-paper .bid-cover .bid-paper-title { text-align: center; font-size: 1.7rem; margin-bottom: 18px; }
+.bid-cover-details { display: grid; gap: 6px; margin: 0 auto; max-width: 560px; text-align: left; }
+.bid-cover-details > div { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 10px; }
+.bid-cover-details dt { font-weight: 700; color: var(--ink-secondary); }
+.bid-cover-details dd { margin: 0; overflow-wrap: anywhere; }
+.bid-toc { margin: 0 0 30px; padding: 0 6px 18px; border-bottom: 1px solid var(--orange-border-soft); }
+.bid-toc h3 { margin: 0 0 8px; font-size: 1.25rem; }
+.bid-toc ol { margin: 0; padding-left: 1.4em; columns: 2; column-gap: 32px; color: var(--ink-secondary); }
+.bid-toc li { break-inside: avoid; margin: 0 0 3px; }
+.bid-workspace .bid-paper .bid-paper-heading { color: var(--ink); border-bottom: 2px solid var(--ink); border-radius: 0; font-size: 1.3rem; }
+.bid-paper-section.is-repeat { margin-top: -10px; }
+.bid-paper-section.is-repeat .bid-paper-section-head { display: none; }
+.bid-workspace .bid-paper .bid-paper-body { line-height: 1.75; }
+.bid-signature { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--orange-border-soft); break-inside: avoid; }
+.bid-signature-box { margin: 24px 0 8px auto; width: min(100%, 420px); text-align: center; }
+.bid-signature-box p { margin: 10px 0; }
+@media (max-width: 600px) { .bid-toc ol { columns: 1; } .bid-cover-details > div { grid-template-columns: 1fr; gap: 0; } }
