@@ -125,7 +125,6 @@ export default function TorBidChecklistCard({ projectId, pdfUrl, loginReturnPath
                                                     data-status={status}
                                                     aria-pressed={item.overrideStatus === status}
                                                     title={item.overrideStatus === status ? 'กดอีกครั้งเพื่อใช้ผลจากระบบ' : undefined}
-                                                    disabled={savingItem !== null}
                                                     onClick={() => void changeStatus(item.id, item.overrideStatus === status ? null : status)}
                                                 >
                                                     {label}
