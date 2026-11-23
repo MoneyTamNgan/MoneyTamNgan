@@ -162,6 +162,10 @@ function detailToProjectRecord(tor) {
 }
 
 function getApiOrigin(requestHeaders) {
+  // Server-side calls can use an address that is reachable from inside the container
+  // (for example http://127.0.0.1:3000) when the public host name is not.
+  const internalOrigin = process.env.INTERNAL_API_ORIGIN;
+  if (internalOrigin) return internalOrigin.replace(/\/$/, "");
   const configuredOrigin = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (configuredOrigin) return configuredOrigin.replace(/\/$/, "");
 
