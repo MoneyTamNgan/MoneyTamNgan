@@ -13,6 +13,14 @@ export default function DraftWorkspace({ initialProjectId = '' }) {
     const [projectId, setProjectId] = useState(initialProjectId);
     const [drafts, setDrafts] = useState([]), [error, setError] = useState(''), [busy, setBusy] = useState(false), [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [elapsed, setElapsed] = useState(0);
+    const hasPresetTor = PROJECT_ID_PATTERN.test(initialProjectId);
+    useEffect(() => {
+        if (!job) { setElapsed(0); return; }
+        const startedAt = Date.now();
+        const timer = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+        return () => clearInterval(timer);
+    }, [job]);
     useEffect(() => {
         const controller = new AbortController();
         bidPrepRequest('/api/bid-prep/drafts', { signal: controller.signal }).then(data => setDrafts(data.drafts))
@@ -68,16 +76,32 @@ export default function DraftWorkspace({ initialProjectId = '' }) {
 
     return (
         <BidWorkspaceLayout title="ร่างข้อเสนอของฉัน" navigation={navigation}>
-            <section className="bid-card">
-                <h2>เริ่มร่างสำหรับ TOR</h2>
-                <label htmlFor="draft-project-id">รหัสโครงการ TOR</label>
-                <input id="draft-project-id" value={projectId} maxLength={64} disabled={busy} onChange={e => setProjectId(e.target.value.trim())} />
-                <div className="bid-actions">
-                    <button id="create-bid-draft" className="bid-primary" disabled={busy || loading} onClick={() => start(false)}>สร้างร่างเพื่อแก้ไข</button>
-                    <button id="generate-ai-bid-draft" className="bid-secondary" disabled={busy || loading} onClick={() => start(true)}>สร้างร่างด้วย AI</button>
-                </div>
-                {job && <p role="status">กำลังรอผล AI ให้รัน worker เพื่อประมวลผลงาน หมายเลขงาน {job.id}</p>}
-                <p>AI ใช้ระบบสร้างร่างและคิวเดิม ผลที่ได้จะบันทึกเป็นร่างส่วนตัวก่อนแก้ไข</p>
+            <section className="bid-card bid-hero">
+                <p className="bid-hero-eyebrow">ผู้ช่วยเตรียมข้อเสนอ</p>
+                <h2>{hasPresetTor ? `ร่างข้อเสนอสำหรับ TOR ${projectId}` : 'เริ่มร่างข้อเสนอสำหรับ TOR'}</h2>
+                <p className="bid-hero-lead">AI อ่าน TOR และโปรไฟล์บริษัทของคุณ แล้วร่างเอกสารให้ทั้งฉบับ พร้อมระบุแหล่งที่มาของทุกข้อความ คุณตรวจและแก้ไขก่อนใช้งานได้เสมอ</p>
+                {!job && <>
+                    {!hasPresetTor && <>
+                        <label htmlFor="draft-project-id">รหัสโครงการ TOR</label>
+                        <input id="draft-project-id" value={projectId} maxLength={64} disabled={busy} placeholder="เช่น 69099536409" onChange={e => setProjectId(e.target.value.trim())} />
+                    </>}
+                    <div className="bid-actions">
+                        <button id="generate-ai-bid-draft" className="bid-primary bid-cta" disabled={busy || loading} onClick={() => start(true)}><span aria-hidden="true">✨</span> สร้างร่างด้วย AI ทันที</button>
+                        <button id="create-bid-draft" className="bid-secondary" disabled={busy || loading} onClick={() => start(false)}>เริ่มจากร่างว่าง</button>
+                    </div>
+                    <p className="bid-hero-note">ไม่ต้องกรอกอะไรเพิ่ม ใช้ข้อมูลจากโปรไฟล์ของคุณ ข้อมูลที่ยังขาดจะถูกทำเครื่องหมายให้เติมเอง</p>
+                </>}
+                {job && <div className="bid-progress" role="status" aria-live="polite">
+                    <div className="bid-progress-bar" aria-hidden="true"><span /></div>
+                    <ol className="bid-progress-steps">
+                        {['อ่านข้อกำหนดจาก TOR', 'จับคู่กับโปรไฟล์บริษัท', 'เขียนร่างและระบุแหล่งที่มา'].map((label, index) => {
+                            const active = Math.min(2, Math.floor(elapsed / 25)) === index, done = Math.min(2, Math.floor(elapsed / 25)) > index;
+                            return <li key={label} className={done ? 'is-done' : active ? 'is-active' : ''}><span aria-hidden="true">{done ? '✓' : index + 1}</span>{label}</li>;
+                        })}
+                    </ol>
+                    <p>กำลังสร้างร่าง ใช้เวลาราว 1–2 นาที · ผ่านไป {elapsed} วินาที</p>
+                    <p className="bid-hero-note">เปิดหน้านี้ค้างไว้ ระบบจะพาไปที่ร่างเมื่อเสร็จ (งาน {job.id})</p>
+                </div>}
             </section>
             {error && <p className="bid-error" role="alert">{error} <Link href="/?next=/bid-prep">เข้าสู่ระบบ</Link></p>}
             <section className="bid-card">
