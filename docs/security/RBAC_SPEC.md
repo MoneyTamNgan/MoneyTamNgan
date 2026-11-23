@@ -23,6 +23,7 @@ The matrix assumes valid full-scope sessions, allowed Origin and valid input. â€
 | --- | --- | --- | --- | --- | --- | --- |
 | GET | [/api/admin/classification/queue](../../app/api/admin/classification/queue/route.js) | 401 | 403 | Allow | `admin:read` + admin role | [M](../../tests/security/rbac-route-matrix.test.js) |
 | POST | [/api/admin/classification/run](../../app/api/admin/classification/run/route.js) | 401 | 403 | Allow | `admin:write` + admin role | [M](../../tests/security/rbac-route-matrix.test.js) |
+| POST | [/api/admin/unlock](../../app/api/admin/unlock/route.js) | 401 | 403 | Allow | `admin:read` + admin role, and an allowed address when `ADMIN_IP_ALLOWLIST` is set | [U](../../tests/unit/admin-gate.test.js) |
 | GET | [/api/admin/keywords](../../app/api/admin/keywords/route.js) | 401 | 403 | Allow | `admin:read` + admin role | [M](../../tests/security/rbac-route-matrix.test.js) |
 | PUT | [/api/admin/keywords](../../app/api/admin/keywords/route.js) | 401 | 403 | Allow | `admin:write` + admin role | [M](../../tests/security/rbac-route-matrix.test.js) |
 | GET | [/api/admin/pipeline/status](../../app/api/admin/pipeline/status/route.js) | 401 | 403 | Allow | `admin:read` + admin role | [M](../../tests/security/rbac-route-matrix.test.js) |
