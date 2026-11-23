@@ -9437,11 +9437,11 @@ body {
 
 
 /* Draft page styled like a printed bid envelope: cover, contents, numbered sections, signature */
-.bid-paper { max-width: 794px; font-family: "TH Sarabun New", "Sarabun", "Noto Sans Thai", Tahoma, serif; font-size: 1.12rem; background-image: linear-gradient(#fff, #fff); }
+.bid-paper { max-width: 794px; font-size: 1rem; }
 .bid-cover { margin: 0 0 28px; padding: 36px 24px 28px; border: 3px double var(--ink); text-align: center; }
 .bid-cover-kicker { margin: 0 0 10px; font-size: 1.15rem; letter-spacing: .06em; font-weight: 700; color: var(--ink-secondary); }
 .bid-workspace .bid-paper .bid-cover .bid-paper-title { text-align: center; font-size: 1.7rem; margin-bottom: 18px; }
-.bid-cover-details { display: grid; gap: 6px; margin: 0 auto; max-width: 560px; text-align: left; }
+.bid-cover-details { font-size: 1rem; display: grid; gap: 6px; margin: 0 auto; max-width: 560px; text-align: left; }
 .bid-cover-details > div { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 10px; }
 .bid-cover-details dt { font-weight: 700; color: var(--ink-secondary); }
 .bid-cover-details dd { margin: 0; overflow-wrap: anywhere; }
