@@ -1,8 +1,11 @@
 # MoneyTamNgan: Software Development Security Report
 
-Course: 01219325 Software Development Security  
-Evidence baseline: 19 November 2026, Asia/Bangkok  
-Document revised: 20 November 2026  
+Course: 01219325 Software Development Security
+
+Evidence baseline: 19 November 2026, Asia/Bangkok
+
+Document revised: 20 November 2026
+
 Audited commit: `b053761a9222f4300f4519ead308ccd67514b191`
 
 ## Scope and results
@@ -153,12 +156,12 @@ New audit findings have separate IDs below instead of changing the meaning of ex
 
 ### 6.1 How the audit was carried out
 
-1. **Baseline Pinning & Isolation:** Pinned the audited commit tree (`b053761a9222f4300f4519ead308ccd67514b191`) in an isolated worktree using locked dependency versions (`package-lock.json`).  
-2. **Specification-to-Code Traceability:** Reviewed security specs (`ASVS_CHECKLIST.md`, `THREAT_MODEL.md`, `RBAC_SPEC.md`, `API_VALIDATION.md`) and verified actual enforcement in source code and integration tests rather than accepting status labels at face value.  
-3. **Automated Unit, Integration, Build & Audit Suites:** Executed the full Node test suite, Vitest suite, production Next.js build, `npm audit` dependency check, Redocly OpenAPI linter, and API documentation consistency audit.  
-4. **CI SAST & DAST Artifact Verification:** Retrieved the latest successful GitHub Actions Semgrep SAST (`run 44472921630`) and OWASP ZAP DAST (`run 44472812671`) artifacts and verified tree hash equivalence (`c5e04d7…` shared between DAST commit `38849ab` and audited commit `b053761`).  
-5. **Local Loopback Runtime Smoke & JWT Verification:** Launched a local production build on port `3119` using dummy credentials (zero production database writes or external API calls) to verify live HTTP security headers, per-request CSP script nonces, CORS origin allow/deny behavior, `401`/`403` denials, JWT signature/algorithm/expiration checks, and post-logout token behavior.  
-6. **Bounded Historical Secret Scanning:** Scanned 1,532 locally fetched Git text blobs using bounded regular expression patterns for leaked credentials, outputting only non-sensitive metadata.  
+1. **Baseline Pinning & Isolation:** Pinned the audited commit tree (`b053761a9222f4300f4519ead308ccd67514b191`) in an isolated worktree using locked dependency versions (`package-lock.json`).
+2. **Specification-to-Code Traceability:** Reviewed security specs (`ASVS_CHECKLIST.md`, `THREAT_MODEL.md`, `RBAC_SPEC.md`, `API_VALIDATION.md`) and verified actual enforcement in source code and integration tests rather than accepting status labels at face value.
+3. **Automated Unit, Integration, Build & Audit Suites:** Executed the full Node test suite, Vitest suite, production Next.js build, `npm audit` dependency check, Redocly OpenAPI linter, and API documentation consistency audit.
+4. **CI SAST & DAST Artifact Verification:** Retrieved the latest successful GitHub Actions Semgrep SAST (`run 44472921630`) and OWASP ZAP DAST (`run 44472812671`) artifacts and verified tree hash equivalence (`c5e04d7…` shared between DAST commit `38849ab` and audited commit `b053761`).
+5. **Local Loopback Runtime Smoke & JWT Verification:** Launched a local production build on port `3119` using dummy credentials (zero production database writes or external API calls) to verify live HTTP security headers, per-request CSP script nonces, CORS origin allow/deny behavior, `401`/`403` denials, JWT signature/algorithm/expiration checks, and post-logout token behavior.
+6. **Bounded Historical Secret Scanning:** Scanned 1,532 locally fetched Git text blobs using bounded regular expression patterns for leaked credentials, outputting only non-sensitive metadata.
 7. **Gap & Residual Risk Recording:** Documented all failed checks, scanner warnings, and residual risks transparently for remediation prior to production deployment.
 
 ### 6.2 Results recorded on 19 November 2026
