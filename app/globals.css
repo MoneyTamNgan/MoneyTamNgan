@@ -1526,9 +1526,8 @@ dd {
 .information-slide {
   display: grid;
   flex: 0 0 100%;
-  grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
+  grid-template-columns: 1fr;
   align-items: center;
-  gap: 40px;
   min-height: 275px;
   padding: 36px clamp(20px, 5vw, 76px);
   background: radial-gradient(circle at 78% 50%, rgba(91, 201, 148, .15), transparent 28%), linear-gradient(110deg, #102e35, #123940)
@@ -1571,24 +1570,6 @@ dd {
 .information-copy strong i {
   font-size: 1.2rem;
   font-style: normal
-}
-
-.information-image {
-  display: grid;
-  justify-items: center;
-  gap: 9px;
-  min-width: 0;
-  color: #9ee8ba
-}
-
-.information-image svg {
-  width: min(100%, 320px);
-  filter: drop-shadow(0 16px 24px rgba(0, 0, 0, .18))
-}
-
-.information-image>span {
-  color: #a9c6b9;
-  font-size: .77rem
 }
 
 .carousel-controls {
@@ -1641,10 +1622,6 @@ dd {
 
   .information-copy>span {
     font-size: .93rem
-  }
-
-  .information-image {
-    display: none
   }
 
   .carousel-controls {
@@ -5728,8 +5705,7 @@ body {
 }
 
 .sidebar-layout.theme-orange .information-copy>p,
-.sidebar-layout.theme-orange .information-copy strong,
-.sidebar-layout.theme-orange .information-image {
+.sidebar-layout.theme-orange .information-copy strong {
   color: var(--orange-primary)
 }
 
@@ -5738,7 +5714,6 @@ body {
 }
 
 .sidebar-layout.theme-orange .information-copy>span,
-.sidebar-layout.theme-orange .information-image>span,
 .sidebar-layout.theme-orange .carousel-controls>span {
   color: var(--ink-secondary)
 }
