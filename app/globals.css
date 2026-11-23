@@ -9388,3 +9388,25 @@ body {
 .bid-workspace .bid-card.bid-editor-actions .bid-actions { margin: 0; }
 .bid-workspace .bid-card.bid-editor-actions p { margin: 0; font-size: .88rem; }
 .bid-workspace .bid-card.bid-editor-actions .bid-error { flex-basis: 100%; }
+
+
+/* Draft editor: one page that reads like a document */
+.bid-paper-hint { margin: 0 0 12px; color: var(--ink-secondary); font-size: .92rem; }
+.bid-paper { max-width: 860px; margin: 0 auto 24px; padding: clamp(24px, 5vw, 64px); background: #fff; border: 1px solid var(--orange-border-soft); border-radius: 6px; box-shadow: 0 2px 4px rgba(58, 29, 18, .06), 0 18px 48px rgba(58, 29, 18, .12); }
+.bid-workspace .bid-paper textarea { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 4px 6px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ink); font: inherit; line-height: 1.7; resize: none; overflow: hidden; }
+.bid-workspace .bid-paper textarea:hover { border-color: var(--orange-border-soft); }
+.bid-workspace .bid-paper textarea:focus { outline: 0; border-color: var(--orange-primary); background: var(--cream-input); }
+.bid-workspace .bid-paper .bid-paper-title { margin-bottom: 20px; font-size: 1.9rem; font-weight: 800; line-height: 1.35; }
+.bid-paper-section { position: relative; margin: 0 0 22px; }
+.bid-paper-section-head { display: flex; align-items: flex-start; gap: 8px; }
+.bid-workspace .bid-paper .bid-paper-heading { font-size: 1.2rem; font-weight: 700; color: var(--orange-primary-hover); }
+.bid-workspace .bid-paper .bid-paper-remove { flex: none; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink-muted); opacity: 0; transition: opacity .15s; }
+.bid-paper-section:hover .bid-paper-remove, .bid-workspace .bid-paper .bid-paper-remove:focus-visible { opacity: 1; }
+.bid-workspace .bid-paper .bid-paper-remove:hover { background: var(--cream-soft); color: var(--danger); }
+.bid-paper-missing { margin: 4px 6px 0; color: var(--warning); background: var(--warning-soft); padding: 4px 10px; border-radius: 6px; font-size: .88rem; }
+.bid-paper-sources { margin: 6px 6px 0; font-size: .85rem; color: var(--ink-muted); }
+.bid-paper-sources summary { cursor: pointer; }
+.bid-paper-sources p { margin: 6px 0; }
+.bid-workspace .bid-paper .bid-paper-sources textarea { border-color: var(--orange-border-soft); font-size: .85rem; line-height: 1.5; }
+.bid-workspace .bid-paper .bid-paper-add { padding: 8px 14px; border: 1px dashed var(--orange-border); background: transparent; color: var(--orange-primary-hover); }
+@media (max-width: 600px) { .bid-workspace .bid-paper .bid-paper-remove { opacity: 1; } }
