@@ -26,6 +26,8 @@ tags:
     description: "[Current] Monitoring and manual triggering of scraping jobs (FR-1.1)."
   - name: Admin - Classification
     description: "[Current] Reviewing and correcting software/non-software classification (FR-1.2)."
+  - name: Admin - Access
+    description: "[Current] Extra admin conditions: address allowlist and access code (docs/security/ADMIN_ACCESS.md)."
   - name: Auth
     description: "[Current] Password and Google sign-in, session lookup, and sign-out."
   - name: Contractor Profile
@@ -2535,6 +2537,59 @@ paths:
   # ---------------------------------------------------------------------------
   # Current - Live operational, legacy project, and notification routes
   # ---------------------------------------------------------------------------
+  /admin/unlock:
+    post:
+      summary: Enter the admin access code
+      description: "Admin role required. When ADMIN_ACCESS_CODE_HASH is set, admin pages and endpoints also need this step: a correct code sets a 30 minute unlock cookie bound to the account and the caller's address. At most 5 tries per 15 minutes per account and address. When ADMIN_IP_ALLOWLIST is set the caller's address must be listed. Browser requests require an allowed Origin."
+      tags: [Admin - Access]
+      operationId: unlockAdminAccess
+      security: [{ sessionAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, maxLength: 64 }
+            example: { code: "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" }
+      responses:
+        "200":
+          description: "Unlocked (or no code is configured). The unlock cookie is set when a code is required."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unlocked: { type: boolean }
+                  required: { type: boolean }
+                  expiresInSeconds: { type: integer }
+        "400":
+          description: "Body is not JSON like {\"code\": \"...\"}. Code `INVALID_BODY`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "401":
+          description: "Authentication required. Code `UNAUTHORIZED`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: "Admin role required, address not allowed, wrong code or bad origin. Codes `INSUFFICIENT_SCOPE`, `ADMIN_IP_NOT_ALLOWED`, `ADMIN_CODE_INVALID`, `FORBIDDEN_ORIGIN`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "429":
+          description: "Too many attempts. Code `RATE_LIMITED`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "503":
+          description: "The code is set but not a valid SHA-256 hex value. Code `ADMIN_CODE_MISCONFIGURED`."
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /admin/classification/run:
     post:
       summary: Re-run keyword classification across unclassified TORs
