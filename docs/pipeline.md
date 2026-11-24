@@ -1,5 +1,7 @@
 # TOR pull pipeline
 
+Traces to: FR-1.1.1, FR-1.1.2, FR-1.2.1, FR-1.2.2, FR-2.1.1, FR-2.1.2, FR-2.3.1. See [traceability.md](traceability.md).
+
 How a project becomes a summarised, searchable TOR. Each box is one stage; the label on a box is the `processing.status` the project has when that stage finishes. The step-by-step sequence with actors is in [tor-flow.md](tor-flow.md).
 
 ```mermaid
@@ -38,6 +40,9 @@ flowchart TD
     X2 -->|admin approves or overrides| C
     X6 -->|admin review| K
 ```
+
+Stage 6 calls the configured AI provider. `AI_PROVIDER=vertex` is the primary path in `lib/vertex/tor-extractor.js`. When Vertex refuses the call and `AI_FALLBACK_PROVIDER=ollama`, that one request goes through the Ollama adapter (`lib/ai/ollama.js`), which the demo points at the [agy bridge](agy-bridge.md). Embeddings stay on Vertex and do not fall back (`lib/embedding-config.js`).
+
 
 ## How each step pulls its data
 

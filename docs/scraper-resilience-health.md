@@ -1,5 +1,7 @@
 # Scraper resilience and health
 
+Traces to: FR-1.1.1, NFR-3 ([#123](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/123), [#124](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/124)). See [traceability.md](traceability.md).
+
 Implementation for #123 and the application portion of #124. It retains government-source admission, link-only document storage, OCR/Vertex history, existing routes and queue semantics. SMTP setup (#165) is intentionally unchanged.
 
 ## Failure policy and regression evidence

@@ -1,5 +1,7 @@
 # Fiscal-budget coverage backfill
 
+Traces to: FR-1.1.2, FR-4.1.1. See [traceability.md](traceability.md).
+
 ## Behavior
 
 The backfill combines the current announcement and primary TOR's stored page text. Regex runs first, reusing source-grounded LLM evidence from existing summaries when available. Only unresolved projects can make new Vertex calls, and only with `--llm`. Unsupported quotations are rejected. Explicit project-funding context is preferred, then actual budget headings; section 9 alone is not proof of funding. Conflicting funding years within or between documents produce `ambiguous`, never a silently selected year.

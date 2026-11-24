@@ -1,33 +1,35 @@
 # UI test plan: every user function as a flow
 
+Each flow below names the SRS ids it exercises. Step-level ids are in [test-sheet.md](test-sheet.md). Convention: [traceability.md](../traceability.md#requirement-id-convention).
+
 Version `v1.0.0`, plan written 22 Nov 2026. Results: [test-sheet.md](test-sheet.md). Review and defects: [review-and-defects.md](review-and-defects.md). Evidence (video per flow, screenshot per step): [../evidence/testing-2026-11-22-full/](../evidence/testing-2026-11-22-full/).
 
 ## 1. Objective
 Show, with a recording of each sequence, that every function a user or an admin can reach on the website works as described, that the protections (login, roles, ownership) hold, and where it does not work. A failed step is recorded as a defect; it is not hidden or retried until green.
 
 ## 2. Scope
-| Area | Functions covered | Flow |
-|---|---|---|
-| Public (no login) | Dashboard, hero slides, keyword search, filters and sort, paging, TOR card (sends a guest to sign-in), TOR detail (guest view), document page, Analytics (filter, clear, chart mode, CSV and JSON export), theme and sidebar toggles | F01 |
-| Accounts | Register (rules: password match, 15+ characters, duplicate email), log in by email and by username (case-insensitive), wrong password, log out, Google button redirect | F02 |
-| Access control | Guest on `/profile`, `/admin`, protected APIs (401); normal user on admin (403); another user's draft (404) | F03 |
-| Profile | Company fields, past project (add, remove), skills, certification, notification settings, save, persistence after reload, invalid value, delete company data (all fields cleared), delete account, sign-in after deletion | F04 |
-| TOR as signed-in user | Detail with the signed-in-only comparison and checklist cards, own status (pass / fail / back to system value), checklist paging, "เตรียมร่างข้อเสนอ" link, document view, dashboard card links | F05 |
-| BidPrep draft | Open workspace, unknown TOR error, create draft, edit and save, add section, export blocked until checklist passes, confirm every checklist item (paged), save, export DOCX, reopen, delete | F06 |
-| BidPrep AI | Queue an AI draft, progress state, result or failure message, AI notice, for a small TOR and a TOR with a large scope | F07, F07b |
-| Admin | Console, ingestion status, review queue and filters, admin API status (read only) | F08 |
-| Responsive | Key pages at 360, 768 and 1280 px | screenshots `screenshots-2026-11-22/` |
+| Area | Functions covered | Flow | FR |
+|---|---|---|---|
+| Public (no login) | Dashboard, hero slides, keyword search, filters and sort, paging, TOR card (sends a guest to sign-in), TOR detail (guest view), document page, Analytics (filter, clear, chart mode, CSV and JSON export), theme and sidebar toggles | F01 | FR-4.1.2, FR-4.1.3, FR-4.2.1, NFR-1, NFR-6 |
+| Accounts | Register (rules: password match, 15+ characters, duplicate email), log in by email and by username (case-insensitive), wrong password, log out, Google button redirect | F02 | FR-2.2.1 |
+| Access control | Guest on `/profile`, `/admin`, protected APIs (401); normal user on admin (403); another user's draft (404) | F03 | FR-4.2.1, BidPrep FR-4.7.1 |
+| Profile | Company fields, past project (add, remove), skills, certification, notification settings, save, persistence after reload, invalid value, delete company data (all fields cleared), delete account, sign-in after deletion | F04 | FR-2.2.1–FR-2.2.3, BidPrep FR-4.1, BidPrep FR-4.7.2 |
+| TOR as signed-in user | Detail with the signed-in-only comparison and checklist cards, own status (pass / fail / back to system value), checklist paging, "เตรียมร่างข้อเสนอ" link, document view, dashboard card links | F05 | FR-2.1.2, FR-2.1.3, BidPrep FR-4.2 |
+| BidPrep draft | Open workspace, unknown TOR error, create draft, edit and save, add section, export blocked until checklist passes, confirm every checklist item (paged), save, export DOCX, reopen, delete | F06 | BidPrep FR-4.3.3, BidPrep FR-4.4.1 |
+| BidPrep AI | Queue an AI draft, progress state, result or failure message, AI notice, for a small TOR and a TOR with a large scope | F07, F07b | BidPrep FR-4.3.1, BidPrep FR-4.3.2, BidPrep FR-4.3.4 |
+| Admin | Console, ingestion status, review queue and filters, admin API status (read only) | F08 | FR-1.1.1, FR-1.2.1, FR-1.2.3, NFR-3 |
+| Responsive | Key pages at 360, 768 and 1280 px | screenshots `screenshots-2026-11-22/` | NFR-6, FR-4.2.1 |
 
 ### Not run, and why
-| Function | Reason |
-|---|---|
-| Complete Google sign-in | Needs a real Google account; only the redirect is tested (F02-10) |
-| "ทดสอบส่งอีเมล" and match-score emails | Needs SMTP/Resend credentials and a real inbox; would send mail |
-| Trigger the ingestion pipeline from the admin page | Writes to the live database and starts OCR/AI; covered by `docs/admin-pipeline-control.md` and the isolated test, not by this run |
-| Database or AI outage in the browser | Would take the demo machine down; covered by the API-level tests of 19 Nov |
-| Classification override in the admin review queue | Changes live records; the queue is read only here |
-| Microsoft Word opening the exported DOCX | No Word on the machine; the file is checked as a valid zip |
-| Project-summary expand toggle, past-project evidence cards | The TORs used have no long summary; no data-correctness check of the comparison numbers |
+| Function | Reason | FR |
+|---|---|---|
+| Complete Google sign-in | Needs a real Google account; only the redirect is tested (F02-10) | FR-2.2.1 |
+| "ทดสอบส่งอีเมล" and match-score emails | Needs SMTP/Resend credentials and a real inbox; would send mail | FR-2.3.3 |
+| Trigger the ingestion pipeline from the admin page | Writes to the live database and starts OCR/AI; covered by `docs/admin-pipeline-control.md` and the isolated test, not by this run | FR-1.1.1 |
+| Database or AI outage in the browser | Would take the demo machine down; covered by the API-level tests of 19 Nov | NFR-5 |
+| Classification override in the admin review queue | Changes live records; the queue is read only here | FR-1.2.2 |
+| Microsoft Word opening the exported DOCX | No Word on the machine; the file is checked as a valid zip | BidPrep FR-4.4.1 |
+| Project-summary expand toggle, past-project evidence cards | The TORs used have no long summary; no data-correctness check of the comparison numbers | FR-2.1.3 |
 
 ## 3. Approach
 - **Black box through the browser.** Playwright (Chromium) drives the real pages like a user: clicks, typing, navigation. Sign-in for flows other than F02 uses the login API to save time; F02 exercises the real form.

@@ -1,5 +1,7 @@
 # Admin low-confidence TOR review
 
+Traces to: FR-1.2.1, FR-1.2.3 ([#77](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/77)). See [traceability.md](traceability.md).
+
 ```http
 GET /api/admin/classification/queue?page=1&pageSize=20&confidenceType=either
 ```

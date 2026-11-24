@@ -1,5 +1,7 @@
 # Announcement bidding schedule extraction
 
+Traces to: FR-1.1.1, FR-4.1.1. See [traceability.md](traceability.md).
+
 Integrated on `develop-api_database` using PR #60's RSS/announcement modules.
 The existing fiscal-year, OCR, Vertex and document-history code remains in place.
 Neither `develop` nor the PR author's branch is modified.

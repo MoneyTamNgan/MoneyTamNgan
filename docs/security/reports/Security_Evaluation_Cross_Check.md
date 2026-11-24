@@ -1,5 +1,7 @@
 # MoneyTamNgan - Security Evaluation & ASVS Cross-Check Report
 
+Historical ASVS cross-check. It does not use main SRS FR ids. BidPrep privacy is BidPrep FR-4.7 in [bid-prep-fr-4.7.md](../bid-prep-fr-4.7.md).
+
 - **Project:** MoneyTamNgan (Thai Procurement TOR Aggregator & BidPrep Assistant)
 - **Framework:** Next.js 16 (App Router), React 19, MongoDB Atlas, Node.js
 - **Standards:** OWASP ASVS v4.0.3 L2, OWASP Top 10, STRIDE Threat Model

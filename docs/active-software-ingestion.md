@@ -1,5 +1,7 @@
 # Active software TOR ingestion
 
+Traces to: FR-1.1.1, FR-1.2.1, FR-1.2.2. See [traceability.md](traceability.md).
+
 Normal ingestion (`POST /api/ingestion/trigger`) now stages software candidates in `discoverycandidates` and, when `enqueueProcessing:true`, queues `verify_candidate` jobs. Slow official-page verification runs in the worker, not inside the HTTP request. Only verified open software is promoted into `projects`, followed by a `process_project` job. `itemsNew` describes inline project writes, not staged candidates; use `candidatesSaved` and `jobsQueued` for deferred discovery. `verifyInline:true` is retained for small diagnostic batches.
 
 Non-software and explicitly contracted/closed records are excluded. Uncertain software is retained for review; unknown eligibility is retained and retried, rather than silently discarded. Not-yet-open candidates can be rechecked later. Existing historical records are not deleted. Inspect pending candidates through `GET /api/ingestion/status`, and requeue with `POST /api/processing/trigger` body `{"candidateId":"PROJECT_ID"}`.

@@ -1,5 +1,7 @@
 # Controls and evidence map
 
+Operational control map. SRS links are in [traceability.md](../traceability.md). BidPrep ownership traces to BidPrep FR-4.7.
+
 For each topic an auditor raises: what we do, where the proof is, and its honest status. "Gap" means a known weakness or something not evidenced yet; it is listed rather than hidden.
 
 ## A. Access control and authentication

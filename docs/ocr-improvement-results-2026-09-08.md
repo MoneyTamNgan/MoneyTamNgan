@@ -1,5 +1,7 @@
 # Thai OCR quality improvements — 2026-09-08
 
+Historical test report. Traces to: FR-2.1.1. See [traceability.md](traceability.md).
+
 ## Implemented
 
 - Preserve the embedded-text-first path. OCR remains the fallback unless explicitly forced.

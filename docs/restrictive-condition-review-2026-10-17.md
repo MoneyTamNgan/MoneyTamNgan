@@ -1,5 +1,7 @@
 # Restrictive-condition review
 
+Historical report. Traces to: FR-3.2.1, FR-3.2.2, FR-3.2.3 ([#38](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/38), [#70](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/70)). See [traceability.md](traceability.md).
+
 Implemented on `develop-api_database`; prompt version `tor-thai-risk-fiscal-v7`.
 
 ## Behavior

@@ -156,7 +156,7 @@ describe("TOR API responses match docs/api/openapi.yaml", () => {
         expect(update({ past_projects: [{ name: "System", client: "Agency", value: -1, year: 2569 }] })).toBe(false);
     });
 
-    it("BidPrep draft and checklist responses match the FR-4.7 schemas", () => {
+    it("BidPrep draft and checklist responses match the BidPrep FR-4.7 schemas", () => {
         const notices = {
             aiDraft: "This is an AI draft. Check every statement and its source before submitting.",
             noEgpSubmission: "MoneyTamNgan does not submit a bid to e-GP. The seller must review this draft and submit it with their own digital signature.",
@@ -199,7 +199,7 @@ describe("TOR API responses match docs/api/openapi.yaml", () => {
         });
     });
 
-    it("a sourced proposal draft and its queued job match the FR-4.3 schemas", () => {
+    it("a sourced proposal draft and its queued job match the BidPrep FR-4.3 schemas", () => {
         const draft = groundProposalDraft({
             company_overview: [],
             project_understanding: [{ text: "เข้าใจขอบเขตจากเอกสาร", sources: [{ kind: "tor_page", page: 1 }] }],

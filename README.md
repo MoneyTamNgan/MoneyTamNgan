@@ -112,17 +112,27 @@ Live local checks verified five HTTP security headers, per-request CSP nonces, e
 
 **Known gaps:** copied-JWT reuse after logout; inconsistent raw error exposure and auth-event logging; legacy input/regex and URL-validation weaknesses; missing password change/common-password screening; and unconfirmed old-key revocation. Full findings, remediation priorities and the final submission checklist are in the [audit report](docs/security-assignment-audit-2026-11-19.md).
 
-## Project documents
+## Documentation
 
-- [Security presentation](docs/presentation/moneytamngan-security-en-20slides.pptx): 20 English slides with speaker notes, ASVS/STRIDE mappings, test evidence and remaining gaps.
+Requirement ids from the main SRS stay `FR-1.x` … `FR-4.2.x` and `NFR-1` … `NFR-6`. The Bid Preparation SRS reuses `FR-4.1` … `FR-4.7` for a different epic, so those ids are written **BidPrep FR-4.x** in this repository. The rule is in [docs/traceability.md](docs/traceability.md#requirement-id-convention).
 
-- [MoneyTamNgan_SRS](https://docs.google.com/document/d/1_o6RmB_G54MWgXHGiePvBzy-vLkhECAzDnhtU15rz0A/edit?usp=sharing): official SRS and use case diagram (TOR aggregation, matching, analytics).
-- [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing): short SRS for the Bid Preparation Assistant (epic #135), waiting for customer confirmation (#143).
-- [MoneyTamNgan Testcase doc](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?usp=sharing): automated tests mapped to modules and source files.
-- [Sprint api planing](https://docs.google.com/spreadsheets/d/1aXUlWRg__PmH6LtbzPxBnOCS7z7v9pk-xxEpwySVCU0/edit?usp=sharing): sprint API plan (ticket, endpoint, expected response, status).
-- [MoneyTamNgan Secure Test](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?usp=sharing): STRIDE threat catalog and ASVS Level 1 traceability, with the status of each mitigation. Open items are tracked as `[Security]` cards (#105, #106, #189 to #194).
-- [TOR Discovery, Extraction, and Display](docs/tor-flow.md): sequence diagram of the pipeline.
-- [TOR pull pipeline](docs/pipeline.md): stage-by-stage flowchart with statuses and code locations.
+The in-repo index is [docs/README.md](docs/README.md).
+
+| Document | What it is |
+| --- | --- |
+| [MoneyTamNgan SRS](https://docs.google.com/document/d/1_o6RmB_G54MWgXHGiePvBzy-vLkhECAzDnhtU15rz0A/edit) | Main SRS: TOR aggregation, matching and public analytics (FR-1.1.1 … FR-4.2.2, NFR-1 … NFR-6) |
+| [Bid Prep Ad Hoc SRS](https://docs.google.com/document/d/1rIqJhvAdZuRWVMVB5JdqmpVUwuwbRRzyAZyfrpj0PH4/edit) (Thai) and [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit) (English) | Bid Preparation SRS (epic #135). English copy is waiting for customer confirmation (#143) |
+| [Design document](docs/design/README.md) | Index of the design that the code implements: architecture, ER diagram, patterns, pipeline, sequence diagram and API |
+| [Traceability matrix](docs/traceability.md) | FR to GitHub card, pull request, test and evidence file, including remaining gaps |
+| [ER diagram](docs/audit/02-data-model-er.md) | Data model, classification and unique indexes |
+| [Sequence diagram](docs/tor-flow.md) and [source](docs/diagrams/tor-discovery-extraction-display.mmd) | Discovery, extraction and display |
+| [Pipeline flowchart](docs/pipeline.md) | Stage-by-stage TOR pull, with statuses and code locations |
+| [UI test cases](docs/testing/test-sheet.md) ([csv](docs/testing/test-sheet.csv), [plan](docs/testing/test-plan.md), [evidence index](docs/testing/evidence-index.md)) | 22 Nov browser run, one video and screenshot per step, with an FR column |
+| [MoneyTamNgan Testcase doc](https://docs.google.com/spreadsheets/d/1DAK7xXw7uJ3rpTrQNPMUjbzi6WOAh-0dQBn6BTv8dQo/edit?usp=sharing) and [module map](https://docs.google.com/spreadsheets/d/1R6gXlBh75GxtKXlraxE6N0eJU5URTa0pgbbUvg4j3GE/edit?usp=sharing) | Automated-test spreadsheets. The second id is the one recorded in [docs/reference.md](docs/reference.md) |
+| [Sprint API plan](https://docs.google.com/spreadsheets/d/1aXUlWRg__PmH6LtbzPxBnOCS7z7v9pk-xxEpwySVCU0/edit?usp=sharing) and [OpenAPI](docs/api/openapi.yaml) | API plan and the contract the routes implement ([overview](docs/api/README.md)) |
+| [Security test catalog](https://docs.google.com/spreadsheets/d/1zl9NWZmycvNj0Brg7PMB2kdizVcQq-ihKPNbVODycvY/edit?usp=sharing) and [docs/security/](docs/security/README.md) | STRIDE and ASVS catalog, threat model, authentication, RBAC and BidPrep FR-4.7 |
+| [Technical reference](docs/reference.md) | Pipeline, storage, Vertex, AI provider fallback ([agy bridge](docs/agy-bridge.md)), Thai OCR, CI |
+| [Security presentation](docs/presentation/moneytamngan-security-en-20slides.pptx) | 20 English slides with speaker notes, ASVS/STRIDE mappings and remaining gaps |
 
 ## How a software TOR flows through the system
 
@@ -212,17 +222,7 @@ Start, stop and rollback on a demo machine: [docs/local-deployment.md](docs/loca
 | Embeddings for semantic search (needs Vertex) | `docker compose run --rm worker npm run embed -- --limit=50` |
 | API smoke test (stack must be up) | `python3 tests/e2e/smoke-api.py` (uses only the Python standard library) |
 
-## Documentation
-
-- [docs/reference.md](docs/reference.md): the full guide (pipeline, ingestion schedule, document storage, Vertex, Thai OCR, scraper commands, CI/CD)
-- [docs/api/openapi.yaml](docs/api/openapi.yaml): API contract
-- [docs/security/](docs/security/README.md): SAST/DAST, threat model, ASVS checklist, BidPrep security
-- [docs/email-password-auth.md](docs/email-password-auth.md): email and username login, migration and rollback
-- [docs/vector-search.md](docs/vector-search.md): embeddings and the Atlas Vector Search index
-- [docs/admin-pipeline-control.md](docs/admin-pipeline-control.md): admin pipeline controls
-- [docs/company-profile.md](docs/company-profile.md): company profile for bids
-- [docs/bid-prep-decisions.md](docs/bid-prep-decisions.md): team decisions on the open SRS questions for the Bid Preparation Assistant
-- [tests/e2e/](tests/e2e/README.md): browser test for username login (Playwright) and its evidence
+Further guides (login, vector search, admin pipeline, company profile, BidPrep decisions, Playwright login) are listed in [docs/README.md](docs/README.md).
 
 ## Branches and CI
 

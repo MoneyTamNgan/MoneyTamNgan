@@ -1,5 +1,7 @@
 # Fiscal budget year extraction
 
+Traces to: FR-1.1.2, FR-4.1.1. See [traceability.md](traceability.md).
+
 Unsupported LLM fiscal-year citations are rejected individually and recorded in `fiscal_budget.warnings`; they do not block otherwise valid summaries. Any such warning marks the summary for review. Rejected years are never treated as fiscal facts.
 
 The existing PDF pipeline keeps raw embedded/OCR text in `documentpages.text`,

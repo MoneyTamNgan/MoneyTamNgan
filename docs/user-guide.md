@@ -1,5 +1,7 @@
 # User guide
 
+The screens below follow FR-4.1.2 and FR-4.2.1 (search), FR-2.2.1 (profile), FR-2.3.2 (Match Score on a signed-in TOR) and BidPrep FR-4.1 through BidPrep FR-4.4.1. See [traceability.md](traceability.md).
+
 ## Find a TOR
 Open the home page. Search by keyword or use the filters. Click a TOR to see its detail and the Match Score against your profile.
 

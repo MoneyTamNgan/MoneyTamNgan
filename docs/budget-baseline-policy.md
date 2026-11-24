@@ -1,5 +1,7 @@
 # Budget baseline policy
 
+Traces to: FR-3.1.1, FR-3.1.2, FR-3.1.3 ([#37](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/37), [#97](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/97)). The baseline in code is the historical category median, which is the behaviour this page describes. See [traceability.md](traceability.md).
+
 The existing historical median policy now starts at three distinct valid samples, rather than five. Category means the project's current binary `is_software` classification (`software` or `non_software`); no technology/subcategory taxonomy is inferred. If a narrower business taxonomy is required, define it before comparing those categories.
 
 ## Calculation

@@ -1,6 +1,8 @@
 # STRIDE threat model
 
-Issue #103 asked for this file. It was not on `develop` when FR-4.7 started, so TH-1 to TH-10 record the controls already in the tree, and TH-11 onward are the BidPrep threats. Evidence is a path in this repo, not a claim that a scanner was re-run for the older rows.
+TH-11 onward trace to BidPrep FR-4.7. TH-1 to TH-10 trace to ASVS, not to a main-SRS functional requirement, except where a row is also NFR-4. Convention: [traceability.md](../traceability.md#requirement-id-convention).
+
+Issue #103 asked for this file. It was not on `develop` when BidPrep FR-4.7 started, so TH-1 to TH-10 record the controls already in the tree, and TH-11 onward are the BidPrep threats. Evidence is a path in this repo, not a claim that a scanner was re-run for the older rows.
 
 | Id | STRIDE | Threat | Mitigation | Status | Evidence |
 |---|---|---|---|---|---|

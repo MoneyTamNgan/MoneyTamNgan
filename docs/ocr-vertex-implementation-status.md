@@ -1,5 +1,7 @@
 # MoneyTamNgan: Thai OCR and Vertex AI implementation handoff
 
+Historical snapshot from the 7 September 2026 handoff. Superseded for current OCR and AI behaviour by [reference.md](reference.md) and [pipeline.md](pipeline.md). Traces to: FR-2.1.1.
+
 Status snapshot: 7 September 2026. Scope: current local code, prior implementation tests, and saved extraction artifacts.
 
 ## 1. Executive status

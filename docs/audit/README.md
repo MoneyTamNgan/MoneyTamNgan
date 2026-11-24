@@ -1,5 +1,7 @@
 # Audit pack
 
+SRS mapping for this pack is in the [design document](../design/README.md) and [traceability.md](../traceability.md).
+
 Everything an auditor usually asks for, in one place. Written 22 Nov 2026 for `v1.0.0`. It describes what exists; weaknesses are listed, not hidden.
 
 | # | Document | Answers |

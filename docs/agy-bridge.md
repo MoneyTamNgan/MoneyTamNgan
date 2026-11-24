@@ -1,5 +1,7 @@
 # Using `agy` as the AI for the demo (bridge)
 
+Traces to: FR-2.1.2 and BidPrep FR-4.3. See [traceability.md](traceability.md).
+
 The app calls a local model through the Ollama protocol (`AI_PROVIDER=ollama`). A small bridge, `tools/agy-bridge/server.py` (Python 3, standard library only), speaks that protocol and answers by running the `agy` CLI (Gemini) on the machine where `agy` is installed. Run it on the demo machine itself, or on another machine and point `OLLAMA_BASE_URL` at it. No change to the app is needed.
 
 ```

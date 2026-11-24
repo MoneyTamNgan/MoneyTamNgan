@@ -1,5 +1,7 @@
 # Handover (#132)
 
+Requirement links: [traceability.md](traceability.md). SRS and design index: [README.md](../README.md#documentation).
+
 No secret value appears in this file. Real values live only in an uncommitted `.env` on each machine.
 
 ## Owner

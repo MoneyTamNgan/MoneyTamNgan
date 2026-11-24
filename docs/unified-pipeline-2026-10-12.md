@@ -1,5 +1,7 @@
 # Unified announcement and TOR pipeline
 
+Historical test report. Traces to: FR-1.1.1, FR-2.1.2. See [traceability.md](traceability.md).
+
 Implemented on `develop-api_database`, 12 October 2026. `develop` was not edited.
 
 ## Change

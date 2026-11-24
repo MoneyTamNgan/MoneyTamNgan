@@ -1,5 +1,7 @@
 # Pipeline consistency fixes and test results
 
+Historical test report. Traces to: FR-1.1.1, FR-1.1.2, FR-2.1.1. See [traceability.md](traceability.md).
+
 Branch: `develop-api_database`. Implementation/testing did not merge branches, delete production records, or backfill production data. Changes are subsequently being committed in focused chunks and pushed at the user's request; `develop` is not being merged or edited.
 
 ## What changed
