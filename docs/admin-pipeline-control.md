@@ -1,5 +1,7 @@
 # Admin pipeline control — issue #78
 
+Traces to: FR-1.1.1 ([#78](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/78)). See [traceability.md](traceability.md).
+
 The canonical endpoint is **POST /api/admin/pipeline/trigger**. There is no `/api/admin/ingestion/trigger` alias. As confirmed by the owner, this card keeps the existing full runner: RSS/HTTP discovery, TOR/announcement acquisition with the existing Puppeteer fallback, OCR/Vertex, matching and notifications. It does not migrate the browser engine to Playwright.
 
 ## Behaviour

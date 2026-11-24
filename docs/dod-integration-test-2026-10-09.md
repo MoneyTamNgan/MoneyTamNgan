@@ -1,5 +1,7 @@
 # TOR fiscal-year and announcement schedule integration tests
 
+Historical test report. Traces to: FR-1.1.2, FR-4.1.1. See [traceability.md](traceability.md).
+
 Historical report: the API/worker integration gap described below was addressed
 on 12 October. See [the unified pipeline report](unified-pipeline-2026-10-12.md).
 

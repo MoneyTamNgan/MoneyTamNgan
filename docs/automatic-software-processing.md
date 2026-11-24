@@ -1,5 +1,7 @@
 # Automatic processing after software verification
 
+Traces to: FR-1.2.1, FR-1.2.2. See [traceability.md](traceability.md).
+
 Confirmed software is scheduled through the existing unique `process_project` queue. The HTTP request never performs OCR, downloads or Vertex analysis inline.
 
 Already supported: API ingestion (unless `enqueueProcessing:false`), RSS ingestion (unless `--no-enqueue`), verified discovery-candidate promotion, and idle watch-worker recovery.

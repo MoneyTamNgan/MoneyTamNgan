@@ -1,5 +1,7 @@
 # HTTP security, CORS and permission scopes
 
+Traces to: FR-4.2.1, FR-4.2.2 where the report covers public pages and rate limits. Header and CORS controls otherwise trace to ASVS. See [traceability.md](traceability.md).
+
 Date: 2026-11-03. Branch: `develop-api_database`.
 
 ## Result

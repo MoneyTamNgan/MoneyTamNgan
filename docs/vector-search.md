@@ -1,5 +1,7 @@
 # TOR embeddings and Atlas Vector Search (FR-2.3.1)
 
+Traces to: FR-2.3.1 ([#16](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/16), [#17](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/17)). See [traceability.md](traceability.md).
+
 ## What is stored
 
 For each project with an AI summary (`latest_summary_id`), `projects.vectorEmbedding` holds a

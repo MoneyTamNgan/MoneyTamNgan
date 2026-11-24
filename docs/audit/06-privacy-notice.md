@@ -1,5 +1,7 @@
 # Privacy notice (DRAFT for legal review)
 
+Draft privacy notice. Company-data deletion traces to BidPrep FR-4.7.2. See [traceability.md](../traceability.md).
+
 > **Status: draft.** It describes what the system does today, taken from the code and documents. It is not legal advice. Before publishing, a person responsible for the project must fill the **[fill in]** fields and have the text reviewed against the Personal Data Protection Act B.E. 2562 (PDPA). Publish it in the application (footer link and at registration) in Thai and English.
 
 ---

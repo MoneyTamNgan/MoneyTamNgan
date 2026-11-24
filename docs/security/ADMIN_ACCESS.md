@@ -1,5 +1,7 @@
 # Admin access
 
+Admin access supports FR-1.1.1 and FR-1.2.2. It is not a separate SRS functional requirement. See [traceability.md](../traceability.md).
+
 Who can be an administrator, how the role is granted and revoked, and what to keep an eye on.
 
 ## What an admin can do

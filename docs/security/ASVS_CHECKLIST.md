@@ -1,5 +1,7 @@
 # ASVS notes for authentication and BidPrep
 
+These rows trace to ASVS. Bid Preparation privacy items are BidPrep FR-4.7. Convention: [traceability.md](../traceability.md#requirement-id-convention).
+
 Issue #103 named an ASVS 5.0.0 checklist that was not committed. The rows below are the ones issue #142 asks to bring up to date: V2, V6.2, V7, V8 and V14. "DONE" means the control is implemented and a test or document in this repo shows it. It is not a claim that every Level 1 item in the ASVS catalogue was re-scored.
 
 ## V6.2 Authentication verifiers (correction)

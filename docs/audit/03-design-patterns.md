@@ -1,5 +1,7 @@
 # Design patterns used
 
+Traces to: FR-1.1.3, FR-2.1.1, FR-4.2.2, BidPrep FR-4.3.2, BidPrep FR-4.4.1, BidPrep FR-4.7.1. This file is part of the [design document](../design/README.md).
+
 Each pattern lists where it lives, why it was chosen and how it can be checked. Only patterns that exist in the code are listed.
 
 | # | Pattern | Where | Why | How to verify |
@@ -37,4 +39,4 @@ Each pattern lists where it lives, why it was chosen and how it can be checked. 
 | MongoDB as queue and lock | One system to run | Polling; throughput bounded by one database |
 | In-memory rate limiter (`createRateLimiter`) | Simple, no extra service | Per-process: limits reset on restart and do not span several `app` instances |
 | JWT session in a cookie (24 h, HttpOnly, SameSite=Lax) | Stateless reads | Logout revokes the token and bumps `session_version` (ASVS V7.4.1 DONE in [ASVS_CHECKLIST](../security/ASVS_CHECKLIST.md)); the README's older known-gap line about copied tokens after logout should be reconciled with that before the audit |
-| Local small model for drafts on the demo machine | Works without cloud billing | Slow (76 to 92 s), lower quality; the AI draft is only a draft the user must review |
+| AI provider: Vertex primary, Ollama-protocol fallback (`AI_PROVIDER`, `AI_FALLBACK_PROVIDER`) | One request shape for extraction and drafts. The demo points the Ollama adapter at the agy bridge when Vertex has no billing | Embeddings do not fall back. The bridge has no authentication and is for the demo. See [agy-bridge.md](../agy-bridge.md) |

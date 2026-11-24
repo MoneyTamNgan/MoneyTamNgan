@@ -1,5 +1,7 @@
 # Architecture, data flow and trust boundaries
 
+Traces to: FR-1.1.1, FR-1.1.2, FR-2.1.1, FR-2.1.2, FR-2.3.3, NFR-3, NFR-5. This file is part of the [design document](../design/README.md).
+
 ## 1. System context
 
 ```mermaid

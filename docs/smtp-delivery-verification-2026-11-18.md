@@ -1,5 +1,7 @@
 # SMTP dispatcher verification — 18 November 2026
 
+Traces to: FR-2.3.3 ([#39](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/39), [#165](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/165)). See [traceability.md](traceability.md).
+
 Related: [dispatcher #39](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/39), [provider setup #165](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/165), [draft PR #164](https://github.com/MoneyTamNgan/MoneyTamNgan/pull/164).
 
 ## What changed

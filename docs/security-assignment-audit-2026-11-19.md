@@ -1,5 +1,7 @@
 # MoneyTamNgan — Software Development Security assignment audit
 
+Historical assignment audit. Product requirement links are in [traceability.md](traceability.md). BidPrep privacy is BidPrep FR-4.7.
+
 **Course:** 01219325 Software Development Security  
 **Audit date:** 19 November 2026, Asia/Bangkok  
 **Code baseline:** `b053761a9222f4300f4519ead308ccd67514b191`, latest fetched `develop` and `main`. PR #164 is merged.  

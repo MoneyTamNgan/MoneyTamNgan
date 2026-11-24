@@ -1,5 +1,7 @@
 # Develop integration validation — 23 October 2026
 
+Historical process report. It does not change a requirement. Current links are in [traceability.md](traceability.md).
+
 Direction: `origin/develop` at `ca7b476` into `develop-api_database` at `1dea65f`. No update to `develop` is part of this operation.
 
 ## Resolution choices

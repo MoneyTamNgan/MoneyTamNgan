@@ -37,11 +37,11 @@ tags:
   - name: Anomaly Detection
     description: "[Current] Budget and qualification anomaly flags on a TOR (FR-3.1, FR-3.2)."
   - name: Public Analytics
-    description: "[Current] Public historical search, dashboard aggregates, and export for the Analytics page."
+    description: "[Current] Public historical search, dashboard aggregates, and export for the Analytics page (main SRS FR-4.1, FR-4.2)."
   - name: Bid preparation
-    description: "[Current] Company-data deletion, owned proposal drafts, checklist access and DOCX export. The system does not submit a bid to e-GP (FR-4.7)."
+    description: "[Current] Company-data deletion, owned proposal drafts, checklist access and DOCX export. The system does not submit a bid to e-GP (BidPrep FR-4.7)."
   - name: Bid Preparation
-    description: "[Current] Sourced technical proposal drafts for a processed TOR (FR-4.3). Generation is queued and the system does not submit a bid."
+    description: "[Current] Sourced technical proposal drafts for a processed TOR (BidPrep FR-4.3). Generation is queued and the system does not submit a bid."
   - name: Pipeline
     description: "[Current] Ingestion, scraping, processing queue, and diagnostic operational endpoints."
   - name: Notifications
@@ -1676,7 +1676,7 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
 
   # ---------------------------------------------------------------------------
-  # Public Analytics (FR-4.1, FR-4.2)
+  # Public Analytics (main SRS FR-4.1, FR-4.2)
   # ---------------------------------------------------------------------------
   /analytics/overview:
     get:
@@ -1840,7 +1840,7 @@ paths:
       tags: [Public Analytics]
       operationId: searchAnalytics
       description: >
-        Public and rate-limited (FR-4.2.2, see 429). Aggregates cover every matching
+        Public and rate-limited (main SRS FR-4.2.2, see 429). Aggregates cover every matching
         project. Use category to filter by classification and pageSize to set the page size.
       parameters:
         - name: dateFrom
@@ -1983,7 +1983,7 @@ paths:
               schema: { $ref: '#/components/schemas/Error' }
 
   # ---------------------------------------------------------------------------
-  # Current - Bid preparation (FR-4.7). Live Next.js routes are /api + path
+  # Current - Bid preparation (BidPrep FR-4.7). Live Next.js routes are /api + path
   # on port 3000. No operation submits a bid to e-GP.
   # ---------------------------------------------------------------------------
   /bid-prep/data:
@@ -3984,7 +3984,7 @@ components:
 
     TorSummary:
       type: object
-      description: "[Planned, FR-2.1]"
+      description: "[Current, FR-2.1.2, FR-2.1.3] Stored extraction summary. `lib/services/project-mapper.ts` maps `extracted_data.summary` to `executiveSummary`."
       properties:
         torId:
           type: string
@@ -4124,11 +4124,11 @@ components:
 
     BudgetAnomaly:
       type: object
-      description: "[Planned, FR-3.1]"
+      description: "[Current, FR-3.1] Implemented in `lib/budget-anomaly.js`. Baseline is the historical category median when at least three earlier same-category budgets exist; otherwise the TOR budget. The main SRS text says category average."
       properties:
         baselinePrice:
           type: number
-          description: Category Average(Scope Category), or the TOR's own budget if no historical category data exists yet.
+          description: Historical category median when at least three earlier same-category budgets exist, otherwise the TOR's own budget (main SRS FR-3.1.1 text says category average). Implemented in lib/budget-anomaly.js.
         deviationMultiplier:
           type: number
           description: TOR Budget / Baseline Price.
@@ -4137,7 +4137,7 @@ components:
 
     FlaggedClause:
       type: object
-      description: "[Planned, FR-3.2]"
+      description: "[Current, FR-3.2] Implemented by `lib/flagged-clauses.js` and the restrictive-review path. Reasoning is stored with the clause (FR-3.2.3)."
       required: [clauseText, type, reasoning]
       properties:
         clauseText:
@@ -4164,7 +4164,7 @@ components:
 
     AnalyticsAggregates:
       type: object
-      description: "[FR-4.1.3] Spend metrics over every matching project."
+      description: "[main SRS FR-4.1.3] Spend metrics over every matching project."
       required: [projectCount, totalSpend, meanBudget, medianDuration, softwareCount, summarizedCount, anomalyCount, byAgency, byStatus, topTechnologies]
       properties:
         projectCount: { type: integer }

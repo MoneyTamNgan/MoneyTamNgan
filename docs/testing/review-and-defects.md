@@ -1,5 +1,7 @@
 # Independent review of the tests, and defects found
 
+Defects are tagged with the SRS id they affect. Convention: [traceability.md](../traceability.md#requirement-id-convention).
+
 Results: [test-sheet.md](test-sheet.md) (first run 81 of 85 passed; after the fixes, full re-run 86 of 86, see section 4 and [evidence-index.md](evidence-index.md)). Plan: [test-plan.md](test-plan.md).
 
 ## 1. Independent review by `agy` (three rounds)
@@ -23,11 +25,11 @@ Two steps in F06 and F08 were corrected once more after round 3 had been read (F
 | F05 | The project-summary expand toggle and the qualification-value card of a signed-in user have no check that the numbers are right (the TORs tested have no summary toggle) |
 
 ## 2. Defects found
-| ID | Flow / step | What happens | Evidence | Severity | Analysis |
-|---|---|---|---|---|---|
-| D1 | F07 03 and 04 | Generating an AI draft for TOR 69109232352 does not finish: the job fails with `VERTEX_TIMEOUT`; the page shows only "การสร้างร่างไม่สำเร็จ โปรดลองอีกครั้ง" followed by a sign-in link although the user is signed in | [video](../evidence/testing-2026-11-22/F07-bidprep-ai/F07-bidprep-ai.webm), worker log | High for the demo | The local model `qwen2.5:3b` takes more than the generation limit (60 s default, capped at 90 s in `lib/proposal/generate.js`). The UI replaces the specific API message with a generic one, so the user is not told it was a time-out |
-| D2 | F07b 03 and 04 | For a TOR with a large scope (47 items) the job completes but saving fails: "Generated draft exceeds editor limits. sections must be a list of at most 40 items." No draft is produced | [video](../evidence/testing-2026-11-22/F07b-bidprep-ai-large-tor/F07b-bidprep-ai-large-tor.webm) | High | `proposalToSections` creates one section per scope item plus about 11 others (`lib/bid-prep/draft-content.js`), while `DRAFT_LIMITS.sections` is 40 (same file, line 3). Any TOR with 30 or more scope items always fails. It was missed earlier because the API smoke test only checked that the job status was "completed" |
-| D3 | F01 (observed in screenshots) | `/projects` is wider than the screen at 360 px | [screenshots](../evidence/screenshots-2026-11-22/) | Low | Layout only |
+| ID | Flow / step | FR | What happens | Evidence | Severity | Analysis |
+|---|---|---|---|---|---|---|
+| D1 | F07 03 and 04 | BidPrep FR-4.3.1 | Generating an AI draft for TOR 69109232352 does not finish: the job fails with `VERTEX_TIMEOUT`; the page shows only "การสร้างร่างไม่สำเร็จ โปรดลองอีกครั้ง" followed by a sign-in link although the user is signed in | [video](../evidence/testing-2026-11-22/F07-bidprep-ai/F07-bidprep-ai.webm), worker log | High for the demo | The local model `qwen2.5:3b` takes more than the generation limit (60 s default, capped at 90 s in `lib/proposal/generate.js`). The UI replaces the specific API message with a generic one, so the user is not told it was a time-out |
+| D2 | F07b 03 and 04 | BidPrep FR-4.3.1 | For a TOR with a large scope (47 items) the job completes but saving fails: "Generated draft exceeds editor limits. sections must be a list of at most 40 items." No draft is produced | [video](../evidence/testing-2026-11-22/F07b-bidprep-ai-large-tor/F07b-bidprep-ai-large-tor.webm) | High | `proposalToSections` creates one section per scope item plus about 11 others (`lib/bid-prep/draft-content.js`), while `DRAFT_LIMITS.sections` is 40 (same file, line 3). Any TOR with 30 or more scope items always fails. It was missed earlier because the API smoke test only checked that the job status was "completed" |
+| D3 | F01 (observed in screenshots) | FR-4.2.1; NFR-6 | `/projects` is wider than the screen at 360 px | [screenshots](../evidence/screenshots-2026-11-22/) | Low | Layout only |
 
 Combined effect of D1 and D2: on the demo machine, no AI draft can be produced end to end through the website with the tested TORs. The manual draft, checklist and DOCX export work (F06). Product code was not changed in this run.
 
@@ -42,11 +44,11 @@ The machine was set to `AI_PROVIDER=vertex`, `AI_FALLBACK_PROVIDER=ollama`, `OLL
 ## 4. Full re-run after the fixes (22 Nov 2026, later the same day)
 All 9 flows were run again on the demo machine with the fixes of PR #242, #243 and #245 (files copied to the machine by hand, not yet merged): **86 of 86 steps pass** (F01 got one new step, 14, for the layout at 360 and 768 px). Sheet: [test-sheet.md](test-sheet.md). Every function with its video and screenshot: [evidence-index.md](evidence-index.md). Evidence: [../evidence/testing-2026-11-22-full/](../evidence/testing-2026-11-22-full/). The evidence of the first run (81 of 85, with the defects) stays in [../evidence/testing-2026-11-22/](../evidence/testing-2026-11-22/).
 
-| Defect | Fix | Re-run |
-|---|---|---|
-| D1 AI time-out | PR #242: no time limit on the draft call (`PROPOSAL_DRAFT_TIMEOUT_MS=0`) | F07 03: draft ready after the generation finished, no time-out |
-| D2 more than 40 sections | PR #243: limit 40 to 100 | F07b 03: draft for the 47-item TOR saved |
-| D4 (new) a long scope item breaks the 200-character heading limit | PR #243: heading cut at 200 characters, full text kept in the body | seen in an intermediate run ("heading must be at most 200 characters"), gone in the final run |
-| D3 `/projects` too wide at 360 px | PR #245: the card badges wrap | F01 14: no page scrolls sideways at 360 or 768 px (`/projects` was 437 px wide at 360 px before the fix, measured with Playwright, and 360 after). The step was not run against the unfixed code, so the 437 px figure is the proof that it detects the defect |
+| Defect | FR | Fix | Re-run |
+|---|---|---|---|
+| D1 AI time-out | BidPrep FR-4.3.1 | PR #242: no time limit on the draft call (`PROPOSAL_DRAFT_TIMEOUT_MS=0`) | F07 03: draft ready after the generation finished, no time-out |
+| D2 more than 40 sections | BidPrep FR-4.3.1 | PR #243: limit 40 to 100 | F07b 03: draft for the 47-item TOR saved |
+| D4 (new) a long scope item breaks the 200-character heading limit | BidPrep FR-4.3.1 | PR #243: heading cut at 200 characters, full text kept in the body | seen in an intermediate run ("heading must be at most 200 characters"), gone in the final run |
+| D3 `/projects` too wide at 360 px | FR-4.2.1; NFR-6 | PR #245: the card badges wrap | F01 14: no page scrolls sideways at 360 or 768 px (`/projects` was 437 px wide at 360 px before the fix, measured with Playwright, and 360 after). The step was not run against the unfixed code, so the 437 px figure is the proof that it detects the defect |
 
 **Caveat: the AI in F07 and F07b was not the local model.** The final full run (all 9 flows, 86 of 86) ran with `AI_PROVIDER=vertex`, `AI_FALLBACK_PROVIDER=agy` (PR #249): Vertex refused and each draft fell back to the bridge installed on the demo machine itself (systemd user service `agy-bridge`, `agy` at `/snap/bin/agy`); the intermediate runs used the same bridge on the tester's laptop. It answers Ollama-style requests by calling the `agy` CLI (Gemini 3.8 Flash). The bridge is now in the repo (PR #246, [../agy-bridge.md](../agy-bridge.md)) and the machine's `.env` was changed for it (`OLLAMA_BASE_URL`; backup `~/.env.bak-before-agy`). The worker log still prints `model: qwen2.5:3b` because that is only the configured label. The quality of the draft text was not assessed, only that a draft is produced, saved and opened. The result with `qwen2.5:3b` itself and no time limit has not been measured.

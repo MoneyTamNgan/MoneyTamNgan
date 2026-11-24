@@ -1,5 +1,7 @@
 # Security audit: SAST (Semgrep) and DAST (OWASP ZAP baseline)
 
+BidPrep ids in this catalog use the `BidPrep FR-4.x` prefix. Other rows trace to ASVS, and public rate limits also trace to NFR-4. Convention: [traceability.md](../traceability.md#requirement-id-convention).
+
 BidPrep FR-4.7 (issue #142) is recorded in [bid-prep-fr-4.7.md](bid-prep-fr-4.7.md), [THREAT_MODEL.md](THREAT_MODEL.md) and [ASVS_CHECKLIST.md](ASVS_CHECKLIST.md). TH-11 onward cover prompt injection, BOLA, Vertex cost, company-data leakage and AI-draft accuracy.
 
 ## API security specifications

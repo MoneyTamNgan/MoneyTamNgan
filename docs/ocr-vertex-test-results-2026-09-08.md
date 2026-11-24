@@ -1,5 +1,7 @@
 # OCR and Vertex verification — 8 September 2026
 
+Historical test report. Traces to: FR-2.1.1. See [traceability.md](traceability.md).
+
 ## Outcome
 
 The application builds, all 38 automated tests pass, and live Vertex calls succeed on real Thai procurement text. After the user added the client IP to Atlas, the real worker, MongoDB persistence, API status, and summary-reuse checks also passed. This is not a complete production acceptance pass: forced OCR introduced a material numerical error that the existing confidence checks did not catch.

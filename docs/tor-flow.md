@@ -1,5 +1,7 @@
 # How a software TOR flows through the system
 
+Traces to: FR-1.1.1, FR-1.1.2, FR-1.3.1, FR-1.3.2, FR-1.3.3, FR-2.1.1, FR-2.1.3, FR-4.2.1. See [traceability.md](traceability.md).
+
 Discovery, document download, text and OCR extraction, Vertex AI summary and embedding, and the dashboard. The same diagram is kept as source in [tor-discovery-extraction-display.mmd](diagrams/tor-discovery-extraction-display.mmd).
 
 ```mermaid

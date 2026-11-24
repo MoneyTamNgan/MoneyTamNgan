@@ -1,5 +1,7 @@
 # API Contract
 
+SRS mapping: [traceability.md](../traceability.md). Design index: [design/README.md](../design/README.md). Main SRS: [MoneyTamNgan_SRS](https://docs.google.com/document/d/1_o6RmB_G54MWgXHGiePvBzy-vLkhECAzDnhtU15rz0A/edit).
+
 [openapi.yaml](openapi.yaml) describes the implemented Next.js route handlers under
 `app/api`. The local base URL is `http://localhost:3000/api`. Paths in the spec
 are relative to that base URL, so `/tors` resolves to `/api/tors`.

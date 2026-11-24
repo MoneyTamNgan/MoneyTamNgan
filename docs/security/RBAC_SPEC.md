@@ -1,5 +1,7 @@
 # RBAC access specification
 
+Traces to ASVS V8 and to BidPrep FR-4.7.1 for owner-only BidPrep routes. See [traceability.md](../traceability.md).
+
 Implementation baseline: `origin/develop` as checked on 2026-11-16. Evidence for [#192](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/192), ASVS V8.1.1. This describes implemented routes, not the planned endpoints in OpenAPI. See [input validation and OpenAPI gaps](../API_VALIDATION.md).
 
 ## Enforcement and identity

@@ -1,5 +1,7 @@
 # Actionable card delivery, 16 November 2026
 
+Historical snapshot of card delivery. Current requirement links are in [traceability.md](traceability.md).
+
 Scope: implement the available work on PhruekCh's unfinished cards, while leaving #165 SMTP/provider setup manual. This report separates implementation from acceptance and never substitutes an automated self-review for a teammate's approval.
 
 | Card | Delivered / existing evidence | Remaining gate |

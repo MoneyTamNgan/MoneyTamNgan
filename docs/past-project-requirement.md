@@ -1,5 +1,7 @@
 # Past-project minimum from extracted qualifications
 
+Traces to: FR-2.1.2. See [traceability.md](traceability.md).
+
 ## Run it
 
 New summaries start with `extraction.past_project_requirement` set to `pending_extraction`, with `minimum_baht` and `operator` set to `null`. The extractor replaces the pending status when it runs. Results with no verified amount keep both value fields set to `null`.

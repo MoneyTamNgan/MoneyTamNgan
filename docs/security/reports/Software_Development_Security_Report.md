@@ -1,5 +1,7 @@
 # MoneyTamNgan: Software Development Security Report
 
+Historical security report. Requirement mapping for the product is in [traceability.md](../../traceability.md).
+
 Course: 01219325 Software Development Security  
 Evidence baseline: 19 November 2026, Asia/Bangkok  
 Document revised: 21 November 2026 (Post-remediation verification)  

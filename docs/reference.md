@@ -1,5 +1,7 @@
 # MoneyTamNgan: full reference
 
+Design index: [design/README.md](design/README.md). Requirement matrix: [traceability.md](traceability.md).
+
 ## Project documents
 
 This inventory matches the Google documents as they stand on 12 November 2026
@@ -10,8 +12,8 @@ This inventory matches the Google documents as they stand on 12 November 2026
   and analytics. An addendum dated 12 November 2026 was appended; it does not
   replace the original scope, and BidPrep is not treated as customer-confirmed.
   The short BidPrep SRS is linked below.
-- [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing).
-  Short English SRS for the Bid Preparation Assistant (epic #135). Version 0.1
+- [Bid Prep Ad Hoc SRS](https://docs.google.com/document/d/1rIqJhvAdZuRWVMVB5JdqmpVUwuwbRRzyAZyfrpj0PH4/edit) (Thai) and [SRS adhoc requirement](https://docs.google.com/document/d/1u8PlICl8XWIjGJUca1KImYh5keUNDkgUoAU73ERks8A/edit?usp=sharing) (English).
+  Bid Preparation SRS (epic #135). Its ids are written `BidPrep FR-4.x` in this repository so they are not confused with main SRS FR-4.1.x / FR-4.2.x. Convention: [traceability.md](traceability.md#requirement-id-convention). Version 0.1
   draft, still waiting for customer confirmation (#143). An
   implementation-status section dated 12 November 2026 was appended; it does
   not change the requirements. Issues #136–#142 remain open even where related
@@ -374,6 +376,17 @@ Add `--full` after the project ID to print the complete structured extraction.
 The prompt version is part of the summary identity, so the first run of a new
 prompt creates a historical summary and repeated runs of that version reuse it
 idempotently.
+
+
+## AI provider and fallback
+
+Vertex AI (section above) is the primary provider: `AI_PROVIDER=vertex`.
+
+`lib/vertex/tor-extractor.js` sends a refused Vertex generation once through the Ollama protocol when `AI_FALLBACK_PROVIDER=ollama`. The refusal reasons handled there are missing credentials, an HTTP error, quota, a network failure and a timeout. Embeddings do not fall back (`lib/embedding-config.js`).
+
+`AI_PROVIDER=ollama` calls `lib/ai/ollama.js` directly. The demo sets `OLLAMA_BASE_URL` to the [agy bridge](agy-bridge.md), which speaks that protocol and runs the `agy` CLI. A local Ollama model is the same adapter with a different base URL. The bridge has no authentication and is for demos only.
+
+Traces to: FR-2.1.2 and BidPrep FR-4.3.
 
 ## Thai OCR setup and operation
 

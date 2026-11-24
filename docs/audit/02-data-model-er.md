@@ -1,5 +1,7 @@
 # Data model and ER diagram
 
+Traces to: FR-1.1.2, FR-1.1.3, FR-1.3.1, FR-2.2.1, FR-4.1.1, BidPrep FR-4.1, BidPrep FR-4.3. This file is part of the [design document](../design/README.md).
+
 Source of truth: `models/*.js` (Mongoose, MongoDB 7 / Atlas). MongoDB has no foreign keys, so the relations below are enforced by the application and by unique and partial-unique indexes. "FK" means an `ObjectId ref` or a `project_id` string that points at `Project.project_id`.
 
 ## Entity-relationship diagram

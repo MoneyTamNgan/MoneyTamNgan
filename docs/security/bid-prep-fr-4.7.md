@@ -1,5 +1,7 @@
 # BidPrep FR-4.7 security and privacy
 
+Ids in this file are Bid Preparation SRS ids. `BidPrep FR-4.1` is company details for a bid, not main SRS public analytics. Convention: [traceability.md](../traceability.md#requirement-id-convention).
+
 Issue #142. The live Next.js routes are under `/api/bid-prep` and the existing profile routes. Nothing in this surface submits a bid to e-GP. The seller reviews the draft and submits it with their own digital signature. That sentence is on the profile page, the TOR page, every draft and checklist response, and inside the DOCX export.
 
 Draft generation itself is issue #139. `POST /api/tors/{id}/proposal-draft` queues the job. It takes the shared `consumeBidPrepLimit('draft-create', session.sub)` quota, so queued drafts and stored drafts count against the same hourly cap, and the job builds its Vertex request with `buildProposalRequest` in `lib/proposal/draft.js`.
@@ -29,7 +31,7 @@ Comparison of TOR qualifications stays `manual` here. Issue #137 owns the rules.
 | Account email, username, name | Sign in and show who is logged in | Kept with the account. Not sent to Vertex. |
 | Password hash | Email/username login | Kept with the account. Never logged or returned. |
 | Company name, skills, capital, past-project value, capacity, certifications | Match a TOR and fill a draft | Until the user deletes company data or the account. |
-| Registration number, address, authorized signatory, past projects (FR-4.1, when stored) | The same bid draft | Removed by the same delete, including fields not yet on the schema. |
+| Registration number, address, authorized signatory, past projects (BidPrep FR-4.1, when stored) | The same bid draft | Removed by the same delete, including fields not yet on the schema. |
 | Proposal draft text and sources | The user edits and exports them | Until that draft or all company data is deleted. |
 | Audit record: user id, ISO-8601 time, client address, draft id, project id | Draft created, exported, or data deleted | Operational log only. No draft text, profile or secret. |
 

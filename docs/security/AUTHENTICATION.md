@@ -1,5 +1,7 @@
 # Authentication and anti-automation controls (ASVS V6.1.1, #184)
 
+Traces to: FR-2.2.1 (sign-in) and FR-4.2.2 / NFR-4 (rate limits). Convention: [traceability.md](../traceability.md#requirement-id-convention).
+
 How the application slows down credential stuffing, brute force and other automated abuse. Every number below is read from the code; the file that sets it is named next to it.
 
 ## Sign-in methods

@@ -1,5 +1,7 @@
 # Connectivity and local AI test, 19 Nov 2026 (#129, #139)
 
+Historical test report. Traces to: NFR-5 ([#127](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/127), [#129](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/129)). See [traceability.md](traceability.md).
+
 Run on the competition machine (see [local-deployment.md](local-deployment.md)). No secret appears in this file.
 
 ## MongoDB Atlas (real database)

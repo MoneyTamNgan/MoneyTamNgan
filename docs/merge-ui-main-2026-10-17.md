@@ -1,5 +1,7 @@
 # UI/main merge decisions — 17 October 2026
 
+Historical process report. It does not change a requirement. Current links are in [traceability.md](traceability.md).
+
 Branch: `feat/redesign-tor-cards-and-details-theme`.
 UI head: `df0aec3`; incoming main: `7d943c1`.
 

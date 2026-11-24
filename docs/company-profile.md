@@ -1,5 +1,7 @@
 # Company details for bids — #136
 
+Traces to: FR-2.2.1, FR-2.2.2, FR-2.2.3 and BidPrep FR-4.1 ([#136](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/136)). See [traceability.md](traceability.md).
+
 The authenticated company profile now stores the registration number, address, authorized signatory and up to 50 past projects directly on the existing `users` document. These facts are already consumed by the bid-draft profile allowlist. No new collection or forced migration is required. Old users receive empty strings and an empty history until they save bid details.
 
 ## Field rules

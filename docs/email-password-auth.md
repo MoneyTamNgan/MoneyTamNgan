@@ -1,5 +1,7 @@
 # Email/password registration and login
 
+Traces to: FR-2.2.1 (supports registration; [#107](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/107), [#108](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/108)). See [traceability.md](traceability.md).
+
 Implemented on `feat/email-password-auth`, branched from `develop-api_database`.
 
 ## User flow

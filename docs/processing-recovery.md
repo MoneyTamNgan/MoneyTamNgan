@@ -1,5 +1,7 @@
 # Resumable processing and backlog recovery
 
+Traces to: FR-2.1.1. See [traceability.md](traceability.md).
+
 ## Main pipeline
 
 Government API ingestion → software candidate → queued official verification → verified-open project → unique `process_project` job → announcement schedule → TOR acquisition or existing document → OCR/embedded text → Vertex → normalized summary/history and current project pointers.

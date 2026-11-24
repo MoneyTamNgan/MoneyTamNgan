@@ -1,14 +1,16 @@
 # BidPrep acceptance results (#144)
 
+Every FR id in this file is a Bid Preparation SRS id (`BidPrep FR-4.x`), not main SRS FR-4.1.x / FR-4.2.x. Convention: [traceability.md](traceability.md#requirement-id-convention). Thai SRS: [Bid Prep Ad Hoc SRS](https://docs.google.com/document/d/1rIqJhvAdZuRWVMVB5JdqmpVUwuwbRRzyAZyfrpj0PH4/edit).
+
 Evidence is from the 19 Nov run on the demo machine ([E2E report](e2e-test-2026-11-19.md), 32 of 32 API steps) and the existing reports. "Not verified" means no evidence exists yet; nothing is marked passed without it. Sub-requirement numbers (FR-4.x.y) are not restated here because the SRS is a private Google Doc; rows use the epic's FR groups.
 
 | Requirement | Result | Evidence |
 |---|---|---|
-| FR-4.1 company details (edit, read) | Pass | E2E "Edit company profile", "Read profile"; [company-profile.md](company-profile.md) |
-| FR-4.2 checklist | Pass (1 TOR) | E2E "Checklist (A)": 47 items; guest gets 401 |
-| FR-4.3 sourced draft | Partial | Draft created and AI job completed (76 s). 2 of 3 real TORs timed out at 90 s; the 90 s criterion is **not met** ([connectivity report](connectivity-test-2026-11-19.md)) |
-| FR-4.4.1 DOCX export | Pass (after checklist confirmed) | 22 Nov E2E: 409 until all items pass, then valid zip 64 KB; [sample.docx](evidence/bid-drafts/sample.docx). Microsoft Word check not done |
-| FR-4.7 access control and privacy | Pass | E2E: B gets 404 on A's draft, export, AI job and list; guests 401; user 403 on admin; [bid-prep-fr-4.7.md](security/bid-prep-fr-4.7.md) |
+| BidPrep FR-4.1 company details (edit, read) | Pass | E2E "Edit company profile", "Read profile"; [company-profile.md](company-profile.md) |
+| BidPrep FR-4.2 checklist | Pass (1 TOR) | E2E "Checklist (A)": 47 items; guest gets 401 |
+| BidPrep FR-4.3 sourced draft | Partial | Draft created and AI job completed (76 s). 2 of 3 real TORs timed out at 90 s; the 90 s criterion is **not met** ([connectivity report](connectivity-test-2026-11-19.md)) |
+| BidPrep FR-4.4.1 DOCX export | Pass (after checklist confirmed) | 22 Nov E2E: 409 until all items pass, then valid zip 64 KB; [sample.docx](evidence/bid-drafts/sample.docx). Microsoft Word check not done |
+| BidPrep FR-4.7 access control and privacy | Pass | E2E: B gets 404 on A's draft, export, AI job and list; guests 401; user 403 on admin; [bid-prep-fr-4.7.md](security/bid-prep-fr-4.7.md) |
 | Vertex/AI down: checklist works, draft shows a message | Pass | `VERTEX_UNAVAILABLE` in 20 ms, no hang |
 | 2 accounts, full flow | Pass | E2E steps above |
 | 3 different TORs (clear, ambiguous, incomplete) | Partial | 25 TORs read on 22 Nov: 5 with checklists (all `manual` with an empty profile), 20 return a clean 409 (incomplete data). Clear vs ambiguous not separable ([report](e2e-test-2026-11-22.md)) |

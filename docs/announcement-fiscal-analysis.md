@@ -1,5 +1,7 @@
 # Fiscal-year analysis from announcement PDFs
 
+Traces to: FR-1.1.1, FR-4.1.1. See [traceability.md](traceability.md).
+
 Announcement PDFs now use the same `extractPdfText` embedded-first/Tesseract fallback and `extractTorWithVertex` grounded regex/LLM fiscal-budget pipeline as TOR PDFs. The main project worker invokes this path for linked announcements without an announcement summary. Only verified-open software procurements may enter it. The recovery planner can also identify missing announcement analysis on otherwise summarized projects.
 
 ## Storage

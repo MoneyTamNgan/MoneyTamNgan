@@ -1,5 +1,7 @@
 # Draft editor and DOCX export implementation report
 
+Traces to: BidPrep FR-4.3.3, BidPrep FR-4.4.1, BidPrep FR-4.7 ([#140](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/140), [#141](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/141)). Id convention: [traceability.md](traceability.md#requirement-id-convention).
+
 Issues #140 and #141 extend the existing bid preparation security layer into a usable personal draft workspace and a combined checklist/proposal document. The implementation preserves the existing generator API and queue, uses MongoDB ownership and version checks for stored edits, and exports plain-text OOXML without executing supplied markup. The changes are on a separate feature branch, with review and merge tracked independently.
 
 ## User workflow
@@ -58,9 +60,9 @@ Wrong types and overlong fields are rejected rather than silently truncated. Tex
 
 A meaningful body section is required for export; a title-only or empty draft returns `EMPTY_DRAFT`. The editor's save request carries the version. The optional export `version` query parameter rejects exporting a newer saved version than the one currently reviewed by the editor.
 
-Every endpoint still uses the independent scope guard and existing FR-4.7 rate limits. Owners come from the authenticated session or scoped Bearer token, never a body/query user ID. Admin permissions do not bypass draft ownership. Another user's GET/PATCH/DELETE/export returns 404. Anonymous requests return 401. Cookies retain Origin checks.
+Every endpoint still uses the independent scope guard and existing BidPrep FR-4.7 rate limits. Owners come from the authenticated session or scoped Bearer token, never a body/query user ID. Admin permissions do not bypass draft ownership. Another user's GET/PATCH/DELETE/export returns 404. Anonymous requests return 401. Cookies retain Origin checks.
 
-Drafts are not cached in localStorage. Existing individual deletion removes the selected owner's document; the FR-4.7 company-data deletion action removes that owner's drafts and preserves other users. The existing account deletion flow continues to remove the account's drafts.
+Drafts are not cached in localStorage. Existing individual deletion removes the selected owner's document; the BidPrep FR-4.7 company-data deletion action removes that owner's drafts and preserves other users. The existing account deletion flow continues to remove the account's drafts.
 
 ## API behavior
 
@@ -118,7 +120,7 @@ The OOXML ZIP contains only `[Content_Types].xml`, package relationships, `word/
 
 A4 page dimensions and one-inch margins bound the checklist table to the printable width. Column widths are explicit, rows wrap/expand and the header repeats on later pages. Tahoma is requested as a Thai-capable font. The rendered sample was checked with the installed font available; another viewer still needs a suitable Thai font. **PDF export is not part of this release (#145).** A temporary PDF used for render QA is not an application export endpoint.
 
-Successful exports emit the existing structured audit event with user ID, timestamp, IP and draft/project IDs. No draft content or company facts are included in that audit. Audit storage/forwarding is deployment logging; a new MongoDB audit collection is not introduced. Export rate limiting is inherited from the existing per-process FR-4.7 limiter; distributed deployments need a shared limiter for a cluster-wide limit.
+Successful exports emit the existing structured audit event with user ID, timestamp, IP and draft/project IDs. No draft content or company facts are included in that audit. Audit storage/forwarding is deployment logging; a new MongoDB audit collection is not introduced. Export rate limiting is inherited from the existing per-process BidPrep FR-4.7 limiter; distributed deployments need a shared limiter for a cluster-wide limit.
 
 ## Verification and evidence
 

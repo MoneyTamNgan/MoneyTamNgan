@@ -1,5 +1,7 @@
 # TOR Scraping Endpoint Test Report
 
+Historical test report (28 September 2026). Traces to: FR-1.1.1. See [traceability.md](traceability.md).
+
 ## Test information
 
 - **Test date:** 28 September 2026

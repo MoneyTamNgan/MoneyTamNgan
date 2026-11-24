@@ -1,5 +1,7 @@
 # Incident response runbook
 
+Operational runbook. It is not an SRS feature design. See [traceability.md](../traceability.md).
+
 Short, usable under pressure. Commands run on the host that runs Docker Compose, from the repository folder. Where a name, contact or decision is needed it is shown as **[fill in]**: complete those once, before an audit.
 
 ## 1. Roles

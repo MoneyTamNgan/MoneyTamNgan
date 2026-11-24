@@ -1,5 +1,7 @@
 # Local deployment: start, stop, rollback (#128)
 
+Traces to: NFR-5. See [traceability.md](traceability.md).
+
 One page for a teammate who has not done this before. It was tested on a **development machine** on 15 November 2026. It has **not** been run on the competition machine yet; repeat the checks in [Checklist for the competition machine](#checklist-for-the-competition-machine) there.
 
 ## Start

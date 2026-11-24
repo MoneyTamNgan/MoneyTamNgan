@@ -1,5 +1,7 @@
 # API input validation dictionary
 
+Traces to ASVS V2.1.1. It is not mapped to an SRS functional requirement. See [traceability.md](traceability.md).
+
 Implementation baseline: `origin/develop` (`40bed4c`), inspected 2026-11-16. Evidence for [#193](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/193), ASVS V2.1.1. This is the **implemented** contract. It does not promise validation merely because OpenAPI declares it. [RBAC_SPEC](security/RBAC_SPEC.md) covers authentication, scopes, ownership and Origin. All paths below include `/api` (OpenAPI uses the `/api` server prefix).
 
 ## Reading the rules

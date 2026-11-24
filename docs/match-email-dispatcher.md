@@ -1,5 +1,7 @@
 # Match threshold email dispatcher — issue #39
 
+Traces to: FR-2.3.3 ([#39](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/39), [#165](https://github.com/MoneyTamNgan/MoneyTamNgan/issues/165)). See [traceability.md](traceability.md).
+
 After the worker or admin pipeline processes a TOR, the notification service hydrates its current normalized document summary, calculates the current skill score for each opted-in user, and records matches meeting that user's threshold (default 70). IMMEDIATE users receive email during that hook. DAILY_DIGEST users accumulate pending matches until the daily command runs. Missing/unprocessed summaries are skipped; an explicitly extracted empty tech stack retains the matching engine's neutral 100 score.
 
 ## Scoring dependency
